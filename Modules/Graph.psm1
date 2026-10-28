@@ -230,10 +230,27 @@ function Invoke-InteractiveSignIn {
     finally {
         switch ($state) {
             'Minimized' { [void]$native::ShowWindow($console, 6) }   # SW_MINIMIZE
-            'Hidden'    { [void]$native::ShowWindow($console, 0) }   # SW_HIDE
+            'Hidden'    { Hide-M365ConsoleWindow -Window $console }
         }
         if ($active -ne [IntPtr]::Zero) { [void]$native::SetForegroundWindow($active) }
     }
+}
+
+function Hide-M365ConsoleWindow {
+    <#
+    .SYNOPSIS
+        Hides the console window of this process (Start.cmd: no black window next to the tool).
+    .DESCRIPTION
+        Hides the current console window, which is looked up again: when Windows Terminal is the default
+        terminal, it takes over the console the moment it becomes visible (e.g. during the sign-in), so the
+        handle from before may no longer be the visible window.
+    #>
+    param([IntPtr]$Window = [IntPtr]::Zero)
+    $native = [M365MfaTool.NativeWindow]
+    if ($Window -ne [IntPtr]::Zero) { [void]$native::ShowWindow($Window, 0) }   # SW_HIDE
+    # GA_ROOTOWNER (3): with Windows Terminal, the console window is a hidden pseudo window owned by the terminal.
+    $current = $native::GetAncestor($native::GetConsoleWindow(), 3)
+    if ($current -ne [IntPtr]::Zero -and $current -ne $Window) { [void]$native::ShowWindow($current, 0) }
 }
 
 function Test-M365GraphConnection {
@@ -845,6 +862,7 @@ Export-ModuleMember -Function @(
     'Get-MissingModules'
     'Install-RequiredModule'
     'Test-M365GraphConnection'
+    'Hide-M365ConsoleWindow'
     'Connect-M365Graph'
     'Disconnect-M365Graph'
     'Request-M365GraphScopes'

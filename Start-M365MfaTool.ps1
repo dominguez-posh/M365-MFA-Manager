@@ -47,11 +47,7 @@ Import-Module (Join-Path $script:AppRoot 'Modules\Localization.psm1') -Force -Gl
 Import-Module (Join-Path $script:AppRoot 'Modules\Graph.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\Provisioning.psm1') -Force
 
-if ($HideConsole) {
-    # GA_ROOTOWNER (3): with Windows Terminal, the console window is a hidden pseudo window owned by the terminal.
-    $consoleWindow = [M365MfaTool.NativeWindow]::GetAncestor([M365MfaTool.NativeWindow]::GetConsoleWindow(), 3)
-    if ($consoleWindow -ne [IntPtr]::Zero) { [void][M365MfaTool.NativeWindow]::ShowWindow($consoleWindow, 0) }   # SW_HIDE
-}
+if ($HideConsole) { Hide-M365ConsoleWindow }
 # -Global: the tenant report also reads the sending date of the MFA guide
 Import-Module (Join-Path $script:AppRoot 'Modules\MfaGuideMail.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\TenantReport.psm1') -Force
@@ -809,6 +805,8 @@ $BtnLogin.Add_Click({
         Write-UiLog (T 'Log.SigningIn')
         Update-UiNow
         $context = Connect-M365Graph
+        # The console was shown for the sign-in dialog; Windows Terminal may have taken it over meanwhile
+        if ($HideConsole) { Hide-M365ConsoleWindow }
         Set-ConnectionStatus $context
         Write-UiLog (T 'Log.SignedIn' $context.Account) 'Success'
         $TxtSearch.Focus() | Out-Null
