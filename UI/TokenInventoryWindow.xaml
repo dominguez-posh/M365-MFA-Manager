@@ -83,6 +83,9 @@
                 <DataTrigger Binding="{Binding IsAssigned}" Value="False">
                     <Setter Property="Background" Value="#FEF3C7"/>
                 </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="assigned">
+                    <Setter Property="Background" Value="#E0ECF8"/>
+                </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="activated">
                     <Setter Property="Background" Value="#DCFCE7"/>
                 </DataTrigger>
@@ -153,7 +156,9 @@
                 <ProgressBar Name="PrgInv" Height="4" Margin="0,6,20,0" Visibility="Hidden" IsIndeterminate="True"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Name="BtnInvBulkAssign" Uid="Inventory.BulkAssign" Style="{StaticResource SecondaryButton}"/>
                 <Button Name="BtnInvAssign" Uid="Inventory.Assign"/>
+                <Button Name="BtnInvActivate" Uid="Inventory.Activate"/>
                 <Button Name="BtnInvUnassign" Uid="Inventory.Unassign" Style="{StaticResource SecondaryButton}"/>
                 <Button Name="BtnInvDelete" Uid="Inventory.Delete" Style="{StaticResource DangerButton}"/>
                 <Button Name="BtnInvClose" Uid="Common.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>

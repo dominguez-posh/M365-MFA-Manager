@@ -225,11 +225,11 @@ For hardware TOTP tokens with a seed file from the vendor (e.g. key fob display 
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Separator `;` or `,`; the column order does not matter. **UPN is optional**: a line without UPN only adds the token to the inventory – assign it later in the [token inventory](#token-inventory). Optional columns: `Manufacturer`, `Model`.
+   Separator `;` or `,`; the column order does not matter. **UPN is optional**: a line without UPN only adds the token to the inventory – assign it later in the [token inventory](#token-inventory), or choose under **Tokens without UPN** the **members of a group** or the **users of a CSV list**: the test import then hands the tokens out in file order, one per user, and the import activates them. Optional columns: `Manufacturer`, `Model`.
 2. **"Select CSV …"** loads the file. Choose the **algorithm** (SHA-1 or SHA-256) and the **time step** (30 or 60 seconds) – both must match the tokens (see order or seed file).
 3. **"Test import"** checks every line without changing anything: Base32 secret, duplicate serial numbers, whether the user exists and whether the serial number is already assigned in the tenant. Lines are shown green/yellow/red.
 4. **"Start import"** creates the tokens without errors in the token inventory, assigns them to the users and activates them right away. Lines with errors are skipped; a failed token is rolled back. Every token is listed in the log (without secret).
-5. **"Excel export …"** saves the result list as evidence. **"Undo last import"** removes the tokens created by the last run from the users and the inventory again (available until the next test import).
+5. **"Excel export …"** saves the result list (serial number → user) as evidence and hand-out document. **"Undo last import"** removes the tokens created by the last run from the users and the inventory again (available until the next test import).
 
 Changing the file, algorithm or time step requires a new test import.
 
@@ -240,6 +240,8 @@ Changing the file, algorithm or time step requires a new test import.
 **Tools ▾ → "Token inventory …"** lists all hardware TOTP tokens of the tenant: free tokens (yellow), assigned and activated ones (green), with model, algorithm, time step and the assigned user. Search and filter by free/assigned.
 
 - **"Assign to selected user …"**: select a user in the main window first, then a free token. Enter the code currently shown on the token – it is assigned and activated in one step (the same way as in the Entra portal).
+- **"Assign free tokens …"**: hands out all free tokens to the members of a group or the users of a CSV list, one each in serial number order – **without activation**, because the secrets are not known any more. Each user activates the token at [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) by entering the code shown on it, or you do it with **"Activate …"**. The assignment list (serial number → user) is offered as Excel right afterwards.
+- **"Activate …"**: activates an assigned but not yet activated token with the code shown on it.
 - **"Remove assignment"**: the user can no longer sign in with the token; it stays in the inventory as a free token.
 - **"Delete"**: removes the token from the inventory (an assigned token is removed from its user first).
 
@@ -377,6 +379,7 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 | `UI/TotpImportWindow.xaml` | Window of the TOTP bulk import |
 | `UI/TokenInventoryWindow.xaml` | Window of the token inventory |
 | `UI/BulkTapWindow.xaml` | Window of the bulk Temporary Access Pass |
+| `UI/AssignTokensDialog.xaml` | Dialog of the bulk token assignment (group or user list) |
 | `UI/MfaGuideDialog.xaml` | Preview dialog of the MFA setup guide |
 | `Modules/Graph.psm1` | Sign-in, Graph requests, users, domains, roles, MFA traffic light, reading/deleting methods |
 | `Modules/Provisioning.psm1` | Setup of FIDO2, TOTP cards, fake MFA, TAP and break-glass accounts |

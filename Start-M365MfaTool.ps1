@@ -1812,7 +1812,8 @@ function Set-TiBusy {
     param([bool]$Busy)
     $ti = $script:Ti
     $ti.Running = $Busy
-    foreach ($control in $ti.BtnTiBrowse, $ti.BtnTiSample, $ti.RbTiSha1, $ti.RbTiSha256, $ti.CmbTiTimeStep, $ti.BtnTiTest, $ti.BtnTiClose) {
+    foreach ($control in $ti.BtnTiBrowse, $ti.BtnTiSample, $ti.RbTiSha1, $ti.RbTiSha256, $ti.CmbTiTimeStep, $ti.BtnTiTest, $ti.BtnTiClose,
+                         $ti.CmbTiAssign, $ti.TxtTiGroupSearch, $ti.BtnTiFindGroup, $ti.CmbTiGroup, $ti.BtnTiUsersBrowse) {
         $control.IsEnabled = -not $Busy
     }
     $ready = @($ti.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
@@ -1886,6 +1887,54 @@ function Select-TotpImportFile {
     Set-TiStatus ''
 }
 
+function Find-TiGroup {
+    $ti = $script:Ti
+    $term = $ti.TxtTiGroupSearch.Text.Trim()
+    if (-not $term) {
+        Show-Message -Text (T 'Report.GroupSearchEmpty') -Title (T 'Import.Title')
+        return
+    }
+    try {
+        Set-TiBusy $true
+        $groups = @(Find-M365Group -SearchTerm $term)
+    }
+    catch {
+        Write-UiError -Message $_.Exception.Message -Title (T 'Import.Title')
+        return
+    }
+    finally {
+        Set-TiBusy $false
+    }
+    Reset-TiTest
+    $ti.CmbTiGroup.ItemsSource = $groups
+    if (-not $groups.Count) {
+        Show-Message -Text (T 'Report.NoGroups' $term) -Title (T 'Import.Title')
+        return
+    }
+    $ti.CmbTiGroup.SelectedIndex = 0
+    if ($groups.Count -gt 1) { $ti.CmbTiGroup.IsDropDownOpen = $true }
+    Set-TiStatus (T 'Report.GroupsFound' $groups.Count)
+}
+
+function Get-TiAssignUsers {
+    # Users that get the tokens without UPN: members of the chosen group or the users of a CSV list; @() = inventory only
+    $ti = $script:Ti
+    switch ([string]$ti.CmbTiAssign.SelectedItem.Tag) {
+        'Group' {
+            $group = $ti.CmbTiGroup.SelectedItem
+            if ($null -eq $group) { throw (T 'Report.SelectGroup') }
+            @(Get-M365ReportUsers -GroupId $group.Id | Sort-Object UserPrincipalName)
+        }
+        'Users' {
+            if (-not $ti.TxtTiUsersFile.Text) { throw (T 'Import.NoFile') }
+            $rows = @(Read-UpnListFile -Path $ti.TxtTiUsersFile.Text)
+            $map = Resolve-M365UsersByUpn -Upns @($rows | ForEach-Object { $_.Upn }) -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
+            @($rows | ForEach-Object { $map[$_.Upn] } | Where-Object { $null -ne $_ })
+        }
+        default { @() }
+    }
+}
+
 function Start-TotpImportTest {
     $ti = $script:Ti
     $path = $ti.TxtTiFile.Text
@@ -1907,7 +1956,8 @@ function Start-TotpImportTest {
         Set-TiStatus (T 'Import.Status.Reading')
         $rows = @(Read-TotpImportFile -Path $path)
         Set-ConnectionStatus (Request-M365GraphScopes -Scopes @('Policy.ReadWrite.AuthenticationMethod', 'UserAuthenticationMethod.ReadWrite.All', 'User.Read.All'))
-        $ti.Results = @(Test-TotpImport -Rows $rows -HashFunction $hashFunction -OnProgress {
+        $assignTo = @(Get-TiAssignUsers)
+        $ti.Results = @(Test-TotpImport -Rows $rows -HashFunction $hashFunction -AssignTo $assignTo -OnProgress {
             param($Done, $Total)
             if ($Done % 10 -eq 0 -or $Done -eq $Total) { Set-TiStatus (T 'Import.Status.Testing' $Done $Total) }
         } -ShouldCancel { $script:Ti.Cancel } -Wait { param($Milliseconds) Wait-Ui $Milliseconds })
@@ -1920,6 +1970,13 @@ function Start-TotpImportTest {
         $ti.Tested = $true
         $counts = Get-TiCounts
         $summary = T 'Import.TestDone' $counts.Total $counts.OK $counts.Warning $counts.Error
+        if ($assignTo.Count) {
+            # How many tokens were handed out automatically, how many users are left without one
+            $autoCount = @($ti.Results | Where-Object AutoAssigned).Count
+            $targets = @($assignTo | Where-Object { $_.AccountEnabled } | Sort-Object Id -Unique).Count
+            $inventoryOnly = @($ti.Results | Where-Object { -not $_.Upn }).Count
+            $summary += ' ' + (T 'Import.AutoAssignSummary' $autoCount ([Math]::Max(0, $targets - $autoCount)) $inventoryOnly)
+        }
         Set-TiStatus $summary
         Write-UiLog ('{0}: {1} ({2})' -f (T 'Import.Title'), $summary, [System.IO.Path]::GetFileName($path))
     }
@@ -2064,6 +2121,7 @@ function Show-TotpImportWindow {
     $script:Ti = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
     foreach ($name in @(
         'TxtTiTenant', 'TxtTiFile', 'BtnTiBrowse', 'BtnTiSample', 'RbTiSha1', 'RbTiSha256', 'CmbTiTimeStep'
+        'CmbTiAssign', 'PnlTiGroup', 'TxtTiGroupSearch', 'BtnTiFindGroup', 'CmbTiGroup', 'PnlTiUsers', 'TxtTiUsersFile', 'BtnTiUsersBrowse'
         'DgTi', 'TxtTiStatus', 'PrgTi', 'BtnTiTest', 'BtnTiImport', 'BtnTiUndo', 'BtnTiExport', 'BtnTiCancel', 'BtnTiClose'
     )) {
         $script:Ti[$name] = $dialog.FindName($name)
@@ -2088,6 +2146,28 @@ function Show-TotpImportWindow {
     # The algorithm and time step must match the tokens: changing them requires a new test.
     foreach ($control in $ti.RbTiSha1, $ti.RbTiSha256) { $control.Add_Checked({ Reset-TiTest }) }
     $ti.CmbTiTimeStep.Add_SelectionChanged({ Reset-TiTest })
+
+    # Assignment of tokens without UPN: group or user list, also invalidates the test
+    $ti.CmbTiAssign.Add_SelectionChanged({
+        $mode = [string]$script:Ti.CmbTiAssign.SelectedItem.Tag
+        $script:Ti.PnlTiGroup.Visibility = if ($mode -eq 'Group') { 'Visible' } else { 'Collapsed' }
+        $script:Ti.PnlTiUsers.Visibility = if ($mode -eq 'Users') { 'Visible' } else { 'Collapsed' }
+        Reset-TiTest
+    })
+    $ti.BtnTiFindGroup.Add_Click({ Find-TiGroup })
+    $ti.TxtTiGroupSearch.Add_KeyDown({
+        param($src, $keyArgs)
+        if ($keyArgs.Key -eq 'Enter') { Find-TiGroup }
+    })
+    $ti.CmbTiGroup.Add_SelectionChanged({ Reset-TiTest })
+    $ti.BtnTiUsersBrowse.Add_Click({
+        $open = New-Object Microsoft.Win32.OpenFileDialog
+        $open.Title = T 'Import.Browse'
+        $open.Filter = (T 'Import.CsvFilter') + ' (*.csv;*.txt)|*.csv;*.txt'
+        if (-not $open.ShowDialog($script:Ti.Window)) { return }
+        Reset-TiTest
+        $script:Ti.TxtTiUsersFile.Text = $open.FileName
+    })
 
     # Closing during a running import: cancel first, the window closes after the current token.
     $dialog.Add_Closing({
@@ -2122,8 +2202,10 @@ function Set-InvBusy {
     foreach ($control in $inv.BtnInvRefresh, $inv.TxtInvSearch, $inv.CmbInvFilter, $inv.BtnInvClose) { $control.IsEnabled = -not $Busy }
     $selected = @($inv.DgInv.SelectedItems | Where-Object { $null -ne $_ })
     $inv.BtnInvAssign.IsEnabled = -not $Busy -and $selected.Count -eq 1 -and -not $selected[0].IsAssigned
+    $inv.BtnInvActivate.IsEnabled = -not $Busy -and $selected.Count -eq 1 -and $selected[0].IsAssigned -and $selected[0].Status -ne 'activated'
     $inv.BtnInvUnassign.IsEnabled = -not $Busy -and $selected.Count -gt 0 -and @($selected | Where-Object IsAssigned).Count -eq $selected.Count
     $inv.BtnInvDelete.IsEnabled = -not $Busy -and $selected.Count -gt 0
+    $inv.BtnInvBulkAssign.IsEnabled = -not $Busy -and @($inv.Devices | Where-Object { -not $_.IsAssigned }).Count -gt 0
     $inv.PrgInv.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
     [System.Windows.Forms.Application]::DoEvents()
 }
@@ -2221,6 +2303,171 @@ function Invoke-InvAssign {
     Update-TokenInventory
 }
 
+function Invoke-InvActivate {
+    # Activates a token that is assigned but not activated yet (e.g. after a bulk assignment), with the code shown on the token
+    $inv = $script:Inv
+    $device = $inv.DgInv.SelectedItem
+    if ($null -eq $device -or -not $device.IsAssigned) { return }
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    $code = [Microsoft.VisualBasic.Interaction]::InputBox((T 'Inventory.ActivatePrompt' $device.SerialNumber $device.AssignedToName), (T 'Inventory.Activate'), '')
+    if ([string]::IsNullOrWhiteSpace($code)) { return }
+    if ($code.Trim() -notmatch '^\d{6,8}$') {
+        Show-Message -Text (T 'Inventory.InvalidCode') -Title (T 'Inventory.Title') -Icon Warning
+        return
+    }
+    try {
+        Set-InvBusy $true
+        Enable-M365HardwareOathDevice -Device $device -VerificationCode $code
+        $inv.Changed = $true
+        Write-UiLog (T 'Inventory.Activated' $device.SerialNumber $device.AssignedToName) 'Success'
+    }
+    catch {
+        Write-UiError -Message (T 'Inventory.ActivateFailed' $device.SerialNumber $_.Exception.Message) -Title (T 'Inventory.Title')
+    }
+    finally {
+        Set-InvBusy $false
+    }
+    Update-TokenInventory
+}
+
+function Show-AssignTokensDialog {
+    <#
+    .SYNOPSIS
+        Asks for the users (group or CSV list) that get the free tokens. Returns Users and SourceText, or $null if cancelled.
+    #>
+    param([int]$FreeCount)
+
+    [xml]$dialogXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\AssignTokensDialog.xaml') -Raw -Encoding UTF8
+    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($dialogXaml))
+    $dialog.Owner = $script:Inv.Window
+    Update-ElementTexts -Root $dialog
+
+    $at = @{ Window = $dialog; Result = $null }
+    foreach ($name in 'TxtAtFree', 'RbAtGroup', 'RbAtCsv', 'PnlAtGroup', 'TxtAtGroupSearch', 'BtnAtFindGroup', 'CmbAtGroup', 'PnlAtCsv', 'TxtAtFile', 'BtnAtBrowse', 'BtnAtStart') {
+        $at[$name] = $dialog.FindName($name)
+    }
+    $at.TxtAtFree.Text = T 'Inventory.BulkAssign.Free' $FreeCount
+
+    $updateSource = {
+        $group = [bool]$at.RbAtGroup.IsChecked
+        $at.PnlAtGroup.Visibility = if ($group) { 'Visible' } else { 'Collapsed' }
+        $at.PnlAtCsv.Visibility = if ($group) { 'Collapsed' } else { 'Visible' }
+    }.GetNewClosure()
+    $at.RbAtGroup.Add_Checked($updateSource)
+    $at.RbAtCsv.Add_Checked($updateSource)
+
+    $findGroup = {
+        $term = $at.TxtAtGroupSearch.Text.Trim()
+        if (-not $term) { return }
+        try { $groups = @(Find-M365Group -SearchTerm $term) }
+        catch { Show-Message -Text $_.Exception.Message -Title (T 'Inventory.BulkAssign.Title') -Icon Error; return }
+        $at.CmbAtGroup.ItemsSource = $groups
+        if (-not $groups.Count) { Show-Message -Text (T 'Report.NoGroups' $term) -Title (T 'Inventory.BulkAssign.Title'); return }
+        $at.CmbAtGroup.SelectedIndex = 0
+        if ($groups.Count -gt 1) { $at.CmbAtGroup.IsDropDownOpen = $true }
+    }.GetNewClosure()
+    $at.BtnAtFindGroup.Add_Click($findGroup)
+    $at.TxtAtGroupSearch.Add_KeyDown({
+        param($src, $keyArgs)
+        if ($keyArgs.Key -eq 'Enter') { & $findGroup; $keyArgs.Handled = $true }
+    }.GetNewClosure())
+    $at.BtnAtBrowse.Add_Click({
+        $open = New-Object Microsoft.Win32.OpenFileDialog
+        $open.Title = T 'Import.Browse'
+        $open.Filter = (T 'Import.CsvFilter') + ' (*.csv;*.txt)|*.csv;*.txt'
+        if ($open.ShowDialog($at.Window)) { $at.TxtAtFile.Text = $open.FileName }
+    }.GetNewClosure())
+
+    $at.BtnAtStart.Add_Click({
+        try {
+            if ($at.RbAtGroup.IsChecked) {
+                $group = $at.CmbAtGroup.SelectedItem
+                if ($null -eq $group) { throw (T 'Report.SelectGroup') }
+                $users = @(Get-M365ReportUsers -GroupId $group.Id | Sort-Object UserPrincipalName)
+                $source = T 'Report.Scope.GroupName' $group.DisplayName
+            }
+            else {
+                if (-not $at.TxtAtFile.Text) { throw (T 'Import.NoFile') }
+                $rows = @(Read-UpnListFile -Path $at.TxtAtFile.Text)
+                $map = Resolve-M365UsersByUpn -Upns @($rows | ForEach-Object { $_.Upn }) -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
+                $users = @($rows | ForEach-Object { $map[$_.Upn] } | Where-Object { $null -ne $_ })
+                $source = [System.IO.Path]::GetFileName($at.TxtAtFile.Text)
+            }
+            if (-not $users.Count) { throw (T 'Report.Status.NoUsers') }
+            $at.Result = @{ Users = $users; SourceText = $source }
+            $at.Window.DialogResult = $true
+        }
+        catch {
+            Show-Message -Text $_.Exception.Message -Title (T 'Inventory.BulkAssign.Title') -Icon Warning
+        }
+    }.GetNewClosure())
+
+    if (-not $dialog.ShowDialog()) { return $null }
+    $at.Result
+}
+
+function Invoke-InvBulkAssign {
+    # Hands out the free tokens to the members of a group or a user list (one each, without activation) and offers the list as Excel
+    $inv = $script:Inv
+    $free = @($inv.Devices | Where-Object { -not $_.IsAssigned })
+    if (-not $free.Count) {
+        Show-Message -Text (T 'Inventory.BulkAssign.NoFree') -Title (T 'Inventory.Title')
+        return
+    }
+    $choice = Show-AssignTokensDialog -FreeCount $free.Count
+    if ($null -eq $choice) { return }
+    $targets = @($choice.Users | Where-Object { $_.AccountEnabled } | Sort-Object Id -Unique).Count
+    $assignments = [Math]::Min($free.Count, $targets)
+    if (-not (Confirm-Action -Text (T 'Inventory.BulkAssign.Confirm' $free.Count $targets $assignments $choice.SourceText) -Title (T 'Inventory.BulkAssign.Title'))) { return }
+
+    $results = @()
+    try {
+        Set-InvBusy $true
+        Write-UiLog (T 'Inventory.BulkAssign.Started' $assignments $choice.SourceText) 'Warning'
+        $results = @(Invoke-TokenBulkAssignment -Devices $free -Users $choice.Users -OnProgress {
+            param($Result, $Done, $Total)
+            if ($Result.Status -eq 'Assigned') { Write-UiLog (T 'Inventory.BulkAssign.Log' $Result.SerialNumber $Result.Upn) 'Success' }
+            else { Write-UiLog (T 'Inventory.BulkAssign.LogFailed' $Result.SerialNumber $Result.Upn $Result.Message) 'Error' }
+            Set-InvStatus (T 'Inventory.BulkAssign.Assigning' $Done $Total)
+            $script:Inv.Changed = $true
+        } -Wait { param($Milliseconds) Wait-Ui $Milliseconds })
+    }
+    catch {
+        Write-UiError -Message (T 'Inventory.Failed' $_.Exception.Message) -Title (T 'Inventory.Title')
+    }
+    finally {
+        Set-InvBusy $false
+    }
+    Update-TokenInventory
+    if (-not $results.Count) { return }
+
+    $assigned = @($results | Where-Object Status -eq 'Assigned').Count
+    $failed = @($results | Where-Object Status -eq 'Failed').Count
+    $withoutToken = @($results | Where-Object Status -eq 'Warning').Count
+    $summary = T 'Inventory.BulkAssign.Done' $assigned $failed $withoutToken
+    Set-InvStatus $summary
+    Write-UiLog $summary $(if ($failed) { 'Warning' } else { 'Success' })
+
+    # The assignment list is the hand-out document: offer it right away
+    if (-not (Confirm-Action -Text ($summary + "`n`n" + (T 'Inventory.BulkAssign.ExportQuestion')) -Title (T 'Inventory.BulkAssign.Title') -Icon Question -DefaultYes)) { return }
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Report.Export'
+    $dialog.Filter = (T 'Report.ExcelFilter') + ' (*.xlsx)|*.xlsx'
+    $dialog.FileName = 'TOTP-Zuordnung_{0:yyyy-MM-dd_HHmm}.xlsx' -f (Get-Date)
+    if (-not $dialog.ShowDialog($inv.Window)) { return }
+    try {
+        Export-TokenAssignmentXlsx -Path $dialog.FileName -Rows $results -Tenant (Get-TiTenantLabel) -Source $choice.SourceText
+        Write-UiLog (T 'Inventory.BulkAssign.Exported' $dialog.FileName)
+    }
+    catch {
+        Write-UiError -Message (T 'Report.ExportFailed' $_.Exception.Message) -Title (T 'Inventory.Title')
+        return
+    }
+    if (Confirm-Action -Text (T 'Report.OpenFile' $dialog.FileName) -Title (T 'Inventory.Title') -Icon Question -DefaultYes) {
+        Start-Process -FilePath $dialog.FileName
+    }
+}
+
 function Invoke-InvUnassign {
     $inv = $script:Inv
     $devices = @($inv.DgInv.SelectedItems | Where-Object { $null -ne $_ -and $_.IsAssigned })
@@ -2286,7 +2533,7 @@ function Show-TokenInventoryWindow {
                      Running = $false; Filter = 'All'; SearchText = ''; Changed = $false }
     foreach ($name in @(
         'TxtInvTenant', 'TxtInvSearch', 'CmbInvFilter', 'TxtInvCount', 'BtnInvRefresh', 'DgInv', 'TxtInvEmpty'
-        'TxtInvStatus', 'PrgInv', 'BtnInvAssign', 'BtnInvUnassign', 'BtnInvDelete', 'BtnInvClose'
+        'TxtInvStatus', 'PrgInv', 'BtnInvBulkAssign', 'BtnInvAssign', 'BtnInvActivate', 'BtnInvUnassign', 'BtnInvDelete', 'BtnInvClose'
     )) {
         $script:Inv[$name] = $dialog.FindName($name)
     }
@@ -2294,11 +2541,15 @@ function Show-TokenInventoryWindow {
     foreach ($column in $inv.DgInv.Columns) { $column.Header = T ([string]$column.Header) }
     $inv.TxtInvTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
     $inv.BtnInvAssign.ToolTip = T 'Inventory.Assign.ToolTip'
+    $inv.BtnInvActivate.ToolTip = T 'Inventory.Activate.ToolTip'
+    $inv.BtnInvBulkAssign.ToolTip = T 'Inventory.BulkAssign.ToolTip'
     Connect-InvView
     Set-InvBusy $false
 
     $inv.BtnInvRefresh.Add_Click({ Update-TokenInventory })
     $inv.BtnInvAssign.Add_Click({ Invoke-InvAssign })
+    $inv.BtnInvActivate.Add_Click({ Invoke-InvActivate })
+    $inv.BtnInvBulkAssign.Add_Click({ Invoke-InvBulkAssign })
     $inv.BtnInvUnassign.Add_Click({ Invoke-InvUnassign })
     $inv.BtnInvDelete.Add_Click({ Invoke-InvDelete })
     $inv.BtnInvClose.Add_Click({ $script:Inv.Window.Close() })

@@ -887,7 +887,10 @@ function Test-TotpImport {
     .DESCRIPTION
         Checks the secret (Base32, length), duplicate serial numbers in the file, whether the user exists
         and whether a token with the serial number already exists in the tenant. Lines without UPN are
-        valid: the token is only added to the inventory.
+        valid: the token is only added to the inventory - or, with AssignTo, assigned to the next user.
+    .PARAMETER AssignTo
+        Users (e.g. members of a group) that get the tokens without UPN, one each, in file order.
+        Disabled users and users that already have a line with their UPN in the file are skipped.
     .OUTPUTS
         One result per line with Status OK, Warning or Error. Lines with OK or Warning are
         imported by Invoke-TotpImport.
@@ -895,6 +898,7 @@ function Test-TotpImport {
     param(
         [Parameter(Mandatory)][object[]]$Rows,
         [ValidateSet('hmacsha1', 'hmacsha256')][string]$HashFunction = 'hmacsha1',
+        [object[]]$AssignTo = @(),
         [scriptblock]$OnProgress = { param($Done, $Total) },
         [scriptblock]$ShouldCancel = { $false },
         [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
@@ -902,6 +906,29 @@ function Test-TotpImport {
 
     $devices = Get-HardwareOathDeviceMap
     $users = Resolve-M365UsersByUpn -Upns @($Rows | ForEach-Object { $_.Upn }) -Wait $Wait
+
+    # Tokens without UPN get the next user from AssignTo (one token per user)
+    $auto = @{}   # line number -> $true
+    if ($AssignTo.Count) {
+        $explicit = @{}
+        foreach ($row in $Rows) { if ($row.Upn) { $explicit[$row.Upn.ToLowerInvariant()] = $true } }
+        $pool = New-Object System.Collections.Generic.Queue[object]
+        $seen = @{}
+        foreach ($candidate in $AssignTo) {
+            if ($null -eq $candidate -or -not $candidate.AccountEnabled -or $seen.ContainsKey($candidate.Id)) { continue }
+            if ($explicit.ContainsKey(([string]$candidate.UserPrincipalName).ToLowerInvariant())) { continue }
+            $seen[$candidate.Id] = $true
+            $pool.Enqueue($candidate)
+        }
+        foreach ($row in $Rows) {
+            if ($row.Upn -or -not $row.SerialNumber -or -not $row.Secret -or -not $pool.Count) { continue }
+            $candidate = $pool.Dequeue()
+            $row.Upn = $candidate.UserPrincipalName
+            $users[$row.Upn] = $candidate
+            $auto[$row.Line] = $true
+        }
+    }
+
     $serialCount = @{}
     $upnCount = @{}
     foreach ($row in $Rows) {
@@ -945,6 +972,7 @@ function Test-TotpImport {
         else {
             $notes.Add((T 'Import.Note.InventoryOnly'))
         }
+        if ($auto.ContainsKey($row.Line)) { $notes.Add((T 'Import.Note.AutoAssigned')) }
 
         if ($row.SerialNumber -and $devices.ContainsKey($row.SerialNumber)) {
             $assignedTo = $devices[$row.SerialNumber]['assignedTo']
@@ -969,6 +997,7 @@ function Test-TotpImport {
             Secret       = $secret
             Manufacturer = if ($row.Manufacturer) { $row.Manufacturer } else { 'OATH' }
             Model        = $row.Model
+            AutoAssigned = $auto.ContainsKey($row.Line)
             MethodId     = $null   # set by Invoke-TotpImport, used by Undo-TotpImport
             DeviceId     = $null
         }
@@ -1071,7 +1100,7 @@ function Undo-TotpImport {
 
 # Excel row color per result status (bulk import and bulk TAP)
 $script:BulkStatusStyles = @{
-    OK = 'Default'; Warning = 'Yellow'; Error = 'Red'; Imported = 'Green'; Created = 'Green'
+    OK = 'Default'; Warning = 'Yellow'; Error = 'Red'; Imported = 'Green'; Created = 'Green'; Assigned = 'Green'
     Failed = 'Red'; Reverted = 'Unknown'; UndoFailed = 'Red'
 }
 
@@ -1200,16 +1229,20 @@ function Set-M365HardwareOathAssignment {
     <#
     .SYNOPSIS
         Assigns an unassigned inventory token to a user and activates it with the code shown on the token.
+        With AssignOnly, the token is only assigned: the user activates it in Security info (aka.ms/mysecurityinfo)
+        or an admin later with Enable-M365HardwareOathDevice.
     #>
     param(
         [Parameter(Mandatory)]$Device,
         [Parameter(Mandatory)]$User,
-        [Parameter(Mandatory)][string]$VerificationCode
+        [string]$VerificationCode,
+        [switch]$AssignOnly
     )
     $userPart = [uri]::EscapeDataString($User.Id)
     $method = Invoke-M365GraphRequest -Method POST -Uri "beta/users/$userPart/authentication/hardwareOathMethods" -Body @{ device = @{ id = $Device.Id } }
     $methodId = [string]$method['id']
     if (-not $methodId) { $methodId = $Device.Id }
+    if ($AssignOnly) { return }
     try {
         Invoke-M365GraphRequest -Method POST -Uri "beta/users/$userPart/authentication/hardwareOathMethods/$([uri]::EscapeDataString($methodId))/activate" -Body @{
             verificationCode = $VerificationCode.Trim()
@@ -1221,6 +1254,112 @@ function Set-M365HardwareOathAssignment {
         try { Invoke-M365GraphRequest -Method DELETE -Uri "beta/users/$userPart/authentication/hardwareOathMethods/$([uri]::EscapeDataString($methodId))" | Out-Null } catch { }
         throw
     }
+}
+
+function Enable-M365HardwareOathDevice {
+    <#
+    .SYNOPSIS
+        Activates a token that is assigned but not activated yet, with the code shown on the token.
+    #>
+    param(
+        [Parameter(Mandatory)]$Device,
+        [Parameter(Mandatory)][string]$VerificationCode
+    )
+    if (-not $Device.AssignedToId) { throw (T 'Inventory.NotAssigned' $Device.SerialNumber) }
+    Invoke-M365GraphRequest -Method POST -Uri "beta/users/$([uri]::EscapeDataString($Device.AssignedToId))/authentication/hardwareOathMethods/$([uri]::EscapeDataString($Device.Id))/activate" -Body @{
+        verificationCode = $VerificationCode.Trim()
+        displayName      = $(if ($Device.DisplayName) { $Device.DisplayName } else { "TOTP token $($Device.SerialNumber)" })
+    } | Out-Null
+}
+
+function Invoke-TokenBulkAssignment {
+    <#
+    .SYNOPSIS
+        Assigns free inventory tokens (in serial number order) to users, one token each, without activation.
+    .DESCRIPTION
+        Disabled users and duplicates are skipped. Users for whom no free token is left get a result with
+        status Warning, so that the exported list is complete.
+    .OUTPUTS
+        One result per assignment: SerialNumber, Upn, DisplayName, Status Assigned/Failed/Warning, Message.
+    #>
+    param(
+        [Parameter(Mandatory)][object[]]$Devices,
+        [Parameter(Mandatory)][object[]]$Users,
+        [scriptblock]$OnProgress = { param($Result, $Done, $Total) },
+        [scriptblock]$ShouldCancel = { $false },
+        [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
+    )
+
+    $free = @($Devices | Where-Object { -not $_.IsAssigned } | Sort-Object SerialNumber)
+    $targets = New-Object System.Collections.Generic.List[object]
+    $seen = @{}
+    foreach ($user in $Users) {
+        if ($null -eq $user -or -not $user.AccountEnabled -or $seen.ContainsKey($user.Id)) { continue }
+        $seen[$user.Id] = $true
+        $targets.Add($user)
+    }
+
+    $results = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $targets.Count; $i++) {
+        $user = $targets[$i]
+        $device = if ($i -lt $free.Count) { $free[$i] } else { $null }
+        $results.Add([pscustomobject]@{
+            SerialNumber = if ($device) { $device.SerialNumber } else { '' }
+            Upn          = $user.UserPrincipalName
+            DisplayName  = $user.DisplayName
+            Status       = if ($device) { 'OK' } else { 'Warning' }
+            StatusText   = T $(if ($device) { 'Import.Status.OK' } else { 'Import.Status.Warning' })
+            Message      = if ($device) { '' } else { T 'Inventory.BulkAssign.NoToken' }
+            Device       = $device
+            User         = $user
+        })
+    }
+
+    $pending = @($results | Where-Object { $null -ne $_.Device })
+    $done = 0
+    foreach ($result in $pending) {
+        if (& $ShouldCancel) { break }
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                Set-M365HardwareOathAssignment -Device $result.Device -User $result.User -AssignOnly
+                $result.Status = 'Assigned'
+                break
+            }
+            catch {
+                if ($attempt -lt 4 -and $_.Exception.Message -match '429|TooManyRequests|activityLimitReached|throttl|503|ServiceUnavailable') {
+                    & $Wait (10000 * $attempt)
+                    continue
+                }
+                $result.Status = 'Failed'
+                $result.Message = $_.Exception.Message
+                break
+            }
+        }
+        $result.StatusText = T "Import.Status.$($result.Status)"
+        $done++
+        & $OnProgress $result $done $pending.Count
+    }
+    $results.ToArray()
+}
+
+function Export-TokenAssignmentXlsx {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][object[]]$Rows,
+        [string]$Tenant,
+        [string]$Source
+    )
+    Export-BulkResultXlsx -Path $Path -Rows $Rows -Title (T 'Inventory.BulkAssign.Title') -Columns @(
+        @{ Key = 'Import.Col.Serial';  Width = 18; Property = 'SerialNumber' }
+        @{ Key = 'Import.Col.Upn';     Width = 38; Property = 'Upn' }
+        @{ Key = 'Import.Col.Name';    Width = 28; Property = 'DisplayName' }
+        @{ Key = 'Import.Col.Status';  Width = 14; Property = 'StatusText' }
+        @{ Key = 'Import.Col.Message'; Width = 70; Property = 'Message' }
+    ) -Summary @(
+        , @((T 'Report.Summary.Tenant'), $Tenant)
+        , @((T 'BulkTap.Summary.Source'), $Source)
+        , @('', (T 'Inventory.BulkAssign.Note'))
+    )
 }
 
 #endregion
@@ -1370,7 +1509,8 @@ Export-ModuleMember -Function @(
     # Bulk import of hardware OATH tokens
     'Get-TotpImportSample', 'Read-TotpImportFile', 'Test-TotpImport', 'Invoke-TotpImport', 'Undo-TotpImport', 'Export-TotpImportXlsx'
     # Token inventory
-    'Get-M365HardwareOathDevices', 'Set-M365HardwareOathAssignment', 'Remove-M365HardwareOathAssignment', 'Remove-M365HardwareOathDevice'
+    'Get-M365HardwareOathDevices', 'Set-M365HardwareOathAssignment', 'Enable-M365HardwareOathDevice', 'Remove-M365HardwareOathAssignment', 'Remove-M365HardwareOathDevice'
+    'Invoke-TokenBulkAssignment', 'Export-TokenAssignmentXlsx'
     # Bulk Temporary Access Pass
-    'Read-UpnListFile', 'Test-TapBulk', 'Invoke-TapBulk', 'Export-TapBulkXlsx'
+    'Read-UpnListFile', 'Resolve-M365UsersByUpn', 'Test-TapBulk', 'Invoke-TapBulk', 'Export-TapBulkXlsx'
 )

@@ -155,6 +155,25 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- Tokens without UPN: inventory only, or assigned to the members of a group / a user list -->
+            <TextBlock Uid="Import.AssignTo" Style="{StaticResource Label}" Margin="0,14,0,4"/>
+            <StackPanel Orientation="Horizontal">
+                <ComboBox Name="CmbTiAssign" Width="300" Padding="8,7" Margin="0,4,4,4" VerticalContentAlignment="Center" SelectedIndex="0">
+                    <ComboBoxItem Uid="Import.AssignTo.None" Tag="None"/>
+                    <ComboBoxItem Uid="Import.AssignTo.Group" Tag="Group"/>
+                    <ComboBoxItem Uid="Import.AssignTo.Users" Tag="Users"/>
+                </ComboBox>
+                <StackPanel Name="PnlTiGroup" Orientation="Horizontal" Visibility="Collapsed">
+                    <TextBox Name="TxtTiGroupSearch" Uid="Report.GroupSearch" Width="220" Margin="4"/>
+                    <Button Name="BtnTiFindGroup" Uid="Report.FindGroup" Style="{StaticResource SecondaryButton}"/>
+                    <ComboBox Name="CmbTiGroup" Width="300" Padding="8,7" Margin="4" VerticalContentAlignment="Center" DisplayMemberPath="DisplayName"/>
+                </StackPanel>
+                <StackPanel Name="PnlTiUsers" Orientation="Horizontal" Visibility="Collapsed">
+                    <TextBox Name="TxtTiUsersFile" IsReadOnly="True" Width="420" Margin="4" VerticalContentAlignment="Center"/>
+                    <Button Name="BtnTiUsersBrowse" Uid="Import.Browse" Style="{StaticResource SecondaryButton}"/>
+                </StackPanel>
+            </StackPanel>
+
             <Border Background="#E0ECF8" CornerRadius="4" Padding="12,10" Margin="0,14,0,12">
                 <StackPanel>
                     <TextBlock FontSize="12" TextWrapping="Wrap" Uid="Import.Info1"/>

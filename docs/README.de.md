@@ -225,11 +225,11 @@ Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als S
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Trennzeichen `;` oder `,`; die Reihenfolge der Spalten ist egal. **UPN ist optional**: Eine Zeile ohne UPN nimmt das Token nur ins Inventar auf – die Zuweisung erfolgt später im [Token-Inventar](#token-inventar). Optionale Spalten: `Manufacturer`, `Model`.
+   Trennzeichen `;` oder `,`; die Reihenfolge der Spalten ist egal. **UPN ist optional**: Eine Zeile ohne UPN nimmt das Token nur ins Inventar auf – die Zuweisung erfolgt später im [Token-Inventar](#token-inventar), oder Sie wählen unter **Token ohne UPN** die **Mitglieder einer Gruppe** oder die **Benutzer einer CSV-Liste**: Der Testimport verteilt die Token dann in Dateireihenfolge, eines pro Benutzer, und der Import aktiviert sie. Optionale Spalten: `Manufacturer`, `Model`.
 2. **„CSV auswählen …“** lädt die Datei. **Algorithmus** (SHA-1 oder SHA-256) und **Zeitintervall** (30 oder 60 Sekunden) wählen – beides muss zu den Token passen (siehe Bestellung bzw. Seed-File).
 3. **„Testimport“** prüft jede Zeile, ohne etwas zu ändern: Base32-Secret, doppelte Seriennummern, ob der Benutzer existiert und ob die Seriennummer im Tenant schon zugewiesen ist. Die Zeilen werden grün/gelb/rot angezeigt.
 4. **„Import starten“** legt die fehlerfreien Token im Token-Inventar an, weist sie den Benutzern zu und aktiviert sie sofort. Zeilen mit Fehlern werden übersprungen; ein fehlgeschlagenes Token wird zurückgerollt. Jedes Token steht im Protokoll (ohne Secret).
-5. **„Excel-Export …“** speichert die Ergebnisliste als Nachweis. **„Letzten Import rückgängig“** entfernt die im letzten Lauf angelegten Token wieder von den Benutzern und aus dem Inventar (bis zum nächsten Testimport möglich).
+5. **„Excel-Export …“** speichert die Ergebnisliste (Seriennummer → Benutzer) als Nachweis und Übergabeliste. **„Letzten Import rückgängig“** entfernt die im letzten Lauf angelegten Token wieder von den Benutzern und aus dem Inventar (bis zum nächsten Testimport möglich).
 
 Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Testimport nötig.
 
@@ -240,6 +240,8 @@ Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Tes
 **Werkzeuge ▾ → „Token-Inventar …“** listet alle Hardware-TOTP-Token des Tenants: freie Token (gelb), zugewiesene und aktivierte (grün), mit Modell, Algorithmus, Zeitintervall und zugewiesenem Benutzer. Mit Suche und Filter nach frei/zugewiesen.
 
 - **„Ausgewähltem Benutzer zuweisen …“**: Zuerst im Hauptfenster einen Benutzer auswählen, dann ein freies Token markieren. Den aktuell am Token angezeigten Code eingeben – das Token wird in einem Schritt zugewiesen und aktiviert (wie im Entra-Portal).
+- **„Freie Token zuweisen …“**: Verteilt alle freien Token an die Mitglieder einer Gruppe oder die Benutzer einer CSV-Liste, je eines in Reihenfolge der Seriennummern – **ohne Aktivierung**, weil die Secrets nicht mehr bekannt sind. Jeder Benutzer aktiviert sein Token unter [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) mit dem darauf angezeigten Code, oder Sie tun es über **„Aktivieren …“**. Die Zuordnungsliste (Seriennummer → Benutzer) wird direkt danach als Excel angeboten.
+- **„Aktivieren …“**: Aktiviert ein zugewiesenes, noch nicht aktiviertes Token mit dem darauf angezeigten Code.
 - **„Zuweisung lösen“**: Der Benutzer kann sich mit dem Token nicht mehr anmelden; es bleibt als freies Token im Inventar.
 - **„Löschen“**: Entfernt das Token aus dem Inventar (ein zugewiesenes Token wird zuerst beim Benutzer entfernt).
 
@@ -377,6 +379,7 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 | `UI/TotpImportWindow.xaml` | Fenster des TOTP-Massenimports |
 | `UI/TokenInventoryWindow.xaml` | Fenster des Token-Inventars |
 | `UI/BulkTapWindow.xaml` | Fenster des Massen-Temporary-Access-Pass |
+| `UI/AssignTokensDialog.xaml` | Dialog der Massenzuweisung von Token (Gruppe oder Benutzerliste) |
 | `UI/MfaGuideDialog.xaml` | Vorschau-Dialog der MFA-Anleitung |
 | `Modules/Graph.psm1` | Anmeldung, Graph-Anfragen, Benutzer, Domains, Rollen, MFA-Ampel, Lesen/Löschen von Methoden |
 | `Modules/Provisioning.psm1` | Einrichtung von FIDO2, TOTP-Karten, Fake-MFA, TAP und Breakglass-Accounts |
