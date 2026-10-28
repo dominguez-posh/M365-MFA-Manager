@@ -299,7 +299,6 @@
     "Graph.ConnectFailed": "Aanmelden bij Microsoft Graph mislukt: {0}",
     "Graph.NoContext": "Geen context beschikbaar.",
     "Graph.NotConnected": "Geen verbinding met Microsoft Graph. Meld u eerst aan.",
-    "Graph.ScopesDenied": "Aanvullende machtigingen ({0}) zijn niet verleend: {1}",
     "Graph.RequestFailed": "Graph-aanvraag mislukt ({0} {1}): {2}",
 
     "Header.TenantReport": "MFA-rapport …",
@@ -525,5 +524,6 @@
     "Import.Log.Started": "TOTP-import gestart: {0} tokens ({1}, {2} s)",
     "Import.Log.Imported": "TOTP-token {0} geïmporteerd voor {1}",
     "Import.Log.Failed": "TOTP-token {0} voor {1} mislukt: {2}",
-    "Import.Done": "TOTP-import voltooid: {0} geïmporteerd, {1} mislukt, {2} niet verwerkt."
+    "Import.Done": "TOTP-import voltooid: {0} geïmporteerd, {1} mislukt, {2} niet verwerkt.",
+    "Config.ConfirmTotp": "Algoritme: {0}, tijdsinterval: {1} s"
 }

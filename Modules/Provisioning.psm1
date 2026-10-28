@@ -322,8 +322,12 @@ function Start-FixedSecretTotpProvisioning {
     $serial = Get-RequiredOption -Options $Options -Name 'SerialNumber' -Label 'Config.Serial.Card'
     $secret = ConvertTo-NormalizedTotpSecret -Secret (Get-RequiredOption -Options $Options -Name 'Secret' -Label 'Config.Secret')
 
+    $hashFunction = if ($Options.ContainsKey('HashFunction') -and $Options.HashFunction) { [string]$Options.HashFunction } else { 'hmacsha1' }
+    $timeStep = if ($Options.ContainsKey('TimeStep') -and $Options.TimeStep) { [int]$Options.TimeStep } else { 30 }
+
     $token = New-HardwareOathTotp -User $User -SerialNumber $serial -SecretKey $secret `
-        -DisplayName "TOTP card $serial" -Model 'TOTP card (fixed secret)' -ReuseExistingDevice
+        -DisplayName "TOTP card $serial" -Model 'TOTP card (fixed secret)' -ReuseExistingDevice `
+        -HashFunction $hashFunction -TimeIntervalInSeconds $timeStep
     $secret = $null
 
     New-ProvisioningResult -Message (T 'Prov.FixedTotp.Done' $serial $User.UserPrincipalName) -AddedMethodIds @($token.MethodId)
@@ -918,15 +922,17 @@ function Invoke-TotpImport {
         $model = if ($result.Model) { $result.Model } else { 'TOTP {0} {1}s' -f $algorithm, $TimeIntervalInSeconds }
         for ($attempt = 1; ; $attempt++) {
             try {
+                # A failed attempt may have replaced or rolled back the device: retries look it up again.
+                $deviceMap = if ($attempt -eq 1) { $devices } else { $null }
                 New-HardwareOathTotp -User $result.User -SerialNumber $result.SerialNumber -SecretKey $result.Secret `
                     -DisplayName "TOTP token $($result.SerialNumber)" -Model $model -Manufacturer $result.Manufacturer `
-                    -HashFunction $HashFunction -TimeIntervalInSeconds $TimeIntervalInSeconds -Devices $devices | Out-Null
+                    -HashFunction $HashFunction -TimeIntervalInSeconds $TimeIntervalInSeconds -Devices $deviceMap | Out-Null
                 $result.Status = 'Imported'
                 $result.Message = ''
                 break
             }
             catch {
-                if ($attempt -lt 4 -and $_.Exception.Message -match '429|TooManyRequests|throttl') {
+                if ($attempt -lt 4 -and $_.Exception.Message -match '429|TooManyRequests|activityLimitReached|throttl|503|ServiceUnavailable') {
                     & $Wait (10000 * $attempt)
                     continue
                 }

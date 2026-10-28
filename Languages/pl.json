@@ -299,7 +299,6 @@
     "Graph.ConnectFailed": "Logowanie do Microsoft Graph nie powiodło się: {0}",
     "Graph.NoContext": "Brak dostępnego kontekstu.",
     "Graph.NotConnected": "Brak połączenia z Microsoft Graph. Najpierw się zaloguj.",
-    "Graph.ScopesDenied": "Nie przyznano dodatkowych uprawnień ({0}): {1}",
     "Graph.RequestFailed": "Żądanie do Graph nie powiodło się ({0} {1}): {2}",
 
     "Header.TenantReport": "Raport MFA …",
@@ -525,5 +524,6 @@
     "Import.Log.Started": "Rozpoczęto import TOTP: {0} tokenów ({1}, {2} s)",
     "Import.Log.Imported": "Zaimportowano token TOTP {0} dla {1}",
     "Import.Log.Failed": "Token TOTP {0} dla {1} – niepowodzenie: {2}",
-    "Import.Done": "Import TOTP zakończony: zaimportowano {0}, niepowodzenia {1}, nieprzetworzone {2}."
+    "Import.Done": "Import TOTP zakończony: zaimportowano {0}, niepowodzenia {1}, nieprzetworzone {2}.",
+    "Config.ConfirmTotp": "Algorytm: {0}, interwał czasu: {1} s"
 }

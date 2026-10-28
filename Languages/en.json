@@ -299,7 +299,6 @@
     "Graph.ConnectFailed": "Sign-in to Microsoft Graph failed: {0}",
     "Graph.NoContext": "No context available.",
     "Graph.NotConnected": "Not connected to Microsoft Graph. Please sign in first.",
-    "Graph.ScopesDenied": "Additional permissions ({0}) were not granted: {1}",
     "Graph.RequestFailed": "Graph request failed ({0} {1}): {2}",
 
     "Header.TenantReport": "MFA report …",
@@ -525,5 +524,6 @@
     "Import.Log.Started": "TOTP import started: {0} tokens ({1}, {2} s)",
     "Import.Log.Imported": "TOTP token {0} imported for {1}",
     "Import.Log.Failed": "TOTP token {0} for {1} failed: {2}",
-    "Import.Done": "TOTP import finished: {0} imported, {1} failed, {2} not processed."
+    "Import.Done": "TOTP import finished: {0} imported, {1} failed, {2} not processed.",
+    "Config.ConfirmTotp": "Algorithm: {0}, time step: {1} s"
 }

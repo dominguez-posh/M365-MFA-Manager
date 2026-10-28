@@ -94,7 +94,7 @@ $controlNames = @(
     'TxtMethodCount', 'TxtPreferredMethod', 'TxtSystemPreferred'
     'BdgMfa', 'DotMfa', 'TxtMfaLevel', 'TxtMfaHints', 'BtnSendGuide', 'TxtGuideStatus', 'TxtRoleSummary', 'BtnShowRoles', 'LstRoles'
     # Configure method
-    'CmbMethod', 'PnlSerial', 'LblSerial', 'TxtSerial', 'PnlSecret', 'PwdSecret', 'TxtMethodHint', 'BtnExecute'
+    'CmbMethod', 'PnlSerial', 'LblSerial', 'TxtSerial', 'PnlSecret', 'PwdSecret', 'CmbTotpAlgorithm', 'CmbTotpTimeStep', 'TxtMethodHint', 'BtnExecute'
     'PnlHrdnrKey', 'TxtHrdnrKey', 'BtnLoadHrdnrKey', 'TxtHrdnrKeyStatus'
     # Result: Temporary Access Pass
     'PnlTap', 'TxtTapUser', 'TxtTapValue', 'TxtTapValidity', 'BtnCopyTap', 'BtnHideTap'
@@ -941,6 +941,9 @@ $BtnExecute.Add_Click({
             return
         }
         $options.Secret = $PwdSecret.Password
+        # Algorithm and time step of the card (printed on the order or in the seed file)
+        $options.HashFunction = [string]$CmbTotpAlgorithm.SelectedItem.Tag
+        $options.TimeStep = [int]$CmbTotpTimeStep.SelectedItem.Tag
     }
     $hrdnrKey = $null
     if ($ui.HrdnrKey) {
@@ -962,6 +965,7 @@ $BtnExecute.Add_Click({
 
     $question = T 'Config.Confirm' $methodName $user.UserPrincipalName
     if ($options.ContainsKey('SerialNumber')) { $question += "`n" + (T 'Config.ConfirmSerial' $options.SerialNumber) }
+    if ($options.ContainsKey('HashFunction')) { $question += "`n" + (T 'Config.ConfirmTotp' ([string]$CmbTotpAlgorithm.SelectedItem.Content) $options.TimeStep) }
     if ($hrdnrKey) { $question += "`n`n" + (T 'Config.ConfirmHrdnr' $hrdnrKey.KeyId) }
     if ($methodId -eq 'Tap') {
         $existingTap = @($DgMethods.ItemsSource | Where-Object { $null -ne $_ -and $_.Type -eq '#microsoft.graph.temporaryAccessPassAuthenticationMethod' })
