@@ -146,23 +146,17 @@
                        Foreground="{StaticResource MutedText}" Visibility="Collapsed"/>
         </Grid>
 
-        <Grid Grid.Row="3" Margin="20,10,20,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Name="TxtInvStatus" Text="" TextWrapping="Wrap"/>
-                <ProgressBar Name="PrgInv" Height="4" Margin="0,6,20,0" Visibility="Hidden" IsIndeterminate="True"/>
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <StackPanel Grid.Row="3" Margin="20,10,20,16">
+            <TextBlock Name="TxtInvStatus" Text="" TextWrapping="Wrap"/>
+                <ProgressBar Name="PrgInv" Height="4" Margin="0,6,0,0" Visibility="Hidden" IsIndeterminate="True"/>
+            <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
                 <Button Name="BtnInvBulkAssign" Uid="Inventory.BulkAssign" Style="{StaticResource SecondaryButton}"/>
                 <Button Name="BtnInvAssign" Uid="Inventory.Assign"/>
                 <Button Name="BtnInvActivate" Uid="Inventory.Activate"/>
                 <Button Name="BtnInvUnassign" Uid="Inventory.Unassign" Style="{StaticResource SecondaryButton}"/>
                 <Button Name="BtnInvDelete" Uid="Inventory.Delete" Style="{StaticResource DangerButton}"/>
                 <Button Name="BtnInvClose" Uid="Common.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
-            </StackPanel>
-        </Grid>
+            </WrapPanel>
+        </StackPanel>
     </Grid>
 </Window>

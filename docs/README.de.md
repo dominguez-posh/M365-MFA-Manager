@@ -227,11 +227,11 @@ Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als S
 
    Trennzeichen `;` oder `,`; die Reihenfolge der Spalten ist egal. **UPN ist optional**: Eine Zeile ohne UPN nimmt das Token nur ins Inventar auf – die Zuweisung erfolgt später im [Token-Inventar](#token-inventar), oder Sie wählen unter **Token ohne UPN** die **Mitglieder einer Gruppe** oder die **Benutzer einer CSV-Liste**: Der Testimport verteilt die Token dann in Dateireihenfolge, eines pro Benutzer, und der Import aktiviert sie. Optionale Spalten: `Manufacturer`, `Model`.
 2. **„CSV auswählen …“** lädt die Datei. **Algorithmus** (SHA-1 oder SHA-256) und **Zeitintervall** (30 oder 60 Sekunden) wählen – beides muss zu den Token passen (siehe Bestellung bzw. Seed-File).
-3. **„Testimport“** prüft jede Zeile, ohne etwas zu ändern: Base32-Secret, doppelte Seriennummern, ob der Benutzer existiert und ob die Seriennummer im Tenant schon zugewiesen ist. Die Zeilen werden grün/gelb/rot angezeigt.
-4. **„Import starten“** legt die fehlerfreien Token im Token-Inventar an, weist sie den Benutzern zu und aktiviert sie sofort. Zeilen mit Fehlern werden übersprungen; ein fehlgeschlagenes Token wird zurückgerollt. Jedes Token steht im Protokoll (ohne Secret).
-5. **„Excel-Export …“** speichert die Ergebnisliste (Seriennummer → Benutzer) als Nachweis und Übergabeliste. **„Letzten Import rückgängig“** entfernt die im letzten Lauf angelegten Token wieder von den Benutzern und aus dem Inventar (bis zum nächsten Testimport möglich).
+3. **„Prüfen“** prüft jede Zeile, ohne etwas zu ändern: Base32-Secret, doppelte Seriennummern, ob der Benutzer existiert und ob die Seriennummer im Tenant schon zugewiesen ist. Die Zeilen werden grün/gelb/rot angezeigt.
+4. **„Importieren“** legt die fehlerfreien Token im Token-Inventar an, weist sie den Benutzern zu und aktiviert sie sofort. Zeilen mit Fehlern werden übersprungen; ein fehlgeschlagenes Token wird zurückgerollt. Jedes Token steht im Protokoll (ohne Secret).
+5. **„Excel-Export …“** speichert die Ergebnisliste (Seriennummer → Benutzer) als Nachweis und Übergabeliste. **„Rückgängig“** entfernt die im letzten Lauf angelegten Token wieder von den Benutzern und aus dem Inventar (bis zum nächsten Testimport möglich).
 
-Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Testimport nötig.
+Nach einer Änderung von Datei, Algorithmus, Zeitintervall oder Verteilung ist ein neues „Prüfen“ nötig.
 
 ---
 
@@ -239,10 +239,10 @@ Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Tes
 
 **Werkzeuge ▾ → „Token-Inventar …“** listet alle Hardware-TOTP-Token des Tenants: freie Token (gelb), zugewiesene und aktivierte (grün), mit Modell, Algorithmus, Zeitintervall und zugewiesenem Benutzer. Mit Suche und Filter nach frei/zugewiesen.
 
-- **„Ausgewähltem Benutzer zuweisen …“**: Zuerst im Hauptfenster einen Benutzer auswählen, dann ein freies Token markieren. Den aktuell am Token angezeigten Code eingeben – das Token wird in einem Schritt zugewiesen und aktiviert (wie im Entra-Portal).
-- **„Freie Token zuweisen …“**: Verteilt alle freien Token an die Mitglieder einer Gruppe oder die Benutzer einer CSV-Liste, je eines in Reihenfolge der Seriennummern – **ohne Aktivierung**, weil die Secrets nicht mehr bekannt sind. Jeder Benutzer aktiviert sein Token unter [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) mit dem darauf angezeigten Code, oder Sie tun es über **„Aktivieren …“**. Die Zuordnungsliste (Seriennummer → Benutzer) wird direkt danach als Excel angeboten.
+- **„Zuweisen …“**: Zuerst im Hauptfenster einen Benutzer auswählen, dann ein freies Token markieren. Den aktuell am Token angezeigten Code eingeben – das Token wird in einem Schritt zugewiesen und aktiviert (wie im Entra-Portal).
+- **„Verteilen …“**: Verteilt alle freien Token an die Mitglieder einer Gruppe oder die Benutzer einer CSV-Liste, je eines in Reihenfolge der Seriennummern – **ohne Aktivierung**, weil die Secrets nicht mehr bekannt sind. Jeder Benutzer aktiviert sein Token unter [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) mit dem darauf angezeigten Code, oder Sie tun es über **„Aktivieren …“**. Die Zuordnungsliste (Seriennummer → Benutzer) wird direkt danach als Excel angeboten.
 - **„Aktivieren …“**: Aktiviert ein zugewiesenes, noch nicht aktiviertes Token mit dem darauf angezeigten Code.
-- **„Zuweisung lösen“**: Der Benutzer kann sich mit dem Token nicht mehr anmelden; es bleibt als freies Token im Inventar.
+- **„Lösen“**: Der Benutzer kann sich mit dem Token nicht mehr anmelden; es bleibt als freies Token im Inventar.
 - **„Löschen“**: Entfernt das Token aus dem Inventar (ein zugewiesenes Token wird zuerst beim Benutzer entfernt).
 
 ---
@@ -253,7 +253,7 @@ Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Tes
 
 1. Benutzer wählen: eine **CSV-Datei** (Spalte `UPN` oder ein UPN pro Zeile) oder die **Mitglieder einer Gruppe** (inkl. verschachtelter Gruppen).
 2. **Gültigkeit** (10–43200 Minuten) und **einmalig verwendbar** festlegen.
-3. **„Test“** löst die Benutzer auf, ohne etwas zu ändern. **„Pässe erstellen“** legt dann pro Benutzer einen Pass an; ein vorhandener Pass des Benutzers wird ersetzt.
+3. **„Prüfen“** löst die Benutzer auf, ohne etwas zu ändern. **„Erstellen“** legt dann pro Benutzer einen Pass an; ein vorhandener Pass des Benutzers wird ersetzt.
 4. **„Excel-Export …“** speichert die Liste mit den Pässen – sie enthält sie im Klartext, also nur an einem geschützten Ort speichern und nach der Übergabe löschen. Die Pässe stehen nie im Protokoll.
 
 ---

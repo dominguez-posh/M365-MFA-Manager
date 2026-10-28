@@ -193,23 +193,17 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <Grid Grid.Row="3" Margin="20,10,20,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Name="TxtTiStatus" Text="" TextWrapping="Wrap"/>
-                <ProgressBar Name="PrgTi" Height="4" Margin="0,6,20,0" Visibility="Hidden"/>
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <StackPanel Grid.Row="3" Margin="20,10,20,16">
+            <TextBlock Name="TxtTiStatus" Text="" TextWrapping="Wrap"/>
+                <ProgressBar Name="PrgTi" Height="4" Margin="0,6,0,0" Visibility="Hidden"/>
+            <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
                 <Button Name="BtnTiTest" Uid="Import.Test"/>
                 <Button Name="BtnTiImport" Uid="Import.Start" Style="{StaticResource ImportButton}" IsEnabled="False"/>
                 <Button Name="BtnTiUndo" Uid="Import.Undo" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
                 <Button Name="BtnTiExport" Uid="Report.Export" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
                 <Button Name="BtnTiCancel" Uid="Common.Cancel" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
                 <Button Name="BtnTiClose" Uid="Import.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
-            </StackPanel>
-        </Grid>
+            </WrapPanel>
+        </StackPanel>
     </Grid>
 </Window>
