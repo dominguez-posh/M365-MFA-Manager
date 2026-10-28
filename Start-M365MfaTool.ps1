@@ -15,7 +15,17 @@ param(
     # Set by Start.cmd: hide the console window. Windows Terminal ignores -WindowStyle and opens a tab,
     # so the script hides the window itself. Not set when started from a terminal by hand, because that
     # would hide the whole terminal window including other tabs.
-    [switch]$HideConsole
+    [switch]$HideConsole,
+
+    # Headless mode: create the tenant MFA report as an Excel file without the GUI, e.g.
+    #   powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Reports\MFA.xlsx
+    # The sign-in is still interactive. -Group: group name (beginning) or object ID instead of all users.
+    [switch]$Report,
+    [string]$OutFile,
+    [string]$Group,
+    [switch]$IncludeDisabled,
+    [switch]$IncludeGuests,
+    [string]$Language
 )
 
 $ErrorActionPreference = 'Stop'
@@ -30,6 +40,8 @@ if ($PSVersionTable.PSEdition -ne 'Desktop') {
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
 
 $script:AppRoot = Split-Path -Parent $PSCommandPath
+$script:AppVersion = '1.3.0'
+$script:RepoUrl = 'https://github.com/dominguez-posh/M365-MFA-Manager'
 # -Global so that all modules can use each other's functions (T, Invoke-M365GraphRequest, etc.).
 Import-Module (Join-Path $script:AppRoot 'Modules\Localization.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\Graph.psm1') -Force -Global
@@ -90,12 +102,61 @@ $script:HrdnrKeyTenant = ""
 $script:HrdnrKeys = ConvertTo-HrdnrKeyMap $(if ($settings.PSObject.Properties['HrdnrKeys']) { $settings.HrdnrKeys } else { $null })
 Initialize-Localization -Path (Join-Path $script:AppRoot 'Languages') -Language $(if ($settings.PSObject.Properties['Language']) { $settings.Language } else { 'en' })
 
+if ($Report) {
+    # Headless: tenant MFA report as Excel without the GUI (e.g. a scheduled run). The GUI is never loaded.
+    if ($Language) { Set-UiLanguage -Language $Language }
+    $exitCode = 0
+    try {
+        if (-not $OutFile) { $OutFile = Join-Path (Get-Location).Path ('MFA-Status_{0:yyyy-MM-dd}.xlsx' -f (Get-Date)) }
+        Write-Host (T 'Log.SigningIn')
+        $context = Connect-M365Graph
+        Write-Host (T 'Log.SignedIn' $context.Account) -ForegroundColor Green
+
+        $groupId = $null
+        $scopeText = T 'Report.Scope.All'
+        if ($Group) {
+            $groups = @(Find-M365Group -SearchTerm $Group)
+            if ($groups.Count -ne 1) { throw (T 'Headless.GroupAmbiguous' $Group $groups.Count) }
+            $groupId = $groups[0].Id
+            $scopeText = T 'Report.Scope.GroupName' $groups[0].DisplayName
+        }
+        if (-not $IncludeDisabled) { $scopeText += ', ' + (T 'Report.EnabledOnly') }
+        if ($IncludeGuests) { $scopeText += ', ' + (T 'Report.IncludeGuests') }
+        Write-Host (T 'Log.ReportStarted' $scopeText)
+
+        $rows = New-Object System.Collections.Generic.List[object]
+        $result = Invoke-M365TenantMfaReport -GroupId $groupId -IncludeDisabled:$IncludeDisabled -IncludeGuests:$IncludeGuests -IncludeSignIn `
+            -OnProgress { param($Message) Write-Host $Message } `
+            -OnWarning { param($Message) Write-Warning $Message } `
+            -OnInfo { param($Message) Write-Host $Message } `
+            -OnRows { param($Rows, $Done, $Total) foreach ($row in $Rows) { $rows.Add($row) } }
+        if (-not $rows.Count) { throw (T 'Report.Status.NoUsers') }
+
+        $tenantName = Get-M365OrganizationName
+        $tenant = if ($tenantName) { '{0} ({1})' -f $tenantName, $context.TenantId } else { $context.TenantId }
+        Export-M365MfaReportXlsx -Path $OutFile -Rows $rows.ToArray() -Tenant $tenant -ScopeText $scopeText -FilterText ''
+        $levels = @{}
+        foreach ($level in 'Red', 'Yellow', 'Green') { $levels[$level] = @($rows | Where-Object Level -eq $level).Count }
+        Write-Host (T 'Log.ReportFinished' $result.Total $levels.Red $levels.Yellow $levels.Green) -ForegroundColor Green
+        Write-Host (T 'Headless.Saved' $OutFile)
+    }
+    catch {
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        $exitCode = 1
+    }
+    finally {
+        Disconnect-M365Graph
+    }
+    exit $exitCode
+}
+
 [xml]$xaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\MainWindow.xaml') -Raw -Encoding UTF8
 $window = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($xaml))
+$window.Title = "M365 MFA Administration $($script:AppVersion)"
 
 $controlNames = @(
     # Header and connection
-    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnTotpImport', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
+    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
     # User search (results in popup)
     'TxtSearch', 'BtnSearch', 'PopUsers', 'TxtUserHits', 'DgUsers'
     # MFA methods
@@ -326,6 +387,8 @@ function Set-Busy {
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
     $script:BtnBreakGlass.IsEnabled      = -not $Busy -and $connected
     $script:BtnTotpImport.IsEnabled      = -not $Busy -and $connected
+    $script:BtnTokenInventory.IsEnabled  = -not $Busy -and $connected
+    $script:BtnBulkTap.IsEnabled         = -not $Busy -and $connected
     $script:BtnTenantReport.IsEnabled    = -not $Busy -and $connected
     $script:CmbLanguage.IsEnabled        = -not $Busy
     $script:BtnSearch.IsEnabled          = -not $Busy -and $connected
@@ -1739,7 +1802,10 @@ function Set-TiBusy {
         $control.IsEnabled = -not $Busy
     }
     $ready = @($ti.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
+    $imported = @($ti.Results | Where-Object { $_.Status -eq 'Imported' -and $_.DeviceId }).Count
     $ti.BtnTiImport.IsEnabled = -not $Busy -and $ti.Tested -and $ready -gt 0
+    $ti.BtnTiUndo.IsEnabled = -not $Busy -and $imported -gt 0
+    $ti.BtnTiExport.IsEnabled = -not $Busy -and @($ti.Results).Count -gt 0
     $ti.BtnTiCancel.IsEnabled = $Busy
     $ti.PrgTi.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
     [System.Windows.Forms.Application]::DoEvents()
@@ -1830,7 +1896,7 @@ function Start-TotpImportTest {
         $ti.Results = @(Test-TotpImport -Rows $rows -HashFunction $hashFunction -OnProgress {
             param($Done, $Total)
             if ($Done % 10 -eq 0 -or $Done -eq $Total) { Set-TiStatus (T 'Import.Status.Testing' $Done $Total) }
-        } -ShouldCancel { $script:Ti.Cancel })
+        } -ShouldCancel { $script:Ti.Cancel } -Wait { param($Milliseconds) Wait-Ui $Milliseconds })
         $ti.DgTi.ItemsSource = $ti.Results
         if ($ti.Cancel) {
             # An incomplete test is not a basis for the import
@@ -1905,6 +1971,76 @@ function Get-TiTenantLabel {
     if ($script:Context) { $script:Context.TenantId } else { '-' }
 }
 
+function Get-TiSettingsText {
+    # "SHA-256, 60 s" for the confirmation and the export
+    $hashFunction = Get-TiHashFunction
+    $algorithm = if ($hashFunction -eq 'hmacsha256') { 'SHA-256' } else { 'SHA-1' }
+    '{0}, {1} s' -f $algorithm, [int]$script:Ti.CmbTiTimeStep.SelectedItem.Tag
+}
+
+function Undo-LastTotpImport {
+    $ti = $script:Ti
+    $count = @($ti.Results | Where-Object { $_.Status -eq 'Imported' -and $_.DeviceId }).Count
+    if (-not $count) { return }
+    if (-not (Confirm-Action -Text (T 'Import.UndoConfirm' $count) -Title (T 'Import.Title'))) { return }
+
+    $ti.Cancel = $false
+    try {
+        Set-TiBusy $true
+        $ti.PrgTi.Value = 0
+        Write-UiLog (T 'Import.Log.UndoStarted' $count) 'Warning'
+        Undo-TotpImport -Results $ti.Results -OnProgress {
+            param($Result, $Done, $Total)
+            if ($Result.Status -eq 'Reverted') { Write-UiLog (T 'Import.Log.Reverted' $Result.SerialNumber $Result.Upn) 'Success' }
+            else { Write-UiLog (T 'Import.Log.UndoFailed' $Result.SerialNumber $Result.Upn $Result.Message) 'Error' }
+            $script:Ti.PrgTi.Value = if ($Total) { 100 * $Done / $Total } else { 100 }
+            $script:Ti.DgTi.Items.Refresh()
+            Set-TiStatus (T 'Import.Status.Undoing' $Done $Total)
+        } -ShouldCancel { $script:Ti.Cancel }
+    }
+    catch {
+        Write-UiError -Message (T 'Import.Failed' $_.Exception.Message) -Title (T 'Import.Title')
+    }
+    finally {
+        $ti.DgTi.Items.Refresh()
+        Set-TiBusy $false
+    }
+
+    $reverted = @($ti.Results | Where-Object Status -eq 'Reverted').Count
+    $failed = @($ti.Results | Where-Object Status -eq 'UndoFailed').Count
+    $summary = T 'Import.UndoDone' $reverted $failed
+    Set-TiStatus $summary
+    Write-UiLog $summary $(if ($failed) { 'Warning' } else { 'Success' })
+    if ($ti.CloseRequested) { $ti.Window.Close() }
+}
+
+function Export-TotpImportResults {
+    $ti = $script:Ti
+    $rows = @($ti.Results)
+    if (-not $rows.Count) {
+        Show-Message -Text (T 'Report.NothingToExport') -Title (T 'Import.Title')
+        return
+    }
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Report.Export'
+    $dialog.Filter = (T 'Report.ExcelFilter') + ' (*.xlsx)|*.xlsx'
+    $dialog.FileName = 'TOTP-Import_{0:yyyy-MM-dd_HHmm}.xlsx' -f (Get-Date)
+    if (-not $dialog.ShowDialog($ti.Window)) { return }
+
+    try {
+        Export-TotpImportXlsx -Path $dialog.FileName -Rows $rows -Tenant (Get-TiTenantLabel) `
+            -FileName ([System.IO.Path]::GetFileName($ti.TxtTiFile.Text)) -Settings (Get-TiSettingsText)
+        Write-UiLog (T 'Import.Exported' $dialog.FileName)
+    }
+    catch {
+        Write-UiError -Message (T 'Report.ExportFailed' $_.Exception.Message) -Title (T 'Import.Title')
+        return
+    }
+    if (Confirm-Action -Text (T 'Report.OpenFile' $dialog.FileName) -Title (T 'Import.Title') -Icon Question -DefaultYes) {
+        Start-Process -FilePath $dialog.FileName
+    }
+}
+
 function Show-TotpImportWindow {
     [xml]$importXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\TotpImportWindow.xaml') -Raw -Encoding UTF8
     $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($importXaml))
@@ -1914,7 +2050,7 @@ function Show-TotpImportWindow {
     $script:Ti = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
     foreach ($name in @(
         'TxtTiTenant', 'TxtTiFile', 'BtnTiBrowse', 'BtnTiSample', 'RbTiSha1', 'RbTiSha256', 'CmbTiTimeStep'
-        'DgTi', 'TxtTiStatus', 'PrgTi', 'BtnTiTest', 'BtnTiImport', 'BtnTiCancel', 'BtnTiClose'
+        'DgTi', 'TxtTiStatus', 'PrgTi', 'BtnTiTest', 'BtnTiImport', 'BtnTiUndo', 'BtnTiExport', 'BtnTiCancel', 'BtnTiClose'
     )) {
         $script:Ti[$name] = $dialog.FindName($name)
     }
@@ -1927,6 +2063,8 @@ function Show-TotpImportWindow {
     $ti.BtnTiSample.Add_Click({ Save-TotpImportSample })
     $ti.BtnTiTest.Add_Click({ Start-TotpImportTest })
     $ti.BtnTiImport.Add_Click({ Start-TotpImport })
+    $ti.BtnTiUndo.Add_Click({ Undo-LastTotpImport })
+    $ti.BtnTiExport.Add_Click({ Export-TotpImportResults })
     $ti.BtnTiClose.Add_Click({ $script:Ti.Window.Close() })
     $ti.BtnTiCancel.Add_Click({
         $script:Ti.Cancel = $true
@@ -1961,6 +2099,557 @@ $BtnTotpImport.Add_Click({
 
 #endregion
 
+#region Token inventory
+
+function Set-InvBusy {
+    param([bool]$Busy)
+    $inv = $script:Inv
+    $inv.Running = $Busy
+    foreach ($control in $inv.BtnInvRefresh, $inv.TxtInvSearch, $inv.CmbInvFilter, $inv.BtnInvClose) { $control.IsEnabled = -not $Busy }
+    $selected = @($inv.DgInv.SelectedItems | Where-Object { $null -ne $_ })
+    $inv.BtnInvAssign.IsEnabled = -not $Busy -and $selected.Count -eq 1 -and -not $selected[0].IsAssigned
+    $inv.BtnInvUnassign.IsEnabled = -not $Busy -and $selected.Count -gt 0 -and @($selected | Where-Object IsAssigned).Count -eq $selected.Count
+    $inv.BtnInvDelete.IsEnabled = -not $Busy -and $selected.Count -gt 0
+    $inv.PrgInv.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Set-InvStatus {
+    param([string]$Message)
+    $script:Inv.TxtInvStatus.Text = $Message
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Update-InvCounts {
+    $inv = $script:Inv
+    $all = @($inv.Devices)
+    $free = @($all | Where-Object { -not $_.IsAssigned }).Count
+    $inv.TxtInvCount.Text = T 'Inventory.Count' $all.Count $free $inv.View.Count
+    $inv.TxtInvEmpty.Visibility = if ($all.Count) { 'Collapsed' } else { 'Visible' }
+}
+
+function Update-InvFilter {
+    $inv = $script:Inv
+    $inv.SearchText = $inv.TxtInvSearch.Text.Trim()
+    $inv.Filter = [string]$inv.CmbInvFilter.SelectedItem.Tag
+    $inv.View.Refresh()
+    Update-InvCounts
+}
+
+function Connect-InvView {
+    # Sorted by serial number, filtered by free/assigned and search text
+    $inv = $script:Inv
+    $view = [System.Windows.Data.ListCollectionView]::new($inv.Devices)
+    $view.Filter = [Predicate[object]]{
+        param($device)
+        $state = $script:Inv
+        if ($state.Filter -eq 'Free' -and $device.IsAssigned) { return $false }
+        if ($state.Filter -eq 'Assigned' -and -not $device.IsAssigned) { return $false }
+        if ($state.SearchText -and $device.SearchText.IndexOf($state.SearchText, [StringComparison]::OrdinalIgnoreCase) -lt 0) { return $false }
+        $true
+    }
+    $inv.View = $view
+    $inv.DgInv.ItemsSource = $view
+    $view.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription 'SerialNumber', 'Ascending'))
+    Update-InvCounts
+}
+
+function Update-TokenInventory {
+    $inv = $script:Inv
+    try {
+        Set-InvBusy $true
+        Set-InvStatus (T 'Inventory.Loading')
+        $devices = New-Object System.Collections.ObjectModel.ObservableCollection[object]
+        foreach ($device in @(Get-M365HardwareOathDevices)) { $devices.Add($device) }
+        $inv.Devices = $devices
+        Connect-InvView
+        Set-InvStatus (T 'Inventory.Loaded' $devices.Count)
+    }
+    catch {
+        Set-InvStatus ''
+        Write-UiError -Message (T 'Inventory.Failed' $_.Exception.Message) -Title (T 'Inventory.Title')
+    }
+    finally {
+        Set-InvBusy $false
+    }
+}
+
+function Invoke-InvAssign {
+    # Assigns the selected free token to the user selected in the main window; the code shown on the token activates it.
+    $inv = $script:Inv
+    $device = $inv.DgInv.SelectedItem
+    $user = $script:SelectedUser
+    if ($null -eq $device -or $device.IsAssigned) { return }
+    if ($null -eq $user) {
+        Show-Message -Text (T 'Inventory.NoUser') -Title (T 'Inventory.Title')
+        return
+    }
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    $code = [Microsoft.VisualBasic.Interaction]::InputBox((T 'Inventory.CodePrompt' $device.SerialNumber $user.UserPrincipalName), (T 'Inventory.Assign'), '')
+    if ([string]::IsNullOrWhiteSpace($code)) { return }
+    if ($code.Trim() -notmatch '^\d{6,8}$') {
+        Show-Message -Text (T 'Inventory.InvalidCode') -Title (T 'Inventory.Title') -Icon Warning
+        return
+    }
+    try {
+        Set-InvBusy $true
+        Set-InvStatus (T 'Inventory.Assigning' $device.SerialNumber $user.UserPrincipalName)
+        Set-M365HardwareOathAssignment -Device $device -User $user -VerificationCode $code
+        $inv.Changed = $true
+        Write-UiLog (T 'Inventory.Assigned' $device.SerialNumber $user.UserPrincipalName) 'Success'
+    }
+    catch {
+        Write-UiError -Message (T 'Inventory.AssignFailed' $device.SerialNumber $_.Exception.Message) -Title (T 'Inventory.Title')
+    }
+    finally {
+        Set-InvBusy $false
+    }
+    Update-TokenInventory
+}
+
+function Invoke-InvUnassign {
+    $inv = $script:Inv
+    $devices = @($inv.DgInv.SelectedItems | Where-Object { $null -ne $_ -and $_.IsAssigned })
+    if (-not $devices.Count) { return }
+    if (-not (Confirm-Action -Text (T 'Inventory.UnassignConfirm' $devices.Count) -Title (T 'Inventory.Title'))) { return }
+    try {
+        Set-InvBusy $true
+        foreach ($device in $devices) {
+            try {
+                Remove-M365HardwareOathAssignment -Device $device
+                $inv.Changed = $true
+                Write-UiLog (T 'Inventory.Unassigned' $device.SerialNumber $device.AssignedToName) 'Success'
+            }
+            catch {
+                Write-UiLog (T 'Inventory.ActionFailed' $device.SerialNumber $_.Exception.Message) 'Error'
+            }
+        }
+    }
+    finally {
+        Set-InvBusy $false
+    }
+    Update-TokenInventory
+}
+
+function Invoke-InvDelete {
+    $inv = $script:Inv
+    $devices = @($inv.DgInv.SelectedItems | Where-Object { $null -ne $_ })
+    if (-not $devices.Count) { return }
+    $assigned = @($devices | Where-Object IsAssigned).Count
+    $question = T 'Inventory.DeleteConfirm' $devices.Count
+    if ($assigned) { $question += "`n`n" + (T 'Inventory.DeleteConfirmAssigned' $assigned) }
+    if (-not (Confirm-Action -Text $question -Title (T 'Inventory.Title'))) { return }
+    try {
+        Set-InvBusy $true
+        foreach ($device in $devices) {
+            try {
+                Remove-M365HardwareOathDevice -Device $device
+                $inv.Changed = $true
+                Write-UiLog (T 'Inventory.Deleted' $device.SerialNumber) 'Success'
+            }
+            catch {
+                Write-UiLog (T 'Inventory.ActionFailed' $device.SerialNumber $_.Exception.Message) 'Error'
+            }
+        }
+    }
+    finally {
+        Set-InvBusy $false
+    }
+    Update-TokenInventory
+}
+
+function Show-TokenInventoryWindow {
+    <#
+    .SYNOPSIS
+        Shows the hardware OATH token inventory. Returns $true if tokens were changed.
+    #>
+    [xml]$inventoryXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\TokenInventoryWindow.xaml') -Raw -Encoding UTF8
+    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($inventoryXaml))
+    $dialog.Owner = $window
+    Update-ElementTexts -Root $dialog
+
+    $script:Inv = @{ Window = $dialog; Devices = (New-Object System.Collections.ObjectModel.ObservableCollection[object]); View = $null
+                     Running = $false; Filter = 'All'; SearchText = ''; Changed = $false }
+    foreach ($name in @(
+        'TxtInvTenant', 'TxtInvSearch', 'CmbInvFilter', 'TxtInvCount', 'BtnInvRefresh', 'DgInv', 'TxtInvEmpty'
+        'TxtInvStatus', 'PrgInv', 'BtnInvAssign', 'BtnInvUnassign', 'BtnInvDelete', 'BtnInvClose'
+    )) {
+        $script:Inv[$name] = $dialog.FindName($name)
+    }
+    $inv = $script:Inv
+    foreach ($column in $inv.DgInv.Columns) { $column.Header = T ([string]$column.Header) }
+    $inv.TxtInvTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
+    $inv.BtnInvAssign.ToolTip = T 'Inventory.Assign.ToolTip'
+    Connect-InvView
+    Set-InvBusy $false
+
+    $inv.BtnInvRefresh.Add_Click({ Update-TokenInventory })
+    $inv.BtnInvAssign.Add_Click({ Invoke-InvAssign })
+    $inv.BtnInvUnassign.Add_Click({ Invoke-InvUnassign })
+    $inv.BtnInvDelete.Add_Click({ Invoke-InvDelete })
+    $inv.BtnInvClose.Add_Click({ $script:Inv.Window.Close() })
+    $inv.CmbInvFilter.Add_SelectionChanged({ Update-InvFilter })
+    $inv.DgInv.Add_SelectionChanged({ if (-not $script:Inv.Running) { Set-InvBusy $false } })
+
+    # Search: filter shortly after the last keystroke
+    $inv.SearchTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $inv.SearchTimer.Interval = [TimeSpan]::FromMilliseconds(300)
+    $inv.SearchTimer.Add_Tick({
+        $script:Inv.SearchTimer.Stop()
+        Update-InvFilter
+    })
+    $inv.TxtInvSearch.Add_TextChanged({
+        $script:Inv.SearchTimer.Stop()
+        $script:Inv.SearchTimer.Start()
+    })
+
+    # Load after the window is visible, so the progress is shown
+    $dialog.Add_Loaded({ Update-TokenInventory })
+    $dialog.Add_Closing({
+        param($src, $closingArgs)
+        if ($script:Inv.Running) { $closingArgs.Cancel = $true }
+    })
+
+    $dialog.ShowDialog() | Out-Null
+    $inv.SearchTimer.Stop()
+    $script:Inv.Changed
+}
+
+$BtnTokenInventory.Add_Click({
+    $changed = Show-TokenInventoryWindow
+    $script:Inv = $null
+    if ($changed -and $null -ne $script:SelectedUser) { Update-MfaView }
+})
+
+#endregion
+
+#region Bulk Temporary Access Pass
+
+function Set-BtBusy {
+    param([bool]$Busy)
+    $bt = $script:Bt
+    $bt.Running = $Busy
+    foreach ($control in $bt.RbBtCsv, $bt.RbBtGroup, $bt.BtnBtBrowse, $bt.TxtBtGroupSearch, $bt.BtnBtFindGroup, $bt.CmbBtGroup,
+                         $bt.TxtBtLifetime, $bt.ChkBtUsableOnce, $bt.BtnBtTest, $bt.BtnBtClose) {
+        $control.IsEnabled = -not $Busy
+    }
+    $ready = @($bt.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
+    $bt.BtnBtStart.IsEnabled = -not $Busy -and $bt.Tested -and $ready -gt 0
+    $bt.BtnBtExport.IsEnabled = -not $Busy -and @($bt.Results).Count -gt 0
+    $bt.BtnBtCancel.IsEnabled = $Busy
+    $bt.PrgBt.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Set-BtStatus {
+    param([string]$Message)
+    $script:Bt.TxtBtStatus.Text = $Message
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Reset-BtTest {
+    # A changed source invalidates the test
+    $bt = $script:Bt
+    if (-not $bt.Tested) { return }
+    $bt.Tested = $false
+    $bt.Results = @()
+    $bt.DgBt.ItemsSource = $null
+    Set-BtStatus (T 'Import.Status.TestAgain')
+    Set-BtBusy $false
+}
+
+function Get-BtSourceText {
+    # "file.csv" or "group 'Name'" for the confirmation and the export
+    $bt = $script:Bt
+    if ($bt.RbBtGroup.IsChecked) {
+        $group = $bt.CmbBtGroup.SelectedItem
+        if ($group) { T 'Report.Scope.GroupName' $group.DisplayName } else { '' }
+    }
+    else {
+        [System.IO.Path]::GetFileName([string]$bt.TxtBtFile.Text)
+    }
+}
+
+function Get-BtRows {
+    # Users to process: Line and UPN from the CSV or the (transitive) members of the group
+    $bt = $script:Bt
+    if ($bt.RbBtGroup.IsChecked) {
+        $group = $bt.CmbBtGroup.SelectedItem
+        if ($null -eq $group) { throw (T 'Report.SelectGroup') }
+        $line = 0
+        foreach ($user in @(Get-M365ReportUsers -GroupId $group.Id | Sort-Object UserPrincipalName)) {
+            $line++
+            [pscustomobject]@{ Line = $line; Upn = $user.UserPrincipalName }
+        }
+    }
+    else {
+        if (-not $bt.TxtBtFile.Text) { throw (T 'Import.NoFile') }
+        Read-UpnListFile -Path $bt.TxtBtFile.Text
+    }
+}
+
+function Get-BtLifetime {
+    # Lifetime in minutes (Graph allows 10 to 43200), $null if invalid
+    $text = $script:Bt.TxtBtLifetime.Text.Trim()
+    $minutes = 0
+    if ([int]::TryParse($text, [ref]$minutes) -and $minutes -ge 10 -and $minutes -le 43200) { $minutes } else { $null }
+}
+
+function Find-BtGroup {
+    $bt = $script:Bt
+    $term = $bt.TxtBtGroupSearch.Text.Trim()
+    if (-not $term) {
+        Show-Message -Text (T 'Report.GroupSearchEmpty') -Title (T 'BulkTap.Title')
+        return
+    }
+    try {
+        Set-BtBusy $true
+        $groups = @(Find-M365Group -SearchTerm $term)
+    }
+    catch {
+        Write-UiError -Message $_.Exception.Message -Title (T 'BulkTap.Title')
+        return
+    }
+    finally {
+        Set-BtBusy $false
+    }
+    Reset-BtTest
+    $bt.CmbBtGroup.ItemsSource = $groups
+    if (-not $groups.Count) {
+        Show-Message -Text (T 'Report.NoGroups' $term) -Title (T 'BulkTap.Title')
+        return
+    }
+    $bt.CmbBtGroup.SelectedIndex = 0
+    if ($groups.Count -gt 1) { $bt.CmbBtGroup.IsDropDownOpen = $true }
+    Set-BtStatus (T 'Report.GroupsFound' $groups.Count)
+}
+
+function Start-BtTest {
+    $bt = $script:Bt
+    if ($null -eq (Get-BtLifetime)) {
+        Show-Message -Text (T 'BulkTap.InvalidLifetime') -Title (T 'BulkTap.Title')
+        $bt.TxtBtLifetime.Focus() | Out-Null
+        return
+    }
+    Reset-BtTest
+    try {
+        Set-BtBusy $true
+        $bt.PrgBt.IsIndeterminate = $true
+        Set-BtStatus (T 'Import.Status.Reading')
+        $rows = @(Get-BtRows)
+        if (-not $rows.Count) { throw (T 'Import.EmptyFile') }
+        $bt.Results = @(Test-TapBulk -Rows $rows -Wait { param($Milliseconds) Wait-Ui $Milliseconds })
+        $bt.DgBt.ItemsSource = $bt.Results
+        $bt.Tested = $true
+        $counts = @{ OK = 0; Warning = 0; Error = 0 }
+        foreach ($result in $bt.Results) { $counts[$result.Status]++ }
+        $summary = T 'Import.TestDone' $bt.Results.Count $counts.OK $counts.Warning $counts.Error
+        Set-BtStatus $summary
+        Write-UiLog ('{0}: {1} ({2})' -f (T 'BulkTap.Title'), $summary, (Get-BtSourceText))
+    }
+    catch {
+        Set-BtStatus ''
+        Write-UiError -Message (T 'BulkTap.Failed' $_.Exception.Message) -Title (T 'BulkTap.Title')
+    }
+    finally {
+        $bt.PrgBt.IsIndeterminate = $false
+        Set-BtBusy $false
+    }
+}
+
+function Start-BtCreate {
+    $bt = $script:Bt
+    $lifetime = Get-BtLifetime
+    if ($null -eq $lifetime) {
+        Show-Message -Text (T 'BulkTap.InvalidLifetime') -Title (T 'BulkTap.Title')
+        return
+    }
+    $usableOnce = [bool]$bt.ChkBtUsableOnce.IsChecked
+    $ready = @($bt.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
+    $onceText = if ($usableOnce) { T 'Tap.UsableOnce' } else { T 'Tap.UsableMultiple' }
+    $question = T 'BulkTap.Confirm' $ready $lifetime $onceText (Get-TiTenantLabel)
+    if (-not (Confirm-Action -Text $question -Title (T 'BulkTap.Title'))) { return }
+
+    $bt.Cancel = $false
+    $bt.Tested = $false   # a second run needs a new test (the TAPs would be replaced)
+    try {
+        Set-BtBusy $true
+        $bt.PrgBt.Value = 0
+        Write-UiLog (T 'BulkTap.Log.Started' $ready $lifetime $onceText) 'Warning'
+        Invoke-TapBulk -Results $bt.Results -LifetimeMinutes $lifetime -UsableOnce:$usableOnce `
+            -OnProgress {
+                param($Result, $Done, $Total)
+                # The TAP itself is never logged
+                if ($Result.Status -eq 'Created') { Write-UiLog (T 'BulkTap.Log.Created' $Result.Upn $Result.ValidText) 'Success' }
+                else { Write-UiLog (T 'BulkTap.Log.Failed' $Result.Upn $Result.Message) 'Error' }
+                $script:Bt.PrgBt.Value = if ($Total) { 100 * $Done / $Total } else { 100 }
+                $script:Bt.DgBt.Items.Refresh()
+                Set-BtStatus (T 'BulkTap.Status.Creating' $Done $Total)
+            } `
+            -ShouldCancel { $script:Bt.Cancel } `
+            -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
+    }
+    catch {
+        Write-UiError -Message (T 'BulkTap.Failed' $_.Exception.Message) -Title (T 'BulkTap.Title')
+    }
+    finally {
+        $bt.DgBt.Items.Refresh()
+        Set-BtBusy $false
+    }
+
+    $created = @($bt.Results | Where-Object Status -eq 'Created').Count
+    $failed = @($bt.Results | Where-Object Status -eq 'Failed').Count
+    $summary = T 'BulkTap.Done' $created $failed ($ready - $created - $failed)
+    Set-BtStatus $summary
+    Write-UiLog $summary $(if ($failed) { 'Warning' } else { 'Success' })
+    if ($bt.CloseRequested) { $bt.Window.Close() }
+}
+
+function Export-BtResults {
+    $bt = $script:Bt
+    $rows = @($bt.Results)
+    if (-not $rows.Count) {
+        Show-Message -Text (T 'Report.NothingToExport') -Title (T 'BulkTap.Title')
+        return
+    }
+    # The file contains the passes in clear text
+    if (@($rows | Where-Object Status -eq 'Created').Count -and -not (Confirm-Action -Text (T 'BulkTap.ExportWarning') -Title (T 'BulkTap.Title'))) { return }
+
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Report.Export'
+    $dialog.Filter = (T 'Report.ExcelFilter') + ' (*.xlsx)|*.xlsx'
+    $dialog.FileName = 'TAP_{0:yyyy-MM-dd_HHmm}.xlsx' -f (Get-Date)
+    if (-not $dialog.ShowDialog($bt.Window)) { return }
+
+    try {
+        $onceText = if ($bt.ChkBtUsableOnce.IsChecked) { T 'Tap.UsableOnce' } else { T 'Tap.UsableMultiple' }
+        Export-TapBulkXlsx -Path $dialog.FileName -Rows $rows -Tenant (Get-TiTenantLabel) -Source (Get-BtSourceText) `
+            -Settings ('{0} min, {1}' -f $bt.TxtBtLifetime.Text.Trim(), $onceText)
+        Write-UiLog (T 'BulkTap.Exported' $dialog.FileName) 'Warning'
+    }
+    catch {
+        Write-UiError -Message (T 'Report.ExportFailed' $_.Exception.Message) -Title (T 'BulkTap.Title')
+        return
+    }
+    if (Confirm-Action -Text (T 'Report.OpenFile' $dialog.FileName) -Title (T 'BulkTap.Title') -Icon Question -DefaultYes) {
+        Start-Process -FilePath $dialog.FileName
+    }
+}
+
+function Show-BulkTapWindow {
+    [xml]$tapXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\BulkTapWindow.xaml') -Raw -Encoding UTF8
+    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($tapXaml))
+    $dialog.Owner = $window
+    Update-ElementTexts -Root $dialog
+
+    $script:Bt = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
+    foreach ($name in @(
+        'TxtBtTenant', 'RbBtCsv', 'RbBtGroup', 'PnlBtCsv', 'TxtBtFile', 'BtnBtBrowse', 'PnlBtGroup', 'TxtBtGroupSearch', 'BtnBtFindGroup', 'CmbBtGroup'
+        'TxtBtLifetime', 'ChkBtUsableOnce', 'DgBt', 'TxtBtStatus', 'PrgBt', 'BtnBtTest', 'BtnBtStart', 'BtnBtExport', 'BtnBtCancel', 'BtnBtClose'
+    )) {
+        $script:Bt[$name] = $dialog.FindName($name)
+    }
+    $bt = $script:Bt
+    foreach ($column in $bt.DgBt.Columns) { $column.Header = T ([string]$column.Header) }
+    $bt.TxtBtTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
+    Set-BtBusy $false
+
+    $updateSource = {
+        $group = [bool]$script:Bt.RbBtGroup.IsChecked
+        $script:Bt.PnlBtCsv.Visibility = if ($group) { 'Collapsed' } else { 'Visible' }
+        $script:Bt.PnlBtGroup.Visibility = if ($group) { 'Visible' } else { 'Collapsed' }
+        Reset-BtTest
+    }
+    $bt.RbBtCsv.Add_Checked($updateSource)
+    $bt.RbBtGroup.Add_Checked($updateSource)
+    $bt.BtnBtBrowse.Add_Click({
+        $open = New-Object Microsoft.Win32.OpenFileDialog
+        $open.Title = T 'Import.Browse'
+        $open.Filter = (T 'Import.CsvFilter') + ' (*.csv;*.txt)|*.csv;*.txt'
+        if (-not $open.ShowDialog($script:Bt.Window)) { return }
+        Reset-BtTest
+        $script:Bt.TxtBtFile.Text = $open.FileName
+        Set-BtStatus ''
+    })
+    $bt.BtnBtFindGroup.Add_Click({ Find-BtGroup })
+    $bt.TxtBtGroupSearch.Add_KeyDown({
+        param($src, $keyArgs)
+        if ($keyArgs.Key -eq 'Enter') { Find-BtGroup }
+    })
+    $bt.CmbBtGroup.Add_SelectionChanged({ Reset-BtTest })
+    $bt.TxtBtLifetime.Add_TextChanged({ Reset-BtTest })
+    $bt.ChkBtUsableOnce.Add_Click({ Reset-BtTest })
+    $bt.BtnBtTest.Add_Click({ Start-BtTest })
+    $bt.BtnBtStart.Add_Click({ Start-BtCreate })
+    $bt.BtnBtExport.Add_Click({ Export-BtResults })
+    $bt.BtnBtClose.Add_Click({ $script:Bt.Window.Close() })
+    $bt.BtnBtCancel.Add_Click({
+        $script:Bt.Cancel = $true
+        $script:Bt.BtnBtCancel.IsEnabled = $false
+        Set-BtStatus (T 'Import.Status.Cancelling')
+    })
+
+    # Closing during a run: cancel first, the window closes after the current user.
+    $dialog.Add_Closing({
+        param($src, $closingArgs)
+        if ($script:Bt.Running) {
+            $script:Bt.Cancel = $true
+            $script:Bt.CloseRequested = $true
+            $closingArgs.Cancel = $true
+            Set-BtStatus (T 'Import.Status.Cancelling')
+        }
+    })
+
+    $dialog.ShowDialog() | Out-Null
+    # The passes are not kept after the window is closed
+    foreach ($result in $script:Bt.Results) { $result.Pass = '' }
+}
+
+$BtnBulkTap.Add_Click({
+    Show-BulkTapWindow
+    $script:Bt = $null
+    if ($null -ne $script:SelectedUser) { Update-MfaView }
+})
+
+#endregion
+
+#region Update check
+
+function Start-UpdateCheck {
+    # Compares the version with the latest GitHub release in the background; the result is only a log line.
+    try {
+        $script:UpdateJob = Start-Job -ArgumentList $script:RepoUrl -ScriptBlock {
+            param($RepoUrl)
+            [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+            $api = $RepoUrl -replace '^https://github\.com/', 'https://api.github.com/repos/'
+            $release = Invoke-RestMethod -Uri "$api/releases/latest" -Headers @{ 'User-Agent' = 'M365MfaTool' } -TimeoutSec 15
+            [pscustomobject]@{ Tag = [string]$release.tag_name; Url = [string]$release.html_url }
+        }
+    }
+    catch { return }
+
+    $script:UpdateTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $script:UpdateTimer.Interval = [TimeSpan]::FromSeconds(3)
+    $script:UpdateTimer.Tag = 0
+    $script:UpdateTimer.Add_Tick({
+        $timer = $script:UpdateTimer
+        $job = $script:UpdateJob
+        $timer.Tag = [int]$timer.Tag + 1
+        if ($job.State -in 'NotStarted', 'Running' -and [int]$timer.Tag -lt 20) { return }
+        $timer.Stop()
+        try {
+            $release = Receive-Job -Job $job -ErrorAction Stop
+            $latest = [version](([string]$release.Tag) -replace '^v', '')
+            if ($latest -gt [version]$script:AppVersion) { Write-UiLog (T 'Update.Available' $release.Tag $release.Url) 'Warning' }
+        }
+        catch { }   # No internet, API limit etc.: silently ignored
+        finally { Remove-Job -Job $job -Force -ErrorAction SilentlyContinue }
+    })
+    $script:UpdateTimer.Start()
+}
+
+#endregion
+
 #region Start
 
 $window.Add_Closing({
@@ -1978,9 +2667,11 @@ Update-MethodInputs
 Set-Busy $false
 
 # Separator in the log file so that several sessions per day can be told apart
-Write-LogFile -Line ('{0} ===== M365 MFA Administration Tool started by {1}\{2} on {3} =====' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $env:USERDOMAIN, $env:USERNAME, $env:COMPUTERNAME)
+Write-LogFile -Line ('{0} ===== M365 MFA Administration Tool {4} started by {1}\{2} on {3} =====' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $env:USERDOMAIN, $env:USERNAME, $env:COMPUTERNAME, $script:AppVersion)
 Write-UiLog (T 'Log.Started')
+Write-UiLog (T 'App.Version' $script:AppVersion)
 if (-not $script:LogFileDisabled) { Write-UiLog (T 'Log.FileLocation' $script:LogFolder) }
+Start-UpdateCheck
 $window.ShowDialog() | Out-Null
 
 #endregion

@@ -18,6 +18,9 @@ Met deze tool richten beheerders en helpdeskmedewerkers **meervoudige verificati
 - [Een noodaccount aanmaken](#een-noodaccount-aanmaken)
 - [MFA-handleiding per e-mail](#mfa-handleiding-per-e-mail)
 - [MFA-rapport voor de tenant](#mfa-rapport-voor-de-tenant)
+- [Bulkimport van TOTP-tokens](#bulkimport-van-totp-tokens)
+- [Tokenvoorraad](#tokenvoorraad)
+- [Bulk Temporary Access Pass](#bulk-temporary-access-pass)
 - [Veelgestelde vragen en probleemoplossing](#veelgestelde-vragen-en-probleemoplossing)
 - [Beveiliging](#beveiliging)
 - [Vereisten en machtigingen voor beheerders](#vereisten-en-machtigingen-voor-beheerders)
@@ -37,6 +40,9 @@ Met deze tool richten beheerders en helpdeskmedewerkers **meervoudige verificati
 | ➕ | **Methoden inrichten** – FIDO2-sleutel, TOTP-kaarten, Temporary Access Pass en nep-MFA |
 | ✉️ | **MFA-handleiding per e-mail** – stuurt gebruikers zonder of met zwakke MFA een stapsgewijze handleiding voor de Microsoft Authenticator-app, in hun taal en met voorbeeld |
 | 📊 | **MFA-rapport voor de tenant** – MFA-status en laatste aanmelding van alle gebruikers als stoplicht, met zoeken, filters en Excel-export in kleur |
+| 📥 | **TOTP-bulkimport** – hardware-TOTP-tokens (SHA-1 of SHA-256) uit een CSV-bestand importeren, met testimport, Excel-export en ongedaan maken |
+| 🗂️ | **Tokenvoorraad** – alle hardware-TOTP-tokens van de tenant: vrije tokens toewijzen, toewijzingen opheffen, verwijderen |
+| 🎫 | **Bulk-TAP** – Temporary Access Pass voor veel gebruikers tegelijk (CSV of groep) met Excel-export |
 | 🆘 | **Noodaccount** – een noodtoegang (break-glass) met FIDO2-sleutel en onbekend wachtwoord aanmaken |
 | 🌐 | **Meertalig** – Engels (standaard), Duits, Spaans, Frans, Italiaans, Portugees, Nederlands en Pools |
 
@@ -200,7 +206,56 @@ Klik linksboven op **"MFA-rapport …"** om in één keer de MFA-status van **al
 
 Als beheerdersrollen tellen actieve rollen en rollen die via PIM in aanmerking komen (gemarkeerd met "(PIM)"), en ook rollen die via groepen zijn toegewezen.
 
+**Zonder interface** (bijv. als maandelijkse geplande taak) kan het rapport vanaf de opdrachtregel worden gemaakt; het aanmelden blijft interactief:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Rapporten\MFA.xlsx
+```
+
+Opties: `-Group "<naam of object-ID>"` (leden van een groep in plaats van alle gebruikers), `-IncludeDisabled`, `-IncludeGuests`, `-Language nl`. Exitcode 0 bij succes, 1 bij een fout.
+
 ---
+
+## Bulkimport van TOTP-tokens
+
+Voor hardware-TOTP-tokens met een seedbestand van de fabrikant (bijv. displaytokens als sleutelhanger) klikt u bovenaan op **"TOTP-import …"**.
+
+1. **"Voorbeeld"** slaat een voorbeeld-CSV met de verwachte kolommen op. Eén regel per token:
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anna.voorbeeld@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
+   ```
+
+   Scheidingsteken `;` of `,`; de kolomvolgorde maakt niet uit. **UPN is optioneel**: een regel zonder UPN voegt het token alleen aan de voorraad toe; wijs het later toe in de [tokenvoorraad](#tokenvoorraad). Optionele kolommen: `Manufacturer`, `Model`.
+2. **"CSV kiezen …"** laadt het bestand. Kies het **algoritme** (SHA-1 of SHA-256) en het **tijdsinterval** (30 of 60 seconden) – beide moeten bij de tokens passen (zie bestelling of seedbestand).
+3. **"Testimport"** controleert elke regel zonder iets te wijzigen: Base32-secret, dubbele serienummers, of de gebruiker bestaat en of het serienummer in de tenant al is toegewezen. De regels worden groen/geel/rood weergegeven.
+4. **"Import starten"** maakt de foutloze tokens aan in de voorraad, wijst ze toe aan de gebruikers en activeert ze direct. Regels met fouten worden overgeslagen; een mislukt token wordt teruggedraaid. Elk token staat in het logboek (zonder secret).
+5. **"Excel-export …"** slaat de resultatenlijst op als bewijs. **"Laatste import ongedaan maken"** verwijdert de bij de laatste run aangemaakte tokens weer van de gebruikers en uit de voorraad (mogelijk tot de volgende testimport).
+
+Na wijziging van bestand, algoritme of tijdsinterval is een nieuwe testimport nodig.
+
+---
+
+## Tokenvoorraad
+
+**"Tokenvoorraad …"** bovenaan toont alle hardware-TOTP-tokens van de tenant: vrije tokens (geel), toegewezen en geactiveerde (groen), met model, algoritme, tijdsinterval en toegewezen gebruiker. Met zoeken en filter op vrij/toegewezen.
+
+- **"Aan geselecteerde gebruiker toewijzen …"**: selecteer eerst een gebruiker in het hoofdvenster en daarna een vrij token. Voer de code in die het token op dat moment toont – het wordt in één stap toegewezen en geactiveerd (zoals in de Entra-portal).
+- **"Toewijzing opheffen"**: de gebruiker kan zich niet meer met het token aanmelden; het blijft als vrij token in de voorraad.
+- **"Verwijderen"**: verwijdert het token uit de voorraad (een toegewezen token wordt eerst bij de gebruiker verwijderd).
+
+---
+
+## Bulk Temporary Access Pass
+
+**"Bulk-TAP …"** maakt voor veel gebruikers tegelijk een Temporary Access Pass, bijv. voor een onboardinggolf.
+
+1. Kies de gebruikers: een **CSV-bestand** (kolom `UPN` of één UPN per regel) of de **leden van een groep** (incl. geneste groepen).
+2. Stel de **geldigheid** (10–43200 minuten) in en of de pas **eenmalig bruikbaar** is.
+3. **"Test"** zoekt de gebruikers op zonder iets te wijzigen. **"Passen maken"** maakt daarna per gebruiker een pas; een bestaande pas van de gebruiker wordt vervangen.
+4. **"Excel-export …"** slaat de lijst met de passen op – die bevat ze in leesbare tekst, dus alleen op een beveiligde plek opslaan en na de overdracht verwijderen. De passen komen nooit in het logboek.
 
 ## Veelgestelde vragen en probleemoplossing
 
@@ -208,7 +263,10 @@ Als beheerdersrollen tellen actieve rollen en rollen die via PIM in aanmerking k
 De tool werkt alleen onder Windows. Is de map gekopieerd van internet, Teams of een ZIP-bestand, dan zijn de bestanden mogelijk geblokkeerd. Voer in PowerShell in de map eenmalig uit: `Get-ChildItem -Recurse | Unblock-File`.
 
 **Bij aanmelden wordt opnieuw om toestemming gevraagd.**
-Dat is normaal wanneer een nieuwe functie extra machtigingen nodig heeft – bijvoorbeeld bij het eerste noodaccount.
+Dat gebeurt eenmalig na een update, wanneer de tool nieuwe machtigingen nodig heeft. Alle machtigingen worden bij het aanmelden gevraagd; daarna verschijnt geen aanmelddialoog meer.
+
+**In het logboek staat dat er een nieuwere versie beschikbaar is.**
+Bij het starten vergelijkt de tool zijn versie met de nieuwste release op GitHub (alleen een logregel, er wordt niets gedownload). Download de nieuwe versie van de releasepagina en vervang de map.
 
 **Een nieuw aangemaakte of verwijderde methode wordt niet direct getoond.**
 Microsoft heeft daar enkele seconden voor nodig. De tool wacht automatisch tot ongeveer 16 seconden; klik daarna zo nodig op **"Vernieuwen"**.
@@ -259,49 +317,29 @@ Daarvoor zijn een **Entra ID P1/P2**-licentie, de machtiging `AuditLog.Read.All`
 
 ### Graph-machtigingen (gedelegeerd)
 
-Bij aanmelden:
+Alle machtigingen worden eenmalig bij het aanmelden gevraagd, zodat tijdens het werken geen aanmelddialoog meer verschijnt:
 
 | Machtiging | Waarvoor |
 |---|---|
 | `User.Read.All` | Gebruikers zoeken |
 | `UserAuthenticationMethod.Read.All` | MFA-methoden tonen |
 | `UserAuthenticationMethod.ReadWrite.All` | MFA-methoden inrichten en verwijderen |
-| `Policy.ReadWrite.AuthenticationMethod` | TOTP-kaarten en nep-MFA in de tokeninventaris aanmaken/verwijderen |
+| `Policy.ReadWrite.AuthenticationMethod` | Tokenvoorraad: TOTP-kaarten, geïmporteerde TOTP-tokens en nep-MFA aanmaken, toewijzen en verwijderen |
 | `RoleManagement.Read.Directory` | Beheerdersrollen van een gebruiker tonen |
+| `User.ReadWrite.All` | Noodaccount; verzenddatum van de MFA-handleiding en het versleutelde nep-MFA-geheim in het gebruikersobject opslaan |
+| `Domain.Read.All` | Noodaccount: domeinen ter selectie tonen |
+| `RoleManagement.ReadWrite.Directory` | Noodaccount: Global Administrator toewijzen |
+| `GroupMember.Read.All` | MFA-rapport: een groep als bereik kiezen, via groepen toegewezen rollen oplossen |
+| `AuditLog.Read.All` | MFA-rapport: laatste aanmelding |
+| `Mail.Send` | MFA-handleiding vanuit de eigen mailbox |
+| `Mail.Send.Shared` | MFA-handleiding vanuit een gedeelde mailbox |
+| `Organization.Read.All` | De hrdnr-sleutel uit de tenant laden |
 
-Daarnaast bij het eerste noodaccount:
+Is een machtiging niet verleend (toestemming geweigerd), dan meldt de betreffende functie dat; meld u af en opnieuw aan om deze te verlenen.
 
-| Machtiging | Waarvoor |
-|---|---|
-| `User.ReadWrite.All` | Gebruikers aanmaken |
-| `Domain.Read.All` | Domeinen ter selectie tonen |
-| `RoleManagement.ReadWrite.Directory` | Global Administrator toewijzen |
+De laatste aanmelding vereist daarnaast een **Entra ID P1/P2**-licentie en een rol die aanmeldgegevens mag lezen, bijv. **Reports Reader**, **Security Reader** of **Global Reader**. Getoond wordt de laatste geslaagde aanmelding (interactief of niet-interactief); Microsoft registreert die sinds december 2023, oudere waarden zijn de laatste aanmeldpoging.
 
-Daarnaast voor het MFA-rapport:
-
-| Machtiging | Waarvoor |
-|---|---|
-| `GroupMember.Read.All` | Een groep als bereik kiezen, beheerdersrollen die via groepen zijn toegewezen ophalen |
-| `AuditLog.Read.All` | Laatste aanmelding (optioneel – zonder wordt het rapport zonder deze kolom gemaakt) |
-
-Voor de laatste aanmelding zijn daarnaast een **Entra ID P1/P2**-licentie en een rol nodig die aanmeldgegevens mag lezen, bijv. **Rapportlezer**, **Beveiligingslezer** of **Globale lezer**. Getoond wordt de laatste geslaagde aanmelding (interactief of niet-interactief); Microsoft registreert deze sinds december 2023, oudere waarden zijn de laatste aanmeldpoging.
-
-Daarnaast voor de MFA-handleiding:
-
-| Machtiging | Waarvoor |
-|---|---|
-| `Mail.Send` | E-mail verzenden vanuit uw eigen postvak |
-| `Mail.Send.Shared` | E-mail verzenden vanuit een gedeeld postvak (alleen als er een is opgegeven) |
-| `User.ReadWrite.All` | Verzenddatum in het gebruikersobject opslaan |
-
-Voor het opslaan van de verzenddatum is een rol nodig die gebruikers mag wijzigen, bijv. **Gebruikersbeheerder**.
-
-Daarnaast voor nep-MFA met hrdnr-sleutel:
-
-| Machtiging | Waarvoor |
-|---|---|
-| `User.ReadWrite.All` | Versleuteld geheim in het gebruikersobject opslaan |
-| `Organization.Read.All` | hrdnr-sleutel uit de tenant laden (alleen voor 'Uit tenant laden') |
+Het opslaan van de verzenddatum van de MFA-handleiding vereist een rol die gebruikers mag wijzigen, bijv. **User Administrator**.
 
 ### Benodigde Entra-rollen voor uw eigen account
 
@@ -309,7 +347,7 @@ Daarnaast voor nep-MFA met hrdnr-sleutel:
 |---|---|
 | Methoden van gewone gebruikers beheren, TAP | **Authentication Administrator** |
 | Methoden van beheerders beheren | **Privileged Authentication Administrator** |
-| TOTP-kaarten en nep-MFA | daarnaast **Authentication Policy Administrator** |
+| TOTP-kaarten, TOTP-import en nep-MFA | daarnaast **Authentication Policy Administrator** |
 | Noodaccount | **Global Administrator** (of Privileged Role Administrator + User Administrator) |
 
 ### Tenantinstellingen
@@ -337,6 +375,9 @@ In het **beleid voor verificatiemethoden** (Entra-beheercentrum → Beveiliging 
 | `UI/MainWindow.xaml` | Indeling van het hoofdvenster |
 | `UI/BreakGlassDialog.xaml` | Dialoogvenster voor nieuwe noodaccounts |
 | `UI/TenantReportWindow.xaml` | Venster van het MFA-rapport |
+| `UI/TotpImportWindow.xaml` | Venster van de TOTP-bulkimport |
+| `UI/TokenInventoryWindow.xaml` | Venster van de tokenvoorraad |
+| `UI/BulkTapWindow.xaml` | Venster van de bulk Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Voorbeeldvenster van de MFA-handleiding |
 | `Modules/Graph.psm1` | Aanmelden, Graph-aanvragen, gebruikers, domeinen, rollen, MFA-stoplicht, methoden lezen/verwijderen |
 | `Modules/Provisioning.psm1` | Inrichten van FIDO2, TOTP-kaarten, nep-MFA, TAP en noodaccounts |

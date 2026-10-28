@@ -177,6 +177,8 @@
                 </StackPanel>
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Name="BtnTotpImport" Uid="Header.TotpImport" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
+                    <Button Name="BtnTokenInventory" Uid="Header.TokenInventory" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
+                    <Button Name="BtnBulkTap" Uid="Header.BulkTap" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
                     <Button Name="BtnBreakGlass" Uid="Header.BreakGlass" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
                     <ComboBox Name="CmbLanguage" Uid="Header.Language" Width="120" Margin="4" Padding="8,7" VerticalContentAlignment="Center"
                               DisplayMemberPath="Name"/>

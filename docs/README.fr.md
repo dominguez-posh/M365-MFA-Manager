@@ -18,6 +18,9 @@ Avec cet outil, les administrateurs et le support informatique configurent **l'a
 - [Créer un compte d'urgence](#créer-un-compte-durgence)
 - [Guide MFA par e-mail](#guide-mfa-par-e-mail)
 - [Rapport MFA du locataire](#rapport-mfa-du-locataire)
+- [Import en masse de jetons TOTP](#import-en-masse-de-jetons-totp)
+- [Inventaire des jetons](#inventaire-des-jetons)
+- [Temporary Access Pass en masse](#temporary-access-pass-en-masse)
 - [Questions fréquentes et dépannage](#questions-fréquentes-et-dépannage)
 - [Sécurité](#sécurité)
 - [Prérequis et autorisations pour les administrateurs](#prérequis-et-autorisations-pour-les-administrateurs)
@@ -37,6 +40,9 @@ Avec cet outil, les administrateurs et le support informatique configurent **l'a
 | ➕ | **Configurer des méthodes** – clé FIDO2, cartes TOTP, Temporary Access Pass et MFA fictive |
 | ✉️ | **Guide MFA par e-mail** – envoie aux utilisateurs sans MFA ou avec une MFA faible un guide pas à pas pour l'application Microsoft Authenticator, dans leur langue et avec aperçu |
 | 📊 | **Rapport MFA du locataire** – statut MFA et dernière connexion de tous les utilisateurs en feu tricolore, avec recherche, filtres et export Excel en couleur |
+| 📥 | **Import TOTP en masse** – importer des jetons TOTP matériels (SHA-1 ou SHA-256) depuis un fichier CSV, avec import de test, export Excel et annulation |
+| 🗂️ | **Inventaire des jetons** – tous les jetons TOTP matériels du locataire : attribuer les jetons libres, retirer des attributions, supprimer |
+| 🎫 | **TAP en masse** – Temporary Access Pass pour de nombreux utilisateurs à la fois (CSV ou groupe) avec export Excel |
 | 🆘 | **Compte d'urgence** – créer un accès d'urgence (break-glass) avec clé FIDO2 et mot de passe inconnu |
 | 🌐 | **Multilingue** – anglais (par défaut), allemand, espagnol, français, italien, portugais, néerlandais et polonais |
 
@@ -200,7 +206,56 @@ Cliquez sur **"Rapport MFA …"** en haut à gauche pour vérifier en une fois l
 
 Sont considérés comme rôles d'administration les rôles actifs et éligibles via PIM (marqués « (PIM) ») ainsi que les rôles attribués via des groupes.
 
+**Sans interface** (p. ex. comme tâche planifiée mensuelle), le rapport peut être créé depuis la ligne de commande ; la connexion reste interactive :
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Rapports\MFA.xlsx
+```
+
+Options : `-Group "<nom ou ID d'objet>"` (membres d'un groupe au lieu de tous les utilisateurs), `-IncludeDisabled`, `-IncludeGuests`, `-Language fr`. Code de sortie 0 en cas de succès, 1 en cas d'erreur.
+
 ---
+
+## Import en masse de jetons TOTP
+
+Pour les jetons TOTP matériels avec fichier de seeds du fabricant (p. ex. jetons à écran type porte-clés), cliquez en haut sur **« Import TOTP … »**.
+
+1. **« Exemple »** enregistre un CSV d'exemple avec les colonnes attendues. Une ligne par jeton :
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anne.exemple@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
+   ```
+
+   Séparateur `;` ou `,` ; l'ordre des colonnes est libre. **UPN est facultatif** : une ligne sans UPN ajoute seulement le jeton à l'inventaire ; attribuez-le ensuite dans l'[inventaire des jetons](#inventaire-des-jetons). Colonnes facultatives : `Manufacturer`, `Model`.
+2. **« Choisir un CSV … »** charge le fichier. Choisissez l'**algorithme** (SHA-1 ou SHA-256) et l'**intervalle** (30 ou 60 secondes) ; les deux doivent correspondre aux jetons (voir la commande ou le fichier de seeds).
+3. **« Import de test »** vérifie chaque ligne sans rien modifier : secret Base32, numéros de série en double, existence de l'utilisateur et numéro de série déjà attribué dans le locataire. Les lignes sont affichées en vert/jaune/rouge.
+4. **« Lancer l'import »** crée les jetons sans erreur dans l'inventaire, les attribue aux utilisateurs et les active immédiatement. Les lignes en erreur sont ignorées ; un jeton en échec est annulé. Chaque jeton figure dans le journal (sans secret).
+5. **« Export Excel … »** enregistre la liste des résultats comme justificatif. **« Annuler le dernier import »** retire à nouveau les jetons créés lors de la dernière exécution des utilisateurs et de l'inventaire (possible jusqu'au prochain import de test).
+
+Modifier le fichier, l'algorithme ou l'intervalle nécessite un nouvel import de test.
+
+---
+
+## Inventaire des jetons
+
+**« Inventaire des jetons … »** en haut liste tous les jetons TOTP matériels du locataire : jetons libres (jaune), attribués et activés (vert), avec modèle, algorithme, intervalle et utilisateur attribué. Avec recherche et filtre libre/attribué.
+
+- **« Attribuer à l'utilisateur sélectionné … »** : sélectionnez d'abord un utilisateur dans la fenêtre principale, puis un jeton libre. Saisissez le code affiché sur le jeton : il est attribué et activé en une étape (comme dans le portail Entra).
+- **« Retirer l'attribution »** : l'utilisateur ne peut plus se connecter avec le jeton ; il reste dans l'inventaire comme jeton libre.
+- **« Supprimer »** : retire le jeton de l'inventaire (un jeton attribué est d'abord retiré de son utilisateur).
+
+---
+
+## Temporary Access Pass en masse
+
+**« TAP en masse … »** crée un Temporary Access Pass pour de nombreux utilisateurs à la fois, p. ex. pour une vague d'intégration.
+
+1. Choisissez les utilisateurs : un **fichier CSV** (colonne `UPN` ou un UPN par ligne) ou les **membres d'un groupe** (groupes imbriqués inclus).
+2. Définissez la **validité** (10–43200 minutes) et si le code est à **usage unique**.
+3. **« Test »** résout les utilisateurs sans rien modifier. **« Créer les codes »** crée ensuite un code par utilisateur ; un code existant de l'utilisateur est remplacé.
+4. **« Export Excel … »** enregistre la liste avec les codes – elle les contient en clair : enregistrez-la uniquement dans un emplacement protégé et supprimez-la après la remise. Les codes ne sont jamais écrits dans le journal.
 
 ## Questions fréquentes et dépannage
 
@@ -208,7 +263,10 @@ Sont considérés comme rôles d'administration les rôles actifs et éligibles 
 L'outil fonctionne uniquement sous Windows. Si le dossier provient d'Internet, de Teams ou d'un fichier ZIP, les fichiers peuvent être bloqués. Exécutez une fois dans PowerShell, dans le dossier : `Get-ChildItem -Recurse | Unblock-File`.
 
 **La connexion redemande un consentement.**
-C'est normal lorsqu'une nouvelle fonction nécessite des autorisations supplémentaires – par exemple pour le premier compte d'urgence.
+Cela se produit une fois après une mise à jour, lorsque l'outil a besoin de nouvelles autorisations. Toutes les autorisations sont demandées à la connexion ; ensuite, aucun autre dialogue de connexion n'apparaît.
+
+**Le journal indique qu'une version plus récente est disponible.**
+Au démarrage, l'outil compare sa version avec la dernière release sur GitHub (une simple ligne de journal, rien n'est téléchargé). Téléchargez la nouvelle version depuis la page des releases et remplacez le dossier.
 
 **Une méthode nouvellement créée ou supprimée n'apparaît pas tout de suite.**
 Microsoft a besoin de quelques secondes. L'outil attend automatiquement jusqu'à environ 16 secondes ; ensuite, cliquez sur **« Actualiser »** si nécessaire.
@@ -259,49 +317,29 @@ Il faut pour cela une licence **Entra ID P1/P2**, l'autorisation `AuditLog.Read.
 
 ### Autorisations Graph (déléguées)
 
-À la connexion :
+Toutes les autorisations sont demandées une seule fois à la connexion ; aucun autre dialogue de connexion n'apparaît pendant le travail :
 
 | Autorisation | Usage |
 |---|---|
 | `User.Read.All` | Rechercher des utilisateurs |
 | `UserAuthenticationMethod.Read.All` | Afficher les méthodes MFA |
 | `UserAuthenticationMethod.ReadWrite.All` | Configurer et supprimer des méthodes MFA |
-| `Policy.ReadWrite.AuthenticationMethod` | Créer/supprimer des cartes TOTP et la MFA fictive dans l'inventaire des jetons |
-| `RoleManagement.Read.Directory` | Afficher les rôles d'administration d'un utilisateur |
+| `Policy.ReadWrite.AuthenticationMethod` | Inventaire des jetons : créer, attribuer et supprimer cartes TOTP, jetons TOTP importés et MFA fictive |
+| `RoleManagement.Read.Directory` | Afficher les rôles d'administrateur d'un utilisateur |
+| `User.ReadWrite.All` | Compte d'urgence ; enregistrer la date d'envoi du guide MFA et le secret chiffré de la MFA fictive dans l'objet utilisateur |
+| `Domain.Read.All` | Compte d'urgence : afficher les domaines pour la sélection |
+| `RoleManagement.ReadWrite.Directory` | Compte d'urgence : attribuer Global Administrator |
+| `GroupMember.Read.All` | Rapport MFA : choisir un groupe comme périmètre, résoudre les rôles attribués via des groupes |
+| `AuditLog.Read.All` | Rapport MFA : dernière connexion |
+| `Mail.Send` | Guide MFA depuis votre propre boîte aux lettres |
+| `Mail.Send.Shared` | Guide MFA depuis une boîte aux lettres partagée |
+| `Organization.Read.All` | Charger la clé hrdnr depuis le locataire |
 
-En plus, lors du premier compte d'urgence :
+Si une autorisation n'a pas été accordée (consentement refusé), la fonction concernée le signale ; déconnectez-vous puis reconnectez-vous pour l'accorder.
 
-| Autorisation | Usage |
-|---|---|
-| `User.ReadWrite.All` | Créer des utilisateurs |
-| `Domain.Read.All` | Afficher les domaines à sélectionner |
-| `RoleManagement.ReadWrite.Directory` | Attribuer Global Administrator |
+La dernière connexion nécessite en plus une licence **Entra ID P1/P2** et un rôle pouvant lire les données de connexion, p. ex. **Reports Reader**, **Security Reader** ou **Global Reader**. La dernière connexion réussie (interactive ou non) est affichée ; Microsoft l'enregistre depuis décembre 2023, les valeurs plus anciennes sont la dernière tentative.
 
-En plus, pour le rapport MFA :
-
-| Autorisation | Utilisation |
-|---|---|
-| `GroupMember.Read.All` | Choisir un groupe comme périmètre, résoudre les rôles d'administration attribués via des groupes |
-| `AuditLog.Read.All` | Dernière connexion (facultatif – sans elle, le rapport est créé sans cette colonne) |
-
-La dernière connexion nécessite en outre une licence **Entra ID P1/P2** et un rôle autorisé à lire les données de connexion, p. ex. **Lecteur de rapports**, **Lecteur de sécurité** ou **Lecteur général**. C'est la dernière connexion réussie (interactive ou non interactive) qui est affichée ; Microsoft l'enregistre depuis décembre 2023, les valeurs plus anciennes correspondent à la dernière tentative de connexion.
-
-En plus, pour le guide MFA :
-
-| Autorisation | Utilisation |
-|---|---|
-| `Mail.Send` | Envoyer l'e-mail depuis votre propre boîte aux lettres |
-| `Mail.Send.Shared` | Envoyer l'e-mail depuis une boîte partagée (uniquement si une est indiquée) |
-| `User.ReadWrite.All` | Enregistrer la date d'envoi dans l'objet utilisateur |
-
-L'enregistrement de la date d'envoi nécessite un rôle autorisé à modifier les utilisateurs, p. ex. **Administrateur d'utilisateurs**.
-
-En plus, pour la MFA fictive avec clé hrdnr :
-
-| Autorisation | Utilité |
-|---|---|
-| `User.ReadWrite.All` | Enregistrer le secret chiffré dans l'objet utilisateur |
-| `Organization.Read.All` | Charger la clé hrdnr depuis le locataire (uniquement pour « Charger depuis le locataire ») |
+L'enregistrement de la date d'envoi du guide MFA nécessite un rôle pouvant modifier les utilisateurs, p. ex. **User Administrator**.
 
 ### Rôles Entra nécessaires pour votre propre compte
 
@@ -309,7 +347,7 @@ En plus, pour la MFA fictive avec clé hrdnr :
 |---|---|
 | Gérer les méthodes des utilisateurs standard, TAP | **Authentication Administrator** |
 | Gérer les méthodes des administrateurs | **Privileged Authentication Administrator** |
-| Cartes TOTP et MFA fictive | en plus **Authentication Policy Administrator** |
+| Cartes TOTP, import TOTP et MFA fictive | en plus **Authentication Policy Administrator** |
 | Compte d'urgence | **Global Administrator** (ou Privileged Role Administrator + User Administrator) |
 
 ### Paramètres du locataire
@@ -337,6 +375,9 @@ Dans la **stratégie des méthodes d'authentification** (Centre d'administration
 | `UI/MainWindow.xaml` | Disposition de la fenêtre principale |
 | `UI/BreakGlassDialog.xaml` | Boîte de dialogue pour les nouveaux comptes d'urgence |
 | `UI/TenantReportWindow.xaml` | Fenêtre du rapport MFA |
+| `UI/TotpImportWindow.xaml` | Fenêtre de l'import TOTP en masse |
+| `UI/TokenInventoryWindow.xaml` | Fenêtre de l'inventaire des jetons |
+| `UI/BulkTapWindow.xaml` | Fenêtre du Temporary Access Pass en masse |
 | `UI/MfaGuideDialog.xaml` | Boîte de dialogue d'aperçu du guide MFA |
 | `Modules/Graph.psm1` | Connexion, requêtes Graph, utilisateurs, domaines, rôles, feu tricolore MFA, lecture/suppression des méthodes |
 | `Modules/Provisioning.psm1` | Configuration de FIDO2, cartes TOTP, MFA fictive, TAP et comptes d'urgence |

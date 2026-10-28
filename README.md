@@ -16,6 +16,8 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 - [MFA setup guide by email](#mfa-setup-guide-by-email)
 - [Tenant MFA report](#tenant-mfa-report)
 - [Bulk import of TOTP tokens](#bulk-import-of-totp-tokens)
+- [Token inventory](#token-inventory)
+- [Bulk Temporary Access Pass](#bulk-temporary-access-pass)
 - [FAQ and troubleshooting](#faq-and-troubleshooting)
 - [Security](#security)
 - [For administrators: requirements and permissions](#for-administrators-requirements-and-permissions)
@@ -35,7 +37,9 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 | ➕ | **Set up methods** – FIDO2 key, TOTP cards, Temporary Access Pass and fake MFA |
 | ✉️ | **MFA setup guide by email** – sends users without or with weak MFA a step-by-step guide for the Microsoft Authenticator app, in their language and with preview |
 | 📊 | **Tenant MFA report** – MFA status and last sign-in of all users as a traffic light, with search, filters and colored Excel export |
-| 📥 | **TOTP bulk import** – import hardware TOTP tokens (SHA-1 or SHA-256) from a CSV file, with test import |
+| 📥 | **TOTP bulk import** – import hardware TOTP tokens (SHA-1 or SHA-256) from a CSV file, with test import, Excel export and undo |
+| 🗂️ | **Token inventory** – all hardware TOTP tokens of the tenant: assign free tokens, remove assignments, delete |
+| 🎫 | **Bulk TAP** – Temporary Access Pass for many users at once (CSV or group) with Excel export |
 | 🆘 | **Break-glass account** – create an emergency access account with a FIDO2 key and an unknown password |
 | 🌐 | **Multilingual** – English (default), German, Spanish, French, Italian, Portuguese, Dutch and Polish |
 
@@ -191,6 +195,14 @@ Click **"MFA report …"** in the top left to check the MFA status of **all user
 4. **"Excel export …"** saves the entries currently shown as an `.xlsx` file in traffic light colors, including a summary sheet. Neither Excel nor an extra module is required.
 5. **Double-clicking** a user closes the report and opens the user in the main window for editing. The report is kept until you sign out.
 
+**Without the GUI** (e.g. a monthly scheduled task) the report can be created from the command line; the sign-in is still interactive:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Reports\MFA.xlsx
+```
+
+Options: `-Group "<name or object ID>"` (members of a group instead of all users), `-IncludeDisabled`, `-IncludeGuests`, `-Language de`. The exit code is 0 on success, 1 on error.
+
 | Traffic light | Meaning |
 |---|---|
 | 🔴 **Red** | No MFA (password only), **or** administrative role with insecure MFA only (SMS/call, TAP or fake MFA) |
@@ -210,14 +222,37 @@ For hardware TOTP tokens with a seed file from the vendor (e.g. key fob display 
    ```csv
    Secret;SerialNumber;UPN
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anna.example@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Separator `;` or `,`; the column order does not matter. Optional columns: `Manufacturer`, `Model`.
+   Separator `;` or `,`; the column order does not matter. **UPN is optional**: a line without UPN only adds the token to the inventory – assign it later in the [token inventory](#token-inventory). Optional columns: `Manufacturer`, `Model`.
 2. **"Select CSV …"** loads the file. Choose the **algorithm** (SHA-1 or SHA-256) and the **time step** (30 or 60 seconds) – both must match the tokens (see order or seed file).
 3. **"Test import"** checks every line without changing anything: Base32 secret, duplicate serial numbers, whether the user exists and whether the serial number is already assigned in the tenant. Lines are shown green/yellow/red.
 4. **"Start import"** creates the tokens without errors in the token inventory, assigns them to the users and activates them right away. Lines with errors are skipped; a failed token is rolled back. Every token is listed in the log (without secret).
+5. **"Excel export …"** saves the result list as evidence. **"Undo last import"** removes the tokens created by the last run from the users and the inventory again (available until the next test import).
 
 Changing the file, algorithm or time step requires a new test import.
+
+---
+
+## Token inventory
+
+**"Token inventory …"** at the top lists all hardware TOTP tokens of the tenant: free tokens (yellow), assigned and activated ones (green), with model, algorithm, time step and the assigned user. Search and filter by free/assigned.
+
+- **"Assign to selected user …"**: select a user in the main window first, then a free token. Enter the code currently shown on the token – it is assigned and activated in one step (the same way as in the Entra portal).
+- **"Remove assignment"**: the user can no longer sign in with the token; it stays in the inventory as a free token.
+- **"Delete"**: removes the token from the inventory (an assigned token is removed from its user first).
+
+---
+
+## Bulk Temporary Access Pass
+
+**"Bulk TAP …"** creates a Temporary Access Pass for many users at once, e.g. for an onboarding wave.
+
+1. Choose the users: a **CSV file** (a `UPN` column, or one UPN per line) or the **members of a group** (incl. nested groups).
+2. Set the **lifetime** (10–43200 minutes) and whether the pass is for **single use**.
+3. **"Test"** resolves the users without changing anything. **"Create passes"** then creates one pass per user; an existing pass of a user is replaced.
+4. **"Excel export …"** saves the list with the passes – it contains them in clear text, so store it in a protected location and delete it after handing out. The passes are never written to the log.
 
 ---
 
@@ -231,6 +266,9 @@ This happens once after an update when the tool needs new permissions. All permi
 
 **A newly created or deleted method does not show up immediately.**
 Microsoft needs a few seconds for this. The tool automatically waits up to approx. 16 seconds; afterwards click **"Refresh"** if needed.
+
+**The log says a newer version is available.**
+The tool compares its version with the latest release on GitHub at start-up (only a log line, nothing is downloaded). Download the new version from the releases page and replace the folder.
 
 **FIDO2: "Fido credential policy …" or "not enabled".**
 FIDO2 is not enabled in the tenant. An administrator must enable it in the authentication methods policy (see [requirements](#for-administrators-requirements-and-permissions)).
@@ -285,7 +323,7 @@ All permissions are requested once at sign-in, so no further sign-in dialog appe
 | `User.Read.All` | Find users |
 | `UserAuthenticationMethod.Read.All` | Show MFA methods |
 | `UserAuthenticationMethod.ReadWrite.All` | Set up and delete MFA methods |
-| `Policy.ReadWrite.AuthenticationMethod` | Create/delete TOTP cards, imported TOTP tokens and fake MFA in the token inventory |
+| `Policy.ReadWrite.AuthenticationMethod` | Token inventory: create, assign and delete TOTP cards, imported TOTP tokens and fake MFA |
 | `RoleManagement.Read.Directory` | Show a user's admin roles |
 | `User.ReadWrite.All` | Break-glass account; store the MFA guide sending date and the encrypted fake MFA secret in the user object |
 | `Domain.Read.All` | Break-glass account: show domains for selection |
@@ -337,6 +375,8 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 | `UI/BreakGlassDialog.xaml` | Dialog for new break-glass accounts |
 | `UI/TenantReportWindow.xaml` | Window of the tenant MFA report |
 | `UI/TotpImportWindow.xaml` | Window of the TOTP bulk import |
+| `UI/TokenInventoryWindow.xaml` | Window of the token inventory |
+| `UI/BulkTapWindow.xaml` | Window of the bulk Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Preview dialog of the MFA setup guide |
 | `Modules/Graph.psm1` | Sign-in, Graph requests, users, domains, roles, MFA traffic light, reading/deleting methods |
 | `Modules/Provisioning.psm1` | Setup of FIDO2, TOTP cards, fake MFA, TAP and break-glass accounts |

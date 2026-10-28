@@ -18,6 +18,9 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 - [Criar uma conta de emergência](#criar-uma-conta-de-emergência)
 - [Guia de MFA por e-mail](#guia-de-mfa-por-e-mail)
 - [Relatório MFA do locatário](#relatório-mfa-do-locatário)
+- [Importação em massa de tokens TOTP](#importação-em-massa-de-tokens-totp)
+- [Inventário de tokens](#inventário-de-tokens)
+- [Temporary Access Pass em massa](#temporary-access-pass-em-massa)
 - [Perguntas frequentes e resolução de problemas](#perguntas-frequentes-e-resolução-de-problemas)
 - [Segurança](#segurança)
 - [Requisitos e permissões para administradores](#requisitos-e-permissões-para-administradores)
@@ -37,6 +40,9 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 | ➕ | **Configurar métodos** – chave FIDO2, cartões TOTP, Temporary Access Pass e MFA fictícia |
 | ✉️ | **Guia de MFA por e-mail** – envia aos utilizadores sem MFA ou com MFA fraca um guia passo a passo para a aplicação Microsoft Authenticator, no seu idioma e com pré-visualização |
 | 📊 | **Relatório MFA do locatário** – estado MFA e último início de sessão de todos os utilizadores como semáforo, com pesquisa, filtros e exportação para Excel a cores |
+| 📥 | **Importação em massa de TOTP** – importar tokens TOTP de hardware (SHA-1 ou SHA-256) a partir de um ficheiro CSV, com importação de teste, exportação para Excel e anulação |
+| 🗂️ | **Inventário de tokens** – todos os tokens TOTP de hardware do locatário: atribuir tokens livres, remover atribuições, eliminar |
+| 🎫 | **TAP em massa** – Temporary Access Pass para muitos utilizadores de uma vez (CSV ou grupo) com exportação para Excel |
 | 🆘 | **Conta de emergência** – criar um acesso de emergência (break-glass) com chave FIDO2 e palavra-passe desconhecida |
 | 🌐 | **Multilingue** – inglês (predefinido), alemão, espanhol, francês, italiano, português, neerlandês e polaco |
 
@@ -200,7 +206,56 @@ Clique em **"Relatório MFA …"** no canto superior esquerdo para verificar de 
 
 Como funções administrativas contam as funções ativas e as elegíveis através do PIM (marcadas com "(PIM)"), bem como as funções atribuídas através de grupos.
 
+**Sem interface** (p. ex. como tarefa agendada mensal) o relatório pode ser criado a partir da linha de comandos; o início de sessão continua a ser interativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Relatorios\MFA.xlsx
+```
+
+Opções: `-Group "<nome ou ID de objeto>"` (membros de um grupo em vez de todos os utilizadores), `-IncludeDisabled`, `-IncludeGuests`, `-Language pt`. Código de saída 0 em caso de sucesso, 1 em caso de erro.
+
 ---
+
+## Importação em massa de tokens TOTP
+
+Para tokens TOTP de hardware com ficheiro de seeds do fabricante (p. ex. tokens com visor em formato porta-chaves), clique no topo em **"Importar TOTP …"**.
+
+1. **"Exemplo"** guarda um CSV de exemplo com as colunas esperadas. Uma linha por token:
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;ana.exemplo@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
+   ```
+
+   Separador `;` ou `,`; a ordem das colunas é indiferente. **O UPN é opcional**: uma linha sem UPN apenas adiciona o token ao inventário – atribua-o depois no [inventário de tokens](#inventário-de-tokens). Colunas opcionais: `Manufacturer`, `Model`.
+2. **"Selecionar CSV …"** carrega o ficheiro. Escolha o **algoritmo** (SHA-1 ou SHA-256) e o **intervalo** (30 ou 60 segundos) – ambos têm de corresponder aos tokens (ver encomenda ou ficheiro de seeds).
+3. **"Importação de teste"** verifica cada linha sem alterar nada: segredo Base32, números de série duplicados, se o utilizador existe e se o número de série já está atribuído no locatário. As linhas são apresentadas a verde/amarelo/vermelho.
+4. **"Iniciar importação"** cria os tokens sem erros no inventário, atribui-os aos utilizadores e ativa-os de imediato. As linhas com erros são ignoradas; um token falhado é revertido. Cada token consta do registo (sem segredo).
+5. **"Exportar para Excel …"** guarda a lista de resultados como comprovativo. **"Anular última importação"** remove novamente os tokens criados na última execução dos utilizadores e do inventário (possível até à próxima importação de teste).
+
+Alterar o ficheiro, o algoritmo ou o intervalo exige uma nova importação de teste.
+
+---
+
+## Inventário de tokens
+
+**"Inventário de tokens …"** no topo lista todos os tokens TOTP de hardware do locatário: tokens livres (amarelo), atribuídos e ativados (verde), com modelo, algoritmo, intervalo e utilizador atribuído. Com pesquisa e filtro por livre/atribuído.
+
+- **"Atribuir ao utilizador selecionado …"**: selecione primeiro um utilizador na janela principal e depois um token livre. Introduza o código apresentado nesse momento no token – é atribuído e ativado num só passo (como no portal Entra).
+- **"Remover atribuição"**: o utilizador deixa de poder iniciar sessão com o token; este permanece no inventário como token livre.
+- **"Eliminar"**: remove o token do inventário (um token atribuído é primeiro removido do seu utilizador).
+
+---
+
+## Temporary Access Pass em massa
+
+**"TAP em massa …"** cria um Temporary Access Pass para muitos utilizadores de uma vez, p. ex. para uma vaga de integração.
+
+1. Escolha os utilizadores: um **ficheiro CSV** (coluna `UPN` ou um UPN por linha) ou os **membros de um grupo** (incl. grupos aninhados).
+2. Defina a **validade** (10–43200 minutos) e se o passe é de **utilização única**.
+3. **"Teste"** resolve os utilizadores sem alterar nada. **"Criar passes"** cria depois um passe por utilizador; um passe existente do utilizador é substituído.
+4. **"Exportar para Excel …"** guarda a lista com os passes – contém-nos em texto simples, por isso guarde-a apenas num local protegido e elimine-a após a entrega. Os passes nunca são escritos no registo.
 
 ## Perguntas frequentes e resolução de problemas
 
@@ -208,7 +263,10 @@ Como funções administrativas contam as funções ativas e as elegíveis atrav�
 A ferramenta só funciona no Windows. Se a pasta foi copiada da Internet, do Teams ou de um ficheiro ZIP, os ficheiros podem estar bloqueados. Execute uma vez no PowerShell, dentro da pasta: `Get-ChildItem -Recurse | Unblock-File`.
 
 **O início de sessão volta a pedir consentimento.**
-É normal quando uma nova função precisa de permissões adicionais – por exemplo, na primeira conta de emergência.
+Acontece uma vez após uma atualização, quando a ferramenta precisa de novas permissões. Todas as permissões são pedidas no início de sessão; depois não aparece mais nenhuma janela de início de sessão.
+
+**O registo indica que está disponível uma versão mais recente.**
+Ao iniciar, a ferramenta compara a sua versão com a última release no GitHub (apenas uma linha no registo, nada é transferido). Transfira a nova versão da página de releases e substitua a pasta.
 
 **Um método acabado de criar ou eliminar não aparece de imediato.**
 A Microsoft precisa de alguns segundos. A ferramenta espera automaticamente até cerca de 16 segundos; depois, se necessário, clique em **"Atualizar"**.
@@ -259,49 +317,29 @@ Para isso são necessários uma licença **Entra ID P1/P2**, a permissão `Audit
 
 ### Permissões do Graph (delegadas)
 
-No início de sessão:
+Todas as permissões são pedidas uma única vez no início de sessão, pelo que durante o trabalho não aparece mais nenhuma janela de início de sessão:
 
 | Permissão | Finalidade |
 |---|---|
 | `User.Read.All` | Pesquisar utilizadores |
 | `UserAuthenticationMethod.Read.All` | Mostrar métodos MFA |
 | `UserAuthenticationMethod.ReadWrite.All` | Configurar e eliminar métodos MFA |
-| `Policy.ReadWrite.AuthenticationMethod` | Criar/eliminar cartões TOTP e MFA fictícia no inventário de tokens |
+| `Policy.ReadWrite.AuthenticationMethod` | Inventário de tokens: criar, atribuir e eliminar cartões TOTP, tokens TOTP importados e MFA fictícia |
 | `RoleManagement.Read.Directory` | Mostrar as funções de administrador de um utilizador |
+| `User.ReadWrite.All` | Conta de emergência; guardar a data de envio do guia de MFA e o segredo cifrado da MFA fictícia no objeto de utilizador |
+| `Domain.Read.All` | Conta de emergência: mostrar domínios para seleção |
+| `RoleManagement.ReadWrite.Directory` | Conta de emergência: atribuir Global Administrator |
+| `GroupMember.Read.All` | Relatório MFA: escolher um grupo como âmbito, resolver funções atribuídas através de grupos |
+| `AuditLog.Read.All` | Relatório MFA: último início de sessão |
+| `Mail.Send` | Guia de MFA a partir da própria caixa de correio |
+| `Mail.Send.Shared` | Guia de MFA a partir de uma caixa de correio partilhada |
+| `Organization.Read.All` | Carregar a chave hrdnr do locatário |
 
-Adicionalmente, na primeira conta de emergência:
+Se uma permissão não foi concedida (consentimento recusado), a função afetada indica-o; termine a sessão e inicie-a novamente para a conceder.
 
-| Permissão | Finalidade |
-|---|---|
-| `User.ReadWrite.All` | Criar utilizadores |
-| `Domain.Read.All` | Mostrar domínios para seleção |
-| `RoleManagement.ReadWrite.Directory` | Atribuir Global Administrator |
+O último início de sessão requer ainda uma licença **Entra ID P1/P2** e uma função que possa ler dados de início de sessão, p. ex. **Reports Reader**, **Security Reader** ou **Global Reader**. É mostrado o último início de sessão bem-sucedido (interativo ou não interativo); a Microsoft regista-o desde dezembro de 2023, os valores anteriores são a última tentativa.
 
-Adicionalmente, para o relatório MFA:
-
-| Permissão | Para quê |
-|---|---|
-| `GroupMember.Read.All` | Escolher um grupo como âmbito, resolver funções de administrador atribuídas através de grupos |
-| `AuditLog.Read.All` | Último início de sessão (opcional – sem ela, o relatório é criado sem esta coluna) |
-
-O último início de sessão requer ainda uma licença **Entra ID P1/P2** e uma função que possa ler os dados de início de sessão, p. ex. **Leitor de relatórios**, **Leitor de segurança** ou **Leitor global**. É mostrado o último início de sessão bem-sucedido (interativo ou não interativo); a Microsoft regista-o desde dezembro de 2023, os valores mais antigos correspondem à última tentativa de início de sessão.
-
-Adicionalmente, para o guia de MFA:
-
-| Permissão | Para quê |
-|---|---|
-| `Mail.Send` | Enviar o e-mail a partir da sua própria caixa de correio |
-| `Mail.Send.Shared` | Enviar o e-mail a partir de uma caixa partilhada (só se for indicada) |
-| `User.ReadWrite.All` | Guardar a data de envio no objeto do utilizador |
-
-Para guardar a data de envio é necessária uma função que possa alterar utilizadores, p. ex. **Administrador de utilizadores**.
-
-Além disso, para a MFA fictícia com chave do hrdnr:
-
-| Permissão | Para quê |
-|---|---|
-| `User.ReadWrite.All` | Guardar o segredo encriptado no objeto do utilizador |
-| `Organization.Read.All` | Carregar a chave do hrdnr do inquilino (apenas para «Carregar do inquilino») |
+Guardar a data de envio do guia de MFA requer uma função que possa alterar utilizadores, p. ex. **User Administrator**.
 
 ### Funções do Entra necessárias para a sua própria conta
 
@@ -309,7 +347,7 @@ Além disso, para a MFA fictícia com chave do hrdnr:
 |---|---|
 | Gerir métodos de utilizadores normais, TAP | **Authentication Administrator** |
 | Gerir métodos de administradores | **Privileged Authentication Administrator** |
-| Cartões TOTP e MFA fictícia | adicionalmente **Authentication Policy Administrator** |
+| Cartões TOTP, importação TOTP e MFA fictícia | adicionalmente **Authentication Policy Administrator** |
 | Conta de emergência | **Global Administrator** (ou Privileged Role Administrator + User Administrator) |
 
 ### Definições do locatário
@@ -337,6 +375,9 @@ Na **política de métodos de autenticação** (Centro de administração do Ent
 | `UI/MainWindow.xaml` | Esquema da janela principal |
 | `UI/BreakGlassDialog.xaml` | Caixa de diálogo para novas contas de emergência |
 | `UI/TenantReportWindow.xaml` | Janela do relatório MFA |
+| `UI/TotpImportWindow.xaml` | Janela da importação em massa de TOTP |
+| `UI/TokenInventoryWindow.xaml` | Janela do inventário de tokens |
+| `UI/BulkTapWindow.xaml` | Janela do Temporary Access Pass em massa |
 | `UI/MfaGuideDialog.xaml` | Caixa de diálogo de pré-visualização do guia de MFA |
 | `Modules/Graph.psm1` | Início de sessão, pedidos ao Graph, utilizadores, domínios, funções, semáforo de MFA, leitura/eliminação de métodos |
 | `Modules/Provisioning.psm1` | Configuração de FIDO2, cartões TOTP, MFA fictícia, TAP e contas de emergência |

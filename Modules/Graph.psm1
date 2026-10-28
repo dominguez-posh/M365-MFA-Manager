@@ -365,6 +365,63 @@ function Invoke-M365GraphRequest {
     }
 }
 
+function Invoke-M365UserBatch {
+    <#
+    .SYNOPSIS
+        Runs one GET per user (up to 20) as a Graph batch request, with retries when throttled.
+    .PARAMETER Path
+        Request path with {0} as placeholder for the user ID, e.g. '/users/{0}/authentication/methods'.
+    .OUTPUTS
+        Hashtable user ID -> @{ Body = response body; Status = HTTP status; Error = message or $null }
+    #>
+    param(
+        [Parameter(Mandatory)][string[]]$UserIds,
+        [Parameter(Mandatory)][string]$Path,
+        [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
+    )
+
+    $result = @{}
+    $pending = @($UserIds)
+    for ($attempt = 1; $pending.Count -and $attempt -le 6; $attempt++) {
+        $requests = for ($i = 0; $i -lt $pending.Count; $i++) {
+            @{ id = "$i"; method = 'GET'; url = $Path -f $pending[$i] }
+        }
+        $response = Invoke-M365GraphRequest -Method POST -Uri 'beta/$batch' -Body @{ requests = @($requests) }
+
+        $retry = New-Object System.Collections.Generic.List[string]
+        $retryAfter = 2
+        foreach ($entry in @($response['responses'])) {
+            $userId = $pending[[int]$entry['id']]
+            $status = [int]$entry['status']
+            $body = $entry['body']
+
+            # Throttled or temporarily unavailable: try again after the requested delay
+            if ($status -eq 429 -or $status -ge 500) {
+                $retry.Add($userId)
+                $headers = $entry['headers']
+                if ($headers -is [System.Collections.IDictionary] -and $headers['Retry-After']) {
+                    $retryAfter = [Math]::Max($retryAfter, [Math]::Min(60, [int]$headers['Retry-After']))
+                }
+                continue
+            }
+            if ($status -ge 400) {
+                $message = "HTTP $status"
+                if ($body -is [System.Collections.IDictionary] -and $body['error'] -is [System.Collections.IDictionary]) {
+                    $message = '{0}: {1}' -f $body['error']['code'], $body['error']['message']
+                }
+                $result[$userId] = @{ Body = $null; Status = $status; Error = $message }
+                continue
+            }
+            $result[$userId] = @{ Body = $body; Status = $status; Error = $null }
+        }
+
+        $pending = @($retry)
+        if ($pending.Count) { & $Wait ($retryAfter * 1000) }
+    }
+    foreach ($userId in $pending) { $result[$userId] = @{ Body = $null; Status = 429; Error = T 'Report.Throttled' } }
+    $result
+}
+
 function ConvertTo-LocalDate {
     <#
     .SYNOPSIS
@@ -792,6 +849,7 @@ Export-ModuleMember -Function @(
     'Disconnect-M365Graph'
     'Request-M365GraphScopes'
     'Invoke-M365GraphRequest'
+    'Invoke-M365UserBatch'
     'Get-M365VerifiedDomains'
     'ConvertTo-LocalDate'
     'Find-M365User'

@@ -18,6 +18,9 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 - [Tworzenie konta awaryjnego](#tworzenie-konta-awaryjnego)
 - [Instrukcja MFA e-mailem](#instrukcja-mfa-e-mailem)
 - [Raport MFA dzierżawy](#raport-mfa-dzierżawy)
+- [Masowy import tokenów TOTP](#masowy-import-tokenów-totp)
+- [Inwentarz tokenów](#inwentarz-tokenów)
+- [Masowy Temporary Access Pass](#masowy-temporary-access-pass)
 - [Często zadawane pytania i rozwiązywanie problemów](#często-zadawane-pytania-i-rozwiązywanie-problemów)
 - [Bezpieczeństwo](#bezpieczeństwo)
 - [Wymagania i uprawnienia dla administratorów](#wymagania-i-uprawnienia-dla-administratorów)
@@ -37,6 +40,9 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 | ➕ | **Konfigurowanie metod** – klucz FIDO2, karty TOTP, Temporary Access Pass i pozorne MFA |
 | ✉️ | **Instrukcja MFA e-mailem** – wysyła użytkownikom bez MFA lub ze słabym MFA instrukcję krok po kroku dla aplikacji Microsoft Authenticator, w ich języku i z podglądem |
 | 📊 | **Raport MFA dzierżawy** – stan MFA i ostatnie logowanie wszystkich użytkowników jako sygnalizacja świetlna, z wyszukiwaniem, filtrami i kolorowym eksportem do Excela |
+| 📥 | **Masowy import TOTP** – import sprzętowych tokenów TOTP (SHA-1 lub SHA-256) z pliku CSV, z importem testowym, eksportem do Excela i cofaniem |
+| 🗂️ | **Inwentarz tokenów** – wszystkie sprzętowe tokeny TOTP dzierżawy: przypisywanie wolnych tokenów, usuwanie przypisań, usuwanie |
+| 🎫 | **Masowy TAP** – Temporary Access Pass dla wielu użytkowników naraz (CSV lub grupa) z eksportem do Excela |
 | 🆘 | **Konto awaryjne** – tworzenie dostępu awaryjnego (break-glass) z kluczem FIDO2 i nieznanym hasłem |
 | 🌐 | **Wielojęzyczność** – angielski (domyślnie), niemiecki, hiszpański, francuski, włoski, portugalski, niderlandzki i polski |
 
@@ -200,7 +206,56 @@ Kliknij **"Raport MFA …"** w lewym górnym rogu, aby za jednym razem sprawdzi�
 
 Za role administracyjne uznawane są role aktywne i kwalifikujące się przez PIM (oznaczone „(PIM)”), a także role przypisane przez grupy.
 
+**Bez interfejsu** (np. jako comiesięczne zadanie zaplanowane) raport można utworzyć z wiersza poleceń; logowanie pozostaje interaktywne:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Raporty\MFA.xlsx
+```
+
+Opcje: `-Group "<nazwa lub ID obiektu>"` (członkowie grupy zamiast wszystkich użytkowników), `-IncludeDisabled`, `-IncludeGuests`, `-Language pl`. Kod wyjścia 0 przy powodzeniu, 1 przy błędzie.
+
 ---
+
+## Masowy import tokenów TOTP
+
+W przypadku sprzętowych tokenów TOTP z plikiem seed od producenta (np. tokeny z wyświetlaczem w formie breloka) kliknij u góry **„Import TOTP …”**.
+
+1. **„Przykład”** zapisuje przykładowy plik CSV z oczekiwanymi kolumnami. Jeden wiersz na token:
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anna.przyklad@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
+   ```
+
+   Separator `;` lub `,`; kolejność kolumn nie ma znaczenia. **UPN jest opcjonalny**: wiersz bez UPN dodaje token tylko do inwentarza – przypisz go później w [inwentarzu tokenów](#inwentarz-tokenów). Kolumny opcjonalne: `Manufacturer`, `Model`.
+2. **„Wybierz CSV …”** wczytuje plik. Wybierz **algorytm** (SHA-1 lub SHA-256) i **interwał czasu** (30 lub 60 sekund) – oba muszą pasować do tokenów (patrz zamówienie lub plik seed).
+3. **„Import testowy”** sprawdza każdy wiersz, niczego nie zmieniając: sekret Base32, powtórzone numery seryjne, istnienie użytkownika i czy numer seryjny jest już przypisany w dzierżawie. Wiersze są oznaczone na zielono/żółto/czerwono.
+4. **„Rozpocznij import”** tworzy bezbłędne tokeny w inwentarzu, przypisuje je użytkownikom i od razu aktywuje. Wiersze z błędami są pomijane; nieudany token jest wycofywany. Każdy token trafia do dziennika (bez sekretu).
+5. **„Eksport do Excela …”** zapisuje listę wyników jako potwierdzenie. **„Cofnij ostatni import”** ponownie usuwa tokeny utworzone w ostatnim przebiegu od użytkowników i z inwentarza (możliwe do następnego importu testowego).
+
+Zmiana pliku, algorytmu lub interwału wymaga nowego importu testowego.
+
+---
+
+## Inwentarz tokenów
+
+**„Inwentarz tokenów …”** u góry wyświetla wszystkie sprzętowe tokeny TOTP dzierżawy: wolne (żółte), przypisane i aktywowane (zielone), z modelem, algorytmem, interwałem i przypisanym użytkownikiem. Z wyszukiwaniem i filtrem wolne/przypisane.
+
+- **„Przypisz wybranemu użytkownikowi …”**: najpierw wybierz użytkownika w oknie głównym, potem wolny token. Wpisz kod aktualnie wyświetlany na tokenie – zostanie przypisany i aktywowany w jednym kroku (jak w portalu Entra).
+- **„Usuń przypisanie”**: użytkownik nie może już logować się tym tokenem; pozostaje on w inwentarzu jako wolny.
+- **„Usuń”**: usuwa token z inwentarza (przypisany token jest najpierw usuwany od użytkownika).
+
+---
+
+## Masowy Temporary Access Pass
+
+**„Masowy TAP …”** tworzy Temporary Access Pass dla wielu użytkowników naraz, np. dla fali onboardingu.
+
+1. Wybierz użytkowników: **plik CSV** (kolumna `UPN` lub jeden UPN w wierszu) albo **członków grupy** (łącznie z grupami zagnieżdżonymi).
+2. Ustaw **ważność** (10–43200 minut) i czy hasło ma być **jednorazowe**.
+3. **„Test”** rozwiązuje użytkowników, niczego nie zmieniając. **„Utwórz hasła”** tworzy następnie po jednym haśle na użytkownika; istniejące hasło użytkownika zostaje zastąpione.
+4. **„Eksport do Excela …”** zapisuje listę z hasłami – zawiera je w postaci jawnej, więc zapisuj ją tylko w chronionym miejscu i usuń po przekazaniu. Hasła nigdy nie trafiają do dziennika.
 
 ## Często zadawane pytania i rozwiązywanie problemów
 
@@ -208,7 +263,10 @@ Za role administracyjne uznawane są role aktywne i kwalifikujące się przez PI
 Narzędzie działa tylko w systemie Windows. Jeśli folder skopiowano z Internetu, z Teams lub z pliku ZIP, pliki mogą być zablokowane. Uruchom jednorazowo w PowerShell w tym folderze: `Get-ChildItem -Recurse | Unblock-File`.
 
 **Logowanie ponownie prosi o zgodę.**
-To normalne, gdy nowa funkcja wymaga dodatkowych uprawnień – na przykład przy pierwszym koncie awaryjnym.
+Dzieje się tak jednorazowo po aktualizacji, gdy narzędzie potrzebuje nowych uprawnień. Wszystkie uprawnienia są żądane przy logowaniu; później nie pojawia się już żadne okno logowania.
+
+**W dzienniku jest informacja o nowszej wersji.**
+Przy starcie narzędzie porównuje swoją wersję z najnowszym wydaniem na GitHubie (tylko wpis w dzienniku, nic nie jest pobierane). Pobierz nową wersję ze strony wydań i zastąp folder.
 
 **Nowo utworzona lub usunięta metoda nie pojawia się od razu.**
 Microsoft potrzebuje na to kilku sekund. Narzędzie automatycznie czeka do ok. 16 sekund; potem w razie potrzeby kliknij **„Odśwież”**.
@@ -259,49 +317,29 @@ Wymagane są licencja **Entra ID P1/P2**, uprawnienie `AuditLog.Read.All` oraz r
 
 ### Uprawnienia Graph (delegowane)
 
-Przy logowaniu:
+Wszystkie uprawnienia są żądane jednorazowo przy logowaniu, dzięki czemu podczas pracy nie pojawia się już żadne okno logowania:
 
 | Uprawnienie | Do czego |
 |---|---|
 | `User.Read.All` | Wyszukiwanie użytkowników |
 | `UserAuthenticationMethod.Read.All` | Wyświetlanie metod MFA |
 | `UserAuthenticationMethod.ReadWrite.All` | Konfigurowanie i usuwanie metod MFA |
-| `Policy.ReadWrite.AuthenticationMethod` | Tworzenie/usuwanie kart TOTP i pozornego MFA w spisie tokenów |
+| `Policy.ReadWrite.AuthenticationMethod` | Inwentarz tokenów: tworzenie, przypisywanie i usuwanie kart TOTP, importowanych tokenów TOTP i pozornego MFA |
 | `RoleManagement.Read.Directory` | Wyświetlanie ról administratora użytkownika |
+| `User.ReadWrite.All` | Konto awaryjne; zapis daty wysłania instrukcji MFA i zaszyfrowanego sekretu pozornego MFA w obiekcie użytkownika |
+| `Domain.Read.All` | Konto awaryjne: wyświetlanie domen do wyboru |
+| `RoleManagement.ReadWrite.Directory` | Konto awaryjne: przypisanie roli Global Administrator |
+| `GroupMember.Read.All` | Raport MFA: wybór grupy jako zakresu, rozwiązywanie ról przypisanych przez grupy |
+| `AuditLog.Read.All` | Raport MFA: ostatnie logowanie |
+| `Mail.Send` | Instrukcja MFA z własnej skrzynki |
+| `Mail.Send.Shared` | Instrukcja MFA ze skrzynki współdzielonej |
+| `Organization.Read.All` | Wczytanie klucza hrdnr z dzierżawy |
 
-Dodatkowo przy pierwszym koncie awaryjnym:
+Jeśli uprawnienie nie zostało przyznane (odrzucona zgoda), zgłasza to dana funkcja; wyloguj się i zaloguj ponownie, aby je przyznać.
 
-| Uprawnienie | Do czego |
-|---|---|
-| `User.ReadWrite.All` | Tworzenie użytkowników |
-| `Domain.Read.All` | Wyświetlanie domen do wyboru |
-| `RoleManagement.ReadWrite.Directory` | Przypisywanie roli Global Administrator |
+Ostatnie logowanie wymaga dodatkowo licencji **Entra ID P1/P2** i roli z dostępem do danych logowania, np. **Reports Reader**, **Security Reader** lub **Global Reader**. Wyświetlane jest ostatnie udane logowanie (interaktywne lub nieinteraktywne); Microsoft rejestruje je od grudnia 2023, starsze wartości to ostatnia próba logowania.
 
-Dodatkowo dla raportu MFA:
-
-| Uprawnienie | Do czego |
-|---|---|
-| `GroupMember.Read.All` | Wybór grupy jako zakresu, ustalanie ról administracyjnych przypisanych przez grupy |
-| `AuditLog.Read.All` | Ostatnie logowanie (opcjonalne – bez niego raport jest tworzony bez tej kolumny) |
-
-Ostatnie logowanie wymaga ponadto licencji **Entra ID P1/P2** oraz roli, która może odczytywać dane logowania, np. **Czytelnik raportów**, **Czytelnik zabezpieczeń** lub **Czytelnik globalny**. Pokazywane jest ostatnie udane logowanie (interakcyjne lub nieinterakcyjne); Microsoft rejestruje je od grudnia 2023 r., starsze wartości to ostatnia próba logowania.
-
-Dodatkowo dla instrukcji MFA:
-
-| Uprawnienie | Do czego |
-|---|---|
-| `Mail.Send` | Wysyłanie wiadomości z własnej skrzynki |
-| `Mail.Send.Shared` | Wysyłanie wiadomości ze skrzynki udostępnionej (tylko jeśli została podana) |
-| `User.ReadWrite.All` | Zapis daty wysłania w obiekcie użytkownika |
-
-Zapis daty wysłania wymaga roli, która może modyfikować użytkowników, np. **Administrator użytkowników**.
-
-Dodatkowo dla fałszywego MFA z kluczem hrdnr:
-
-| Uprawnienie | Do czego |
-|---|---|
-| `User.ReadWrite.All` | Zapisanie zaszyfrowanego sekretu w obiekcie użytkownika |
-| `Organization.Read.All` | Wczytanie klucza hrdnr z dzierżawy (tylko dla „Wczytaj z dzierżawy”) |
+Zapis daty wysłania instrukcji MFA wymaga roli mogącej modyfikować użytkowników, np. **User Administrator**.
 
 ### Wymagane role Entra dla własnego konta
 
@@ -309,7 +347,7 @@ Dodatkowo dla fałszywego MFA z kluczem hrdnr:
 |---|---|
 | Zarządzanie metodami zwykłych użytkowników, TAP | **Authentication Administrator** |
 | Zarządzanie metodami administratorów | **Privileged Authentication Administrator** |
-| Karty TOTP i pozorne MFA | dodatkowo **Authentication Policy Administrator** |
+| Karty TOTP, import TOTP i pozorne MFA | dodatkowo **Authentication Policy Administrator** |
 | Konto awaryjne | **Global Administrator** (lub Privileged Role Administrator + User Administrator) |
 
 ### Ustawienia dzierżawy
@@ -337,6 +375,9 @@ W **zasadach metod uwierzytelniania** (Centrum administracyjne Entra → Ochrona
 | `UI/MainWindow.xaml` | Układ okna głównego |
 | `UI/BreakGlassDialog.xaml` | Okno dla nowych kont awaryjnych |
 | `UI/TenantReportWindow.xaml` | Okno raportu MFA |
+| `UI/TotpImportWindow.xaml` | Okno masowego importu TOTP |
+| `UI/TokenInventoryWindow.xaml` | Okno inwentarza tokenów |
+| `UI/BulkTapWindow.xaml` | Okno masowego Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Okno podglądu instrukcji MFA |
 | `Modules/Graph.psm1` | Logowanie, żądania Graph, użytkownicy, domeny, role, sygnalizator MFA, odczyt/usuwanie metod |
 | `Modules/Provisioning.psm1` | Konfiguracja FIDO2, kart TOTP, pozornego MFA, TAP i kont awaryjnych |

@@ -18,6 +18,9 @@ Con esta herramienta, los administradores y el personal del servicio de asistenc
 - [Crear una cuenta de emergencia](#crear-una-cuenta-de-emergencia)
 - [Guía de MFA por correo](#guía-de-mfa-por-correo)
 - [Informe MFA del inquilino](#informe-mfa-del-inquilino)
+- [Importación masiva de tokens TOTP](#importación-masiva-de-tokens-totp)
+- [Inventario de tokens](#inventario-de-tokens)
+- [Temporary Access Pass masivo](#temporary-access-pass-masivo)
 - [Preguntas frecuentes y solución de problemas](#preguntas-frecuentes-y-solución-de-problemas)
 - [Seguridad](#seguridad)
 - [Para administradores: requisitos y permisos](#para-administradores-requisitos-y-permisos)
@@ -37,6 +40,9 @@ Con esta herramienta, los administradores y el personal del servicio de asistenc
 | ➕ | **Configurar métodos** – llave FIDO2, tarjetas TOTP, Temporary Access Pass y MFA ficticia |
 | ✉️ | **Guía de MFA por correo** – envía a los usuarios sin MFA o con MFA débil una guía paso a paso para la aplicación Microsoft Authenticator, en su idioma y con vista previa |
 | 📊 | **Informe MFA del inquilino** – estado MFA y último inicio de sesión de todos los usuarios como semáforo, con búsqueda, filtros y exportación a Excel en color |
+| 📥 | **Importación masiva de TOTP** – importar tokens TOTP de hardware (SHA-1 o SHA-256) desde un archivo CSV, con importación de prueba, exportación a Excel y deshacer |
+| 🗂️ | **Inventario de tokens** – todos los tokens TOTP de hardware del inquilino: asignar tokens libres, quitar asignaciones, eliminar |
+| 🎫 | **TAP masivo** – Temporary Access Pass para muchos usuarios a la vez (CSV o grupo) con exportación a Excel |
 | 🆘 | **Cuenta de emergencia** – crear un acceso de emergencia (break-glass) con llave FIDO2 y contraseña desconocida |
 | 🌐 | **Multilingüe** – inglés (predeterminado), alemán, español, francés, italiano, portugués, neerlandés y polaco |
 
@@ -200,7 +206,56 @@ Haga clic en **"Informe MFA …"** arriba a la izquierda para comprobar de una v
 
 Como roles administrativos cuentan los roles activos y los elegibles mediante PIM (marcados con "(PIM)"), así como los roles asignados a través de grupos.
 
+**Sin interfaz gráfica** (p. ej. como tarea programada mensual) el informe puede crearse desde la línea de comandos; el inicio de sesión sigue siendo interactivo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Informes\MFA.xlsx
+```
+
+Opciones: `-Group "<nombre o ID de objeto>"` (miembros de un grupo en lugar de todos los usuarios), `-IncludeDisabled`, `-IncludeGuests`, `-Language es`. Código de salida 0 si todo va bien, 1 en caso de error.
+
 ---
+
+## Importación masiva de tokens TOTP
+
+Para tokens TOTP de hardware con archivo de semillas del fabricante (p. ej. tokens con pantalla tipo llavero), haga clic arriba en **"Importar TOTP …"**.
+
+1. **"Ejemplo"** guarda un CSV de ejemplo con las columnas esperadas. Una línea por token:
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;ana.ejemplo@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
+   ```
+
+   Separador `;` o `,`; el orden de las columnas no importa. **UPN es opcional**: una línea sin UPN solo añade el token al inventario; asígnelo después en el [inventario de tokens](#inventario-de-tokens). Columnas opcionales: `Manufacturer`, `Model`.
+2. **"Seleccionar CSV …"** carga el archivo. Elija el **algoritmo** (SHA-1 o SHA-256) y el **intervalo** (30 o 60 segundos); ambos deben coincidir con los tokens (véase el pedido o el archivo de semillas).
+3. **"Importación de prueba"** comprueba cada línea sin cambiar nada: secreto Base32, números de serie duplicados, si el usuario existe y si el número de serie ya está asignado en el inquilino. Las líneas se muestran en verde/amarillo/rojo.
+4. **"Iniciar importación"** crea los tokens sin errores en el inventario, los asigna a los usuarios y los activa de inmediato. Las líneas con errores se omiten; un token fallido se revierte. Cada token aparece en el registro (sin secreto).
+5. **"Exportar a Excel …"** guarda la lista de resultados como comprobante. **"Deshacer última importación"** elimina de nuevo los tokens creados en la última ejecución de los usuarios y del inventario (disponible hasta la próxima importación de prueba).
+
+Cambiar el archivo, el algoritmo o el intervalo requiere una nueva importación de prueba.
+
+---
+
+## Inventario de tokens
+
+**"Inventario de tokens …"** arriba muestra todos los tokens TOTP de hardware del inquilino: tokens libres (amarillo), asignados y activados (verde), con modelo, algoritmo, intervalo y usuario asignado. Con búsqueda y filtro por libre/asignado.
+
+- **"Asignar al usuario seleccionado …"**: seleccione primero un usuario en la ventana principal y luego un token libre. Introduzca el código que muestra el token en ese momento: se asigna y activa en un solo paso (como en el portal de Entra).
+- **"Quitar asignación"**: el usuario ya no puede iniciar sesión con el token; permanece en el inventario como token libre.
+- **"Eliminar"**: quita el token del inventario (un token asignado se quita primero de su usuario).
+
+---
+
+## Temporary Access Pass masivo
+
+**"TAP masivo …"** crea un Temporary Access Pass para muchos usuarios a la vez, p. ej. para una oleada de incorporaciones.
+
+1. Elija los usuarios: un **archivo CSV** (columna `UPN` o un UPN por línea) o los **miembros de un grupo** (incl. grupos anidados).
+2. Defina la **validez** (10–43200 minutos) y si el pase es de **uso único**.
+3. **"Prueba"** resuelve los usuarios sin cambiar nada. **"Crear pases"** crea después un pase por usuario; un pase existente del usuario se reemplaza.
+4. **"Exportar a Excel …"** guarda la lista con los pases; los contiene en texto claro, así que guárdela solo en un lugar protegido y elimínela tras la entrega. Los pases nunca se escriben en el registro.
 
 ## Preguntas frecuentes y solución de problemas
 
@@ -208,7 +263,10 @@ Como roles administrativos cuentan los roles activos y los elegibles mediante PI
 La herramienta solo funciona en Windows. Si la carpeta se copió de Internet, Teams o un archivo ZIP, los archivos pueden estar bloqueados. Ejecute una vez en PowerShell dentro de la carpeta: `Get-ChildItem -Recurse | Unblock-File`.
 
 **El inicio de sesión vuelve a pedir consentimiento.**
-Es normal cuando una función nueva necesita permisos adicionales, por ejemplo con la primera cuenta de emergencia.
+Ocurre una vez tras una actualización, cuando la herramienta necesita permisos nuevos. Todos los permisos se solicitan al iniciar sesión; después no aparece ningún otro diálogo de inicio de sesión.
+
+**El registro indica que hay una versión más reciente.**
+Al iniciar, la herramienta compara su versión con la última publicada en GitHub (solo una línea en el registro, no se descarga nada). Descargue la nueva versión desde la página de releases y reemplace la carpeta.
 
 **Un método recién creado o eliminado no se muestra de inmediato.**
 Microsoft necesita unos segundos. La herramienta espera automáticamente hasta unos 16 segundos; después, si es necesario, haga clic en **"Actualizar"**.
@@ -259,49 +317,29 @@ Para ello se necesitan una licencia **Entra ID P1/P2**, el permiso `AuditLog.Rea
 
 ### Permisos de Graph (delegados)
 
-Al iniciar sesión:
+Todos los permisos se solicitan una sola vez al iniciar sesión, por lo que no aparece ningún otro diálogo de inicio de sesión durante el trabajo:
 
 | Permiso | Para qué |
 |---|---|
 | `User.Read.All` | Buscar usuarios |
 | `UserAuthenticationMethod.Read.All` | Mostrar métodos MFA |
 | `UserAuthenticationMethod.ReadWrite.All` | Configurar y eliminar métodos MFA |
-| `Policy.ReadWrite.AuthenticationMethod` | Crear/eliminar tarjetas TOTP y MFA ficticia en el inventario de tokens |
+| `Policy.ReadWrite.AuthenticationMethod` | Inventario de tokens: crear, asignar y eliminar tarjetas TOTP, tokens TOTP importados y MFA ficticia |
 | `RoleManagement.Read.Directory` | Mostrar los roles de administrador de un usuario |
+| `User.ReadWrite.All` | Cuenta de emergencia; guardar la fecha de envío de la guía MFA y el secreto cifrado de la MFA ficticia en el objeto de usuario |
+| `Domain.Read.All` | Cuenta de emergencia: mostrar dominios para seleccionar |
+| `RoleManagement.ReadWrite.Directory` | Cuenta de emergencia: asignar Global Administrator |
+| `GroupMember.Read.All` | Informe MFA: elegir un grupo como ámbito, resolver roles asignados mediante grupos |
+| `AuditLog.Read.All` | Informe MFA: último inicio de sesión |
+| `Mail.Send` | Guía MFA desde el propio buzón |
+| `Mail.Send.Shared` | Guía MFA desde un buzón compartido |
+| `Organization.Read.All` | Cargar la clave hrdnr desde el inquilino |
 
-Además, con la primera cuenta de emergencia:
+Si un permiso no se concedió (consentimiento rechazado), la función afectada lo indica; cierre la sesión y vuelva a iniciarla para concederlo.
 
-| Permiso | Para qué |
-|---|---|
-| `User.ReadWrite.All` | Crear usuarios |
-| `Domain.Read.All` | Mostrar dominios para seleccionar |
-| `RoleManagement.ReadWrite.Directory` | Asignar Global Administrator |
+El último inicio de sesión requiere además una licencia **Entra ID P1/P2** y un rol que pueda leer datos de inicio de sesión, p. ej. **Reports Reader**, **Security Reader** o **Global Reader**. Se muestra el último inicio de sesión correcto (interactivo o no interactivo); Microsoft lo registra desde diciembre de 2023, los valores anteriores son el último intento.
 
-Además, para el informe MFA:
-
-| Permiso | Para qué |
-|---|---|
-| `GroupMember.Read.All` | Elegir un grupo como alcance, resolver roles de administrador asignados a través de grupos |
-| `AuditLog.Read.All` | Último inicio de sesión (opcional; sin él, el informe se crea sin esta columna) |
-
-El último inicio de sesión requiere además una licencia **Entra ID P1/P2** y un rol que pueda leer los datos de inicio de sesión, p. ej. **Lector de informes**, **Lector de seguridad** o **Lector global**. Se muestra el último inicio de sesión correcto (interactivo o no interactivo); Microsoft lo registra desde diciembre de 2023, los valores anteriores corresponden al último intento de inicio de sesión.
-
-Además, para la guía de MFA:
-
-| Permiso | Para qué |
-|---|---|
-| `Mail.Send` | Enviar el correo desde su propio buzón |
-| `Mail.Send.Shared` | Enviar el correo desde un buzón compartido (solo si se indica uno) |
-| `User.ReadWrite.All` | Guardar la fecha de envío en el objeto de usuario |
-
-Para guardar la fecha de envío se necesita un rol que pueda modificar usuarios, p. ej. **Administrador de usuarios**.
-
-Además, para la MFA ficticia con clave de hrdnr:
-
-| Permiso | Para qué |
-|---|---|
-| `User.ReadWrite.All` | Guardar el secreto cifrado en el objeto de usuario |
-| `Organization.Read.All` | Cargar la clave de hrdnr del inquilino (solo para «Cargar del inquilino») |
+Guardar la fecha de envío de la guía MFA requiere un rol que pueda modificar usuarios, p. ej. **User Administrator**.
 
 ### Roles de Entra necesarios para su propia cuenta
 
@@ -309,7 +347,7 @@ Además, para la MFA ficticia con clave de hrdnr:
 |---|---|
 | Gestionar métodos de usuarios normales, TAP | **Authentication Administrator** |
 | Gestionar métodos de administradores | **Privileged Authentication Administrator** |
-| Tarjetas TOTP y MFA ficticia | además **Authentication Policy Administrator** |
+| Tarjetas TOTP, importación TOTP y MFA ficticia | además **Authentication Policy Administrator** |
 | Cuenta de emergencia | **Global Administrator** (o Privileged Role Administrator + User Administrator) |
 
 ### Configuración del inquilino
@@ -337,6 +375,9 @@ En la **directiva de métodos de autenticación** (Centro de administración de 
 | `UI/MainWindow.xaml` | Diseño de la ventana principal |
 | `UI/BreakGlassDialog.xaml` | Diálogo para nuevas cuentas de emergencia |
 | `UI/TenantReportWindow.xaml` | Ventana del informe MFA |
+| `UI/TotpImportWindow.xaml` | Ventana de la importación masiva de TOTP |
+| `UI/TokenInventoryWindow.xaml` | Ventana del inventario de tokens |
+| `UI/BulkTapWindow.xaml` | Ventana del Temporary Access Pass masivo |
 | `UI/MfaGuideDialog.xaml` | Diálogo de vista previa de la guía de MFA |
 | `Modules/Graph.psm1` | Inicio de sesión, solicitudes a Graph, usuarios, dominios, roles, semáforo de MFA, lectura/eliminación de métodos |
 | `Modules/Provisioning.psm1` | Configuración de FIDO2, tarjetas TOTP, MFA ficticia, TAP y cuentas de emergencia |

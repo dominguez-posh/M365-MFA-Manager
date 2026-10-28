@@ -1,0 +1,163 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Uid="Inventory.Title"
+        Height="680" Width="1150" MinHeight="460" MinWidth="860"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="#F5F7FA" FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="Primary" Color="#0067B8"/>
+        <SolidColorBrush x:Key="Secondary" Color="#64748B"/>
+        <SolidColorBrush x:Key="Text" Color="#242424"/>
+        <SolidColorBrush x:Key="MutedText" Color="#64748B"/>
+        <SolidColorBrush x:Key="Border" Color="#D0D7DE"/>
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="16,9"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{StaticResource Primary}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource Secondary}"/>
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#B91C1C"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="SelectionMode" Value="Extended"/>
+            <Setter Property="SelectionUnit" Value="FullRow"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E1E5EA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="EnableRowVirtualization" Value="True"/>
+            <Setter Property="ClipboardCopyMode" Value="IncludeHeader"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="BorderBrush" Value="#E1E5EA"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+        <!-- Free tokens are highlighted; selection wins (last trigger) -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" Padding="10,6">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAssigned}" Value="False">
+                    <Setter Property="Background" Value="#FEF3C7"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="activated">
+                    <Setter Property="Background" Value="#DCFCE7"/>
+                </DataTrigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#BFDBFE"/>
+                    <Setter Property="Foreground" Value="#0F172A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#0F172A" Padding="24,16">
+            <StackPanel>
+                <TextBlock Uid="Inventory.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Name="TxtInvTenant" Text="" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="20,14,20,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Name="TxtInvSearch" Uid="Inventory.Search" Margin="0,4,4,4" VerticalContentAlignment="Center"/>
+            <ComboBox Grid.Column="1" Name="CmbInvFilter" Width="200" Padding="8,7" Margin="4" VerticalContentAlignment="Center" SelectedIndex="0">
+                <ComboBoxItem Uid="Inventory.Filter.All" Tag="All"/>
+                <ComboBoxItem Uid="Inventory.Filter.Free" Tag="Free"/>
+                <ComboBoxItem Uid="Inventory.Filter.Assigned" Tag="Assigned"/>
+            </ComboBox>
+            <TextBlock Grid.Column="2" Name="TxtInvCount" Text="" VerticalAlignment="Center" Margin="12,0" Foreground="{StaticResource MutedText}"/>
+            <Button Grid.Column="3" Name="BtnInvRefresh" Uid="Inventory.Refresh" Style="{StaticResource SecondaryButton}"/>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="20,0,20,0">
+            <DataGrid Name="DgInv">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Inventory.Col.Serial" Binding="{Binding SerialNumber}" Width="150"/>
+                    <DataGridTextColumn Header="Inventory.Col.Status" Binding="{Binding StatusText}" Width="110"/>
+                    <DataGridTextColumn Header="Inventory.Col.AssignedTo" Binding="{Binding AssignedToName}" Width="220"/>
+                    <DataGridTextColumn Header="Inventory.Col.Model" Binding="{Binding Model}" Width="170"/>
+                    <DataGridTextColumn Header="Inventory.Col.Manufacturer" Binding="{Binding Manufacturer}" Width="130"/>
+                    <DataGridTextColumn Header="Inventory.Col.Algorithm" Binding="{Binding Algorithm}" Width="90"/>
+                    <DataGridTextColumn Header="Inventory.Col.Interval" Binding="{Binding TimeInterval}" Width="80"/>
+                    <DataGridTextColumn Header="Inventory.Col.DisplayName" Binding="{Binding DisplayName}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock Name="TxtInvEmpty" Uid="Inventory.Empty" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{StaticResource MutedText}" Visibility="Collapsed"/>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="20,10,20,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Name="TxtInvStatus" Text="" TextWrapping="Wrap"/>
+                <ProgressBar Name="PrgInv" Height="4" Margin="0,6,20,0" Visibility="Hidden" IsIndeterminate="True"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Name="BtnInvAssign" Uid="Inventory.Assign"/>
+                <Button Name="BtnInvUnassign" Uid="Inventory.Unassign" Style="{StaticResource SecondaryButton}"/>
+                <Button Name="BtnInvDelete" Uid="Inventory.Delete" Style="{StaticResource DangerButton}"/>
+                <Button Name="BtnInvClose" Uid="Common.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

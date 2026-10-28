@@ -96,6 +96,12 @@
                 <DataTrigger Binding="{Binding Status}" Value="Imported">
                     <Setter Property="Background" Value="#DCFCE7"/>
                 </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="UndoFailed">
+                    <Setter Property="Background" Value="#FEE2E2"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Reverted">
+                    <Setter Property="Background" Value="#F1F5F9"/>
+                </DataTrigger>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#BFDBFE"/>
                     <Setter Property="Foreground" Value="#0F172A"/>
@@ -180,6 +186,8 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Name="BtnTiTest" Uid="Import.Test"/>
                 <Button Name="BtnTiImport" Uid="Import.Start" Style="{StaticResource ImportButton}" IsEnabled="False"/>
+                <Button Name="BtnTiUndo" Uid="Import.Undo" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <Button Name="BtnTiExport" Uid="Report.Export" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
                 <Button Name="BtnTiCancel" Uid="Common.Cancel" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
                 <Button Name="BtnTiClose" Uid="Import.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
             </StackPanel>

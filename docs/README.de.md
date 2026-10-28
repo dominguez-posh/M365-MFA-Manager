@@ -16,6 +16,8 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 - [MFA-Anleitung per E-Mail](#mfa-anleitung-per-e-mail)
 - [MFA-Report für den Tenant](#mfa-report-für-den-tenant)
 - [Massenimport von TOTP-Token](#massenimport-von-totp-token)
+- [Token-Inventar](#token-inventar)
+- [Massen-Temporary-Access-Pass](#massen-temporary-access-pass)
 - [Häufige Fragen und Fehlerbehebung](#häufige-fragen-und-fehlerbehebung)
 - [Sicherheit](#sicherheit)
 - [Für Administratoren: Voraussetzungen und Berechtigungen](#für-administratoren-voraussetzungen-und-berechtigungen)
@@ -35,7 +37,9 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 | ➕ | **Methoden einrichten** – FIDO2-Stick, TOTP-Karten, Temporary Access Pass und Fake-MFA |
 | ✉️ | **MFA-Anleitung per E-Mail** – schickt Benutzern ohne oder mit schwachem MFA eine Schritt-für-Schritt-Anleitung für die Microsoft Authenticator App, in ihrer Sprache und mit Vorschau |
 | 📊 | **MFA-Report für den Tenant** – MFA-Status und letzte Anmeldung aller Benutzer als Ampel, mit Suche, Filtern und farbigem Excel-Export |
-| 📥 | **TOTP-Massenimport** – Hardware-TOTP-Token (SHA-1 oder SHA-256) aus einer CSV-Datei importieren, mit Testimport |
+| 📥 | **TOTP-Massenimport** – Hardware-TOTP-Token (SHA-1 oder SHA-256) aus einer CSV-Datei importieren, mit Testimport, Excel-Export und Rückgängig |
+| 🗂️ | **Token-Inventar** – alle Hardware-TOTP-Token des Tenants: freie Token zuweisen, Zuweisungen lösen, löschen |
+| 🎫 | **Massen-TAP** – Temporary Access Pass für viele Benutzer auf einmal (CSV oder Gruppe) mit Excel-Export |
 | 🆘 | **Breakglass-Account** – Notfallzugang mit FIDO2-Stick und unbekanntem Kennwort anlegen |
 | 🌐 | **Mehrsprachig** – Englisch (Standard), Deutsch, Spanisch, Französisch, Italienisch, Portugiesisch, Niederländisch und Polnisch |
 
@@ -191,6 +195,14 @@ Die Smartphone-Screenshots in der E-Mail stammen aus der Microsoft-Dokumentation
 4. **„Excel-Export …“** speichert die aktuell angezeigten Einträge als `.xlsx` in Ampelfarben, inklusive Blatt „Zusammenfassung“. Weder Excel noch ein Zusatzmodul ist nötig.
 5. **Doppelklick** auf einen Benutzer schließt den Report und öffnet den Benutzer im Hauptfenster zur Bearbeitung. Der Report bleibt bis zur Abmeldung erhalten.
 
+**Ohne Oberfläche** (z. B. als monatliche geplante Aufgabe) lässt sich der Report von der Kommandozeile erstellen; die Anmeldung bleibt interaktiv:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Start-M365MfaTool.ps1 -Report -OutFile C:\Reports\MFA.xlsx
+```
+
+Optionen: `-Group "<Name oder Objekt-ID>"` (Mitglieder einer Gruppe statt aller Benutzer), `-IncludeDisabled`, `-IncludeGuests`, `-Language de`. Exit-Code 0 bei Erfolg, 1 bei Fehler.
+
 | Ampel | Bedeutung |
 |---|---|
 | 🔴 **Rot** | Kein MFA (nur Kennwort) **oder** Admin-Rolle mit nur unsicherem MFA (SMS/Anruf, TAP oder Fake-MFA) |
@@ -210,14 +222,37 @@ Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als S
    ```csv
    Secret;SerialNumber;UPN
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anna.beispiel@contoso.com
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Trennzeichen `;` oder `,`; die Reihenfolge der Spalten ist egal. Optionale Spalten: `Manufacturer`, `Model`.
+   Trennzeichen `;` oder `,`; die Reihenfolge der Spalten ist egal. **UPN ist optional**: Eine Zeile ohne UPN nimmt das Token nur ins Inventar auf – die Zuweisung erfolgt später im [Token-Inventar](#token-inventar). Optionale Spalten: `Manufacturer`, `Model`.
 2. **„CSV auswählen …“** lädt die Datei. **Algorithmus** (SHA-1 oder SHA-256) und **Zeitintervall** (30 oder 60 Sekunden) wählen – beides muss zu den Token passen (siehe Bestellung bzw. Seed-File).
 3. **„Testimport“** prüft jede Zeile, ohne etwas zu ändern: Base32-Secret, doppelte Seriennummern, ob der Benutzer existiert und ob die Seriennummer im Tenant schon zugewiesen ist. Die Zeilen werden grün/gelb/rot angezeigt.
 4. **„Import starten“** legt die fehlerfreien Token im Token-Inventar an, weist sie den Benutzern zu und aktiviert sie sofort. Zeilen mit Fehlern werden übersprungen; ein fehlgeschlagenes Token wird zurückgerollt. Jedes Token steht im Protokoll (ohne Secret).
+5. **„Excel-Export …“** speichert die Ergebnisliste als Nachweis. **„Letzten Import rückgängig“** entfernt die im letzten Lauf angelegten Token wieder von den Benutzern und aus dem Inventar (bis zum nächsten Testimport möglich).
 
 Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Testimport nötig.
+
+---
+
+## Token-Inventar
+
+**„Token-Inventar …“** oben listet alle Hardware-TOTP-Token des Tenants: freie Token (gelb), zugewiesene und aktivierte (grün), mit Modell, Algorithmus, Zeitintervall und zugewiesenem Benutzer. Mit Suche und Filter nach frei/zugewiesen.
+
+- **„Ausgewähltem Benutzer zuweisen …“**: Zuerst im Hauptfenster einen Benutzer auswählen, dann ein freies Token markieren. Den aktuell am Token angezeigten Code eingeben – das Token wird in einem Schritt zugewiesen und aktiviert (wie im Entra-Portal).
+- **„Zuweisung lösen“**: Der Benutzer kann sich mit dem Token nicht mehr anmelden; es bleibt als freies Token im Inventar.
+- **„Löschen“**: Entfernt das Token aus dem Inventar (ein zugewiesenes Token wird zuerst beim Benutzer entfernt).
+
+---
+
+## Massen-Temporary-Access-Pass
+
+**„Massen-TAP …“** erstellt für viele Benutzer auf einmal einen Temporary Access Pass, z. B. für eine Onboarding-Welle.
+
+1. Benutzer wählen: eine **CSV-Datei** (Spalte `UPN` oder ein UPN pro Zeile) oder die **Mitglieder einer Gruppe** (inkl. verschachtelter Gruppen).
+2. **Gültigkeit** (10–43200 Minuten) und **einmalig verwendbar** festlegen.
+3. **„Test“** löst die Benutzer auf, ohne etwas zu ändern. **„Pässe erstellen“** legt dann pro Benutzer einen Pass an; ein vorhandener Pass des Benutzers wird ersetzt.
+4. **„Excel-Export …“** speichert die Liste mit den Pässen – sie enthält sie im Klartext, also nur an einem geschützten Ort speichern und nach der Übergabe löschen. Die Pässe stehen nie im Protokoll.
 
 ---
 
@@ -231,6 +266,9 @@ Das passiert einmalig nach einem Update, wenn das Tool neue Berechtigungen brauc
 
 **Eine neu angelegte oder gelöschte Methode wird nicht sofort angezeigt.**
 Microsoft braucht dafür einige Sekunden. Das Tool wartet automatisch bis zu ca. 16 Sekunden; danach ggf. **„Aktualisieren“** klicken.
+
+**Im Protokoll steht, dass eine neuere Version verfügbar ist.**
+Das Tool vergleicht beim Start seine Version mit dem neuesten Release auf GitHub (nur eine Protokollzeile, es wird nichts heruntergeladen). Die neue Version von der Releases-Seite laden und den Ordner ersetzen.
 
 **FIDO2: „Fido credential policy …“ oder „nicht aktiviert“.**
 FIDO2 ist im Tenant nicht freigeschaltet. Ein Administrator muss es in den Authentifizierungsmethoden-Richtlinien aktivieren (siehe [Voraussetzungen](#für-administratoren-voraussetzungen-und-berechtigungen)).
@@ -285,7 +323,7 @@ Alle Berechtigungen werden einmalig bei der Anmeldung angefordert – während d
 | `User.Read.All` | Benutzer suchen |
 | `UserAuthenticationMethod.Read.All` | MFA-Methoden anzeigen |
 | `UserAuthenticationMethod.ReadWrite.All` | MFA-Methoden einrichten und löschen |
-| `Policy.ReadWrite.AuthenticationMethod` | TOTP-Karten, importierte TOTP-Token und Fake-MFA im Token-Inventar anlegen/löschen |
+| `Policy.ReadWrite.AuthenticationMethod` | Token-Inventar: TOTP-Karten, importierte TOTP-Token und Fake-MFA anlegen, zuweisen und löschen |
 | `RoleManagement.Read.Directory` | Admin-Rollen eines Benutzers anzeigen |
 | `User.ReadWrite.All` | Breakglass-Account; Versanddatum der MFA-Anleitung und verschlüsseltes Fake-MFA-Secret im Benutzerobjekt speichern |
 | `Domain.Read.All` | Breakglass-Account: Domains zur Auswahl anzeigen |
@@ -337,6 +375,8 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 | `UI/BreakGlassDialog.xaml` | Dialog für neue Breakglass-Accounts |
 | `UI/TenantReportWindow.xaml` | Fenster des MFA-Reports |
 | `UI/TotpImportWindow.xaml` | Fenster des TOTP-Massenimports |
+| `UI/TokenInventoryWindow.xaml` | Fenster des Token-Inventars |
+| `UI/BulkTapWindow.xaml` | Fenster des Massen-Temporary-Access-Pass |
 | `UI/MfaGuideDialog.xaml` | Vorschau-Dialog der MFA-Anleitung |
 | `Modules/Graph.psm1` | Anmeldung, Graph-Anfragen, Benutzer, Domains, Rollen, MFA-Ampel, Lesen/Löschen von Methoden |
 | `Modules/Provisioning.psm1` | Einrichtung von FIDO2, TOTP-Karten, Fake-MFA, TAP und Breakglass-Accounts |
