@@ -613,5 +613,7 @@
     "BulkTap.Done": "Massen-TAP fertig: {0} erstellt, {1} fehlgeschlagen, {2} nicht verarbeitet.",
     "BulkTap.ExportWarning": "Die Excel-Datei enthält die Pässe im Klartext. Nur an einem geschützten Ort speichern und nach der Übergabe löschen. Fortfahren?",
     "BulkTap.Exported": "TAP-Liste exportiert (enthält Pässe): {0}",
-    "BulkTap.Summary.Source": "Quelle"
+    "BulkTap.Summary.Source": "Quelle",
+    "Header.Tools": "Werkzeuge ▾",
+    "Header.Tools.ToolTip": "TOTP-Import, Token-Inventar, Massen-TAP, Breakglass-Account"
 }

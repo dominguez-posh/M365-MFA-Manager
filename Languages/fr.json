@@ -613,5 +613,7 @@
     "BulkTap.Done": "TAP en masse terminé : {0} créés, {1} en échec, {2} non traités.",
     "BulkTap.ExportWarning": "Le fichier Excel contient les codes en clair. Enregistrez-le uniquement dans un emplacement protégé et supprimez-le après la remise. Continuer ?",
     "BulkTap.Exported": "Liste TAP exportée (contient les codes) : {0}",
-    "BulkTap.Summary.Source": "Source"
+    "BulkTap.Summary.Source": "Source",
+    "Header.Tools": "Outils ▾",
+    "Header.Tools.ToolTip": "Import TOTP, inventaire des jetons, TAP en masse, compte d'urgence"
 }

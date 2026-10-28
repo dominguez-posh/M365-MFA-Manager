@@ -613,5 +613,7 @@
     "BulkTap.Done": "Bulk-TAP voltooid: {0} gemaakt, {1} mislukt, {2} niet verwerkt.",
     "BulkTap.ExportWarning": "Het Excel-bestand bevat de passen in leesbare tekst. Sla het alleen op een beveiligde plek op en verwijder het na de overdracht. Doorgaan?",
     "BulkTap.Exported": "TAP-lijst geëxporteerd (bevat passen): {0}",
-    "BulkTap.Summary.Source": "Bron"
+    "BulkTap.Summary.Source": "Bron",
+    "Header.Tools": "Hulpmiddelen ▾",
+    "Header.Tools.ToolTip": "TOTP-import, tokenvoorraad, bulk-TAP, noodaccount"
 }

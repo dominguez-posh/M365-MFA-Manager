@@ -176,10 +176,18 @@
                     <TextBlock Name="TxtTenant" Text="Tenant: -" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Right"/>
                 </StackPanel>
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Name="BtnTotpImport" Uid="Header.TotpImport" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
-                    <Button Name="BtnTokenInventory" Uid="Header.TokenInventory" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
-                    <Button Name="BtnBulkTap" Uid="Header.BulkTap" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
-                    <Button Name="BtnBreakGlass" Uid="Header.BreakGlass" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
+                    <!-- Tools menu: the less frequent functions, so that the header stays uncluttered -->
+                    <Button Name="BtnTools" Uid="Header.Tools" IsEnabled="False" Style="{StaticResource HeaderButton}">
+                        <Button.ContextMenu>
+                            <ContextMenu Name="MnuTools" FontFamily="Segoe UI" FontSize="13">
+                                <MenuItem Name="BtnTotpImport" Uid="Header.TotpImport" Padding="10,6"/>
+                                <MenuItem Name="BtnTokenInventory" Uid="Header.TokenInventory" Padding="10,6"/>
+                                <MenuItem Name="BtnBulkTap" Uid="Header.BulkTap" Padding="10,6"/>
+                                <Separator/>
+                                <MenuItem Name="BtnBreakGlass" Uid="Header.BreakGlass" Padding="10,6"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                     <ComboBox Name="CmbLanguage" Uid="Header.Language" Width="120" Margin="4" Padding="8,7" VerticalContentAlignment="Center"
                               DisplayMemberPath="Name"/>
                     <Button Name="BtnLogin" Uid="Header.Login"/>

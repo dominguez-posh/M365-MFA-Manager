@@ -218,7 +218,7 @@ Opties: `-Group "<naam of object-ID>"` (leden van een groep in plaats van alle g
 
 ## Bulkimport van TOTP-tokens
 
-Voor hardware-TOTP-tokens met een seedbestand van de fabrikant (bijv. displaytokens als sleutelhanger) klikt u bovenaan op **"TOTP-import …"**.
+Voor hardware-TOTP-tokens met een seedbestand van de fabrikant (bijv. displaytokens als sleutelhanger) opent u bovenaan **Hulpmiddelen ▾ → "TOTP-import …"**.
 
 1. **"Voorbeeld"** slaat een voorbeeld-CSV met de verwachte kolommen op. Eén regel per token:
 
@@ -240,7 +240,7 @@ Na wijziging van bestand, algoritme of tijdsinterval is een nieuwe testimport no
 
 ## Tokenvoorraad
 
-**"Tokenvoorraad …"** bovenaan toont alle hardware-TOTP-tokens van de tenant: vrije tokens (geel), toegewezen en geactiveerde (groen), met model, algoritme, tijdsinterval en toegewezen gebruiker. Met zoeken en filter op vrij/toegewezen.
+**Hulpmiddelen ▾ → "Tokenvoorraad …"** toont alle hardware-TOTP-tokens van de tenant: vrije tokens (geel), toegewezen en geactiveerde (groen), met model, algoritme, tijdsinterval en toegewezen gebruiker. Met zoeken en filter op vrij/toegewezen.
 
 - **"Aan geselecteerde gebruiker toewijzen …"**: selecteer eerst een gebruiker in het hoofdvenster en daarna een vrij token. Voer de code in die het token op dat moment toont – het wordt in één stap toegewezen en geactiveerd (zoals in de Entra-portal).
 - **"Toewijzing opheffen"**: de gebruiker kan zich niet meer met het token aanmelden; het blijft als vrij token in de voorraad.
@@ -250,7 +250,7 @@ Na wijziging van bestand, algoritme of tijdsinterval is een nieuwe testimport no
 
 ## Bulk Temporary Access Pass
 
-**"Bulk-TAP …"** maakt voor veel gebruikers tegelijk een Temporary Access Pass, bijv. voor een onboardinggolf.
+**Hulpmiddelen ▾ → "Bulk-TAP …"** maakt voor veel gebruikers tegelijk een Temporary Access Pass, bijv. voor een onboardinggolf.
 
 1. Kies de gebruikers: een **CSV-bestand** (kolom `UPN` of één UPN per regel) of de **leden van een groep** (incl. geneste groepen).
 2. Stel de **geldigheid** (10–43200 minuten) in en of de pas **eenmalig bruikbaar** is.

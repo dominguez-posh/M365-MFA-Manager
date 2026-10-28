@@ -613,5 +613,7 @@
     "BulkTap.Done": "Bulk TAP finished: {0} created, {1} failed, {2} not processed.",
     "BulkTap.ExportWarning": "The Excel file contains the passes in clear text. Save it only in a protected location and delete it after handing out. Continue?",
     "BulkTap.Exported": "TAP list exported (contains passes): {0}",
-    "BulkTap.Summary.Source": "Source"
+    "BulkTap.Summary.Source": "Source",
+    "Header.Tools": "Tools ▾",
+    "Header.Tools.ToolTip": "TOTP import, token inventory, bulk TAP, break-glass account"
 }

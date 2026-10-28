@@ -218,7 +218,7 @@ Opções: `-Group "<nome ou ID de objeto>"` (membros de um grupo em vez de todos
 
 ## Importação em massa de tokens TOTP
 
-Para tokens TOTP de hardware com ficheiro de seeds do fabricante (p. ex. tokens com visor em formato porta-chaves), clique no topo em **"Importar TOTP …"**.
+Para tokens TOTP de hardware com ficheiro de seeds do fabricante (p. ex. tokens com visor em formato porta-chaves), abra no topo **Ferramentas ▾ → "Importar TOTP …"**.
 
 1. **"Exemplo"** guarda um CSV de exemplo com as colunas esperadas. Uma linha por token:
 
@@ -240,7 +240,7 @@ Alterar o ficheiro, o algoritmo ou o intervalo exige uma nova importação de te
 
 ## Inventário de tokens
 
-**"Inventário de tokens …"** no topo lista todos os tokens TOTP de hardware do locatário: tokens livres (amarelo), atribuídos e ativados (verde), com modelo, algoritmo, intervalo e utilizador atribuído. Com pesquisa e filtro por livre/atribuído.
+**Ferramentas ▾ → "Inventário de tokens …"** lista todos os tokens TOTP de hardware do locatário: tokens livres (amarelo), atribuídos e ativados (verde), com modelo, algoritmo, intervalo e utilizador atribuído. Com pesquisa e filtro por livre/atribuído.
 
 - **"Atribuir ao utilizador selecionado …"**: selecione primeiro um utilizador na janela principal e depois um token livre. Introduza o código apresentado nesse momento no token – é atribuído e ativado num só passo (como no portal Entra).
 - **"Remover atribuição"**: o utilizador deixa de poder iniciar sessão com o token; este permanece no inventário como token livre.
@@ -250,7 +250,7 @@ Alterar o ficheiro, o algoritmo ou o intervalo exige uma nova importação de te
 
 ## Temporary Access Pass em massa
 
-**"TAP em massa …"** cria um Temporary Access Pass para muitos utilizadores de uma vez, p. ex. para uma vaga de integração.
+**Ferramentas ▾ → "TAP em massa …"** cria um Temporary Access Pass para muitos utilizadores de uma vez, p. ex. para uma vaga de integração.
 
 1. Escolha os utilizadores: um **ficheiro CSV** (coluna `UPN` ou um UPN por linha) ou os **membros de um grupo** (incl. grupos aninhados).
 2. Defina a **validade** (10–43200 minutos) e se o passe é de **utilização única**.

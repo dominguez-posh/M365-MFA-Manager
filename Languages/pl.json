@@ -613,5 +613,7 @@
     "BulkTap.Done": "Masowy TAP zakończony: utworzono {0}, niepowodzenia {1}, nieprzetworzone {2}.",
     "BulkTap.ExportWarning": "Plik Excel zawiera hasła w postaci jawnej. Zapisz go tylko w chronionym miejscu i usuń po przekazaniu. Kontynuować?",
     "BulkTap.Exported": "Lista TAP wyeksportowana (zawiera hasła): {0}",
-    "BulkTap.Summary.Source": "Źródło"
+    "BulkTap.Summary.Source": "Źródło",
+    "Header.Tools": "Narzędzia ▾",
+    "Header.Tools.ToolTip": "Import TOTP, inwentarz tokenów, masowy TAP, konto awaryjne"
 }

@@ -218,7 +218,7 @@ Opcje: `-Group "<nazwa lub ID obiektu>"` (członkowie grupy zamiast wszystkich u
 
 ## Masowy import tokenów TOTP
 
-W przypadku sprzętowych tokenów TOTP z plikiem seed od producenta (np. tokeny z wyświetlaczem w formie breloka) kliknij u góry **„Import TOTP …”**.
+W przypadku sprzętowych tokenów TOTP z plikiem seed od producenta (np. tokeny z wyświetlaczem w formie breloka) otwórz u góry **Narzędzia ▾ → „Import TOTP …”**.
 
 1. **„Przykład”** zapisuje przykładowy plik CSV z oczekiwanymi kolumnami. Jeden wiersz na token:
 
@@ -240,7 +240,7 @@ Zmiana pliku, algorytmu lub interwału wymaga nowego importu testowego.
 
 ## Inwentarz tokenów
 
-**„Inwentarz tokenów …”** u góry wyświetla wszystkie sprzętowe tokeny TOTP dzierżawy: wolne (żółte), przypisane i aktywowane (zielone), z modelem, algorytmem, interwałem i przypisanym użytkownikiem. Z wyszukiwaniem i filtrem wolne/przypisane.
+**Narzędzia ▾ → „Inwentarz tokenów …”** wyświetla wszystkie sprzętowe tokeny TOTP dzierżawy: wolne (żółte), przypisane i aktywowane (zielone), z modelem, algorytmem, interwałem i przypisanym użytkownikiem. Z wyszukiwaniem i filtrem wolne/przypisane.
 
 - **„Przypisz wybranemu użytkownikowi …”**: najpierw wybierz użytkownika w oknie głównym, potem wolny token. Wpisz kod aktualnie wyświetlany na tokenie – zostanie przypisany i aktywowany w jednym kroku (jak w portalu Entra).
 - **„Usuń przypisanie”**: użytkownik nie może już logować się tym tokenem; pozostaje on w inwentarzu jako wolny.
@@ -250,7 +250,7 @@ Zmiana pliku, algorytmu lub interwału wymaga nowego importu testowego.
 
 ## Masowy Temporary Access Pass
 
-**„Masowy TAP …”** tworzy Temporary Access Pass dla wielu użytkowników naraz, np. dla fali onboardingu.
+**Narzędzia ▾ → „Masowy TAP …”** tworzy Temporary Access Pass dla wielu użytkowników naraz, np. dla fali onboardingu.
 
 1. Wybierz użytkowników: **plik CSV** (kolumna `UPN` lub jeden UPN w wierszu) albo **członków grupy** (łącznie z grupami zagnieżdżonymi).
 2. Ustaw **ważność** (10–43200 minut) i czy hasło ma być **jednorazowe**.

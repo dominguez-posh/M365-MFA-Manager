@@ -156,7 +156,7 @@ $window.Title = "M365 MFA Administration $($script:AppVersion)"
 
 $controlNames = @(
     # Header and connection
-    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
+    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnTools', 'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
     # User search (results in popup)
     'TxtSearch', 'BtnSearch', 'PopUsers', 'TxtUserHits', 'DgUsers'
     # MFA methods
@@ -176,7 +176,10 @@ $controlNames = @(
     'TxtLog', 'ProgressBar'
 )
 foreach ($name in $controlNames) {
-    Set-Variable -Name $name -Value $window.FindName($name) -Scope Script
+    $control = $window.FindName($name)
+    # Items of the tools menu are not in the window's logical tree: look them up in the menu
+    if ($null -eq $control) { $control = $window.FindName('BtnTools').ContextMenu.Items | Where-Object { $_ -is [System.Windows.Controls.MenuItem] -and $_.Name -eq $name } }
+    Set-Variable -Name $name -Value $control -Scope Script
 }
 
 $script:Context = $null
@@ -233,6 +236,12 @@ function Update-ElementTexts {
 
 function Update-UiTexts {
     Update-ElementTexts -Root $window
+    # The tools menu is not part of the logical tree
+    foreach ($item in $script:BtnTools.ContextMenu.Items) {
+        if ($item -isnot [System.Windows.Controls.MenuItem] -or -not $item.Uid) { continue }
+        $item.Header = T $item.Uid
+        if (Test-UiText "$($item.Uid).ToolTip") { $item.ToolTip = T "$($item.Uid).ToolTip" }
+    }
 
     # Column headers: the XAML contains the text key, which is remembered on the first call.
     foreach ($grid in $script:DgUsers, $script:DgMethods) {
@@ -385,10 +394,7 @@ function Set-Busy {
     $script:ProgressBar.Visibility       = if ($Busy) { 'Visible' } else { 'Collapsed' }
     $script:BtnLogin.IsEnabled           = -not $Busy -and -not $connected
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
-    $script:BtnBreakGlass.IsEnabled      = -not $Busy -and $connected
-    $script:BtnTotpImport.IsEnabled      = -not $Busy -and $connected
-    $script:BtnTokenInventory.IsEnabled  = -not $Busy -and $connected
-    $script:BtnBulkTap.IsEnabled         = -not $Busy -and $connected
+    $script:BtnTools.IsEnabled           = -not $Busy -and $connected
     $script:BtnTenantReport.IsEnabled    = -not $Busy -and $connected
     $script:CmbLanguage.IsEnabled        = -not $Busy
     $script:BtnSearch.IsEnabled          = -not $Busy -and $connected
@@ -783,6 +789,14 @@ $CmbLanguage.Add_SelectionChanged({
     Update-DynamicTexts
     # Method names and traffic light texts come from the modules, so reload them.
     if ($null -ne $script:SelectedUser) { Update-MfaView }
+})
+
+$BtnTools.Add_Click({
+    # Open the menu below the button (a context menu would otherwise need a right-click)
+    $menu = $BtnTools.ContextMenu
+    $menu.PlacementTarget = $BtnTools
+    $menu.Placement = [System.Windows.Controls.Primitives.PlacementMode]::Bottom
+    $menu.IsOpen = $true
 })
 
 $BtnLogin.Add_Click({

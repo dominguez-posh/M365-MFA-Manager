@@ -218,7 +218,7 @@ Opciones: `-Group "<nombre o ID de objeto>"` (miembros de un grupo en lugar de t
 
 ## Importación masiva de tokens TOTP
 
-Para tokens TOTP de hardware con archivo de semillas del fabricante (p. ej. tokens con pantalla tipo llavero), haga clic arriba en **"Importar TOTP …"**.
+Para tokens TOTP de hardware con archivo de semillas del fabricante (p. ej. tokens con pantalla tipo llavero), abra arriba **Herramientas ▾ → "Importar TOTP …"**.
 
 1. **"Ejemplo"** guarda un CSV de ejemplo con las columnas esperadas. Una línea por token:
 
@@ -240,7 +240,7 @@ Cambiar el archivo, el algoritmo o el intervalo requiere una nueva importación 
 
 ## Inventario de tokens
 
-**"Inventario de tokens …"** arriba muestra todos los tokens TOTP de hardware del inquilino: tokens libres (amarillo), asignados y activados (verde), con modelo, algoritmo, intervalo y usuario asignado. Con búsqueda y filtro por libre/asignado.
+**Herramientas ▾ → "Inventario de tokens …"** muestra todos los tokens TOTP de hardware del inquilino: tokens libres (amarillo), asignados y activados (verde), con modelo, algoritmo, intervalo y usuario asignado. Con búsqueda y filtro por libre/asignado.
 
 - **"Asignar al usuario seleccionado …"**: seleccione primero un usuario en la ventana principal y luego un token libre. Introduzca el código que muestra el token en ese momento: se asigna y activa en un solo paso (como en el portal de Entra).
 - **"Quitar asignación"**: el usuario ya no puede iniciar sesión con el token; permanece en el inventario como token libre.
@@ -250,7 +250,7 @@ Cambiar el archivo, el algoritmo o el intervalo requiere una nueva importación 
 
 ## Temporary Access Pass masivo
 
-**"TAP masivo …"** crea un Temporary Access Pass para muchos usuarios a la vez, p. ej. para una oleada de incorporaciones.
+**Herramientas ▾ → "TAP masivo …"** crea un Temporary Access Pass para muchos usuarios a la vez, p. ej. para una oleada de incorporaciones.
 
 1. Elija los usuarios: un **archivo CSV** (columna `UPN` o un UPN por línea) o los **miembros de un grupo** (incl. grupos anidados).
 2. Defina la **validez** (10–43200 minutos) y si el pase es de **uso único**.

@@ -136,7 +136,7 @@ Wird der Mandant mit hrdnr verwaltet, kann das Secret eines Fake-MFA-Tokens **ve
 
 Ein **Breakglass-Account** ist ein Notfallzugang, mit dem man auch dann noch in den Tenant kommt, wenn normale Admin-Zugänge nicht funktionieren (z. B. bei einer fehlerhaften Conditional-Access-Richtlinie).
 
-Oben rechts auf **„Breakglass-Account …“** klicken:
+Oben **Werkzeuge ▾ → „Breakglass-Account …“** öffnen:
 
 ![Dialog „Breakglass-Account erstellen“](images/de/breakglass-dialog.png)
 
@@ -215,7 +215,7 @@ Als administrative Rollen zählen aktive und PIM-berechtigte Rollen (markiert mi
 
 ## Massenimport von TOTP-Token
 
-Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als Schlüsselanhänger) oben auf **„TOTP-Import …“** klicken.
+Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als Schlüsselanhänger) oben **Werkzeuge ▾ → „TOTP-Import …“** öffnen.
 
 1. **„Sample“** speichert eine Beispiel-CSV mit den erwarteten Spalten. Pro Token eine Zeile:
 
@@ -237,7 +237,7 @@ Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Tes
 
 ## Token-Inventar
 
-**„Token-Inventar …“** oben listet alle Hardware-TOTP-Token des Tenants: freie Token (gelb), zugewiesene und aktivierte (grün), mit Modell, Algorithmus, Zeitintervall und zugewiesenem Benutzer. Mit Suche und Filter nach frei/zugewiesen.
+**Werkzeuge ▾ → „Token-Inventar …“** listet alle Hardware-TOTP-Token des Tenants: freie Token (gelb), zugewiesene und aktivierte (grün), mit Modell, Algorithmus, Zeitintervall und zugewiesenem Benutzer. Mit Suche und Filter nach frei/zugewiesen.
 
 - **„Ausgewähltem Benutzer zuweisen …“**: Zuerst im Hauptfenster einen Benutzer auswählen, dann ein freies Token markieren. Den aktuell am Token angezeigten Code eingeben – das Token wird in einem Schritt zugewiesen und aktiviert (wie im Entra-Portal).
 - **„Zuweisung lösen“**: Der Benutzer kann sich mit dem Token nicht mehr anmelden; es bleibt als freies Token im Inventar.
@@ -247,7 +247,7 @@ Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Tes
 
 ## Massen-Temporary-Access-Pass
 
-**„Massen-TAP …“** erstellt für viele Benutzer auf einmal einen Temporary Access Pass, z. B. für eine Onboarding-Welle.
+**Werkzeuge ▾ → „Massen-TAP …“** erstellt für viele Benutzer auf einmal einen Temporary Access Pass, z. B. für eine Onboarding-Welle.
 
 1. Benutzer wählen: eine **CSV-Datei** (Spalte `UPN` oder ein UPN pro Zeile) oder die **Mitglieder einer Gruppe** (inkl. verschachtelter Gruppen).
 2. **Gültigkeit** (10–43200 Minuten) und **einmalig verwendbar** festlegen.

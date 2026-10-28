@@ -218,7 +218,7 @@ Opzioni: `-Group "<nome o ID oggetto>"` (membri di un gruppo invece di tutti gli
 
 ## Importazione massiva di token TOTP
 
-Per token TOTP hardware con file dei seed del produttore (ad es. token con display a portachiavi), fare clic in alto su **"Importa TOTP …"**.
+Per token TOTP hardware con file dei seed del produttore (ad es. token con display a portachiavi), aprire in alto **Strumenti ▾ → "Importa TOTP …"**.
 
 1. **"Esempio"** salva un CSV di esempio con le colonne previste. Una riga per token:
 
@@ -240,7 +240,7 @@ Cambiare file, algoritmo o intervallo richiede una nuova importazione di prova.
 
 ## Inventario dei token
 
-**"Inventario token …"** in alto elenca tutti i token TOTP hardware del tenant: token liberi (giallo), assegnati e attivati (verde), con modello, algoritmo, intervallo e utente assegnato. Con ricerca e filtro libero/assegnato.
+**Strumenti ▾ → "Inventario token …"** elenca tutti i token TOTP hardware del tenant: token liberi (giallo), assegnati e attivati (verde), con modello, algoritmo, intervallo e utente assegnato. Con ricerca e filtro libero/assegnato.
 
 - **"Assegna all'utente selezionato …"**: selezionare prima un utente nella finestra principale, poi un token libero. Inserire il codice mostrato in quel momento sul token: viene assegnato e attivato in un solo passaggio (come nel portale Entra).
 - **"Rimuovi assegnazione"**: l'utente non può più accedere con il token; resta nell'inventario come token libero.
@@ -250,7 +250,7 @@ Cambiare file, algoritmo o intervallo richiede una nuova importazione di prova.
 
 ## Temporary Access Pass di massa
 
-**"TAP di massa …"** crea un Temporary Access Pass per molti utenti in una volta, ad es. per un'ondata di onboarding.
+**Strumenti ▾ → "TAP di massa …"** crea un Temporary Access Pass per molti utenti in una volta, ad es. per un'ondata di onboarding.
 
 1. Scegliere gli utenti: un **file CSV** (colonna `UPN` o un UPN per riga) oppure i **membri di un gruppo** (inclusi i gruppi nidificati).
 2. Impostare la **validità** (10–43200 minuti) e se il pass è a **uso singolo**.

@@ -218,7 +218,7 @@ Options : `-Group "<nom ou ID d'objet>"` (membres d'un groupe au lieu de tous le
 
 ## Import en masse de jetons TOTP
 
-Pour les jetons TOTP matériels avec fichier de seeds du fabricant (p. ex. jetons à écran type porte-clés), cliquez en haut sur **« Import TOTP … »**.
+Pour les jetons TOTP matériels avec fichier de seeds du fabricant (p. ex. jetons à écran type porte-clés), ouvrez en haut **Outils ▾ → « Import TOTP … »**.
 
 1. **« Exemple »** enregistre un CSV d'exemple avec les colonnes attendues. Une ligne par jeton :
 
@@ -240,7 +240,7 @@ Modifier le fichier, l'algorithme ou l'intervalle nécessite un nouvel import de
 
 ## Inventaire des jetons
 
-**« Inventaire des jetons … »** en haut liste tous les jetons TOTP matériels du locataire : jetons libres (jaune), attribués et activés (vert), avec modèle, algorithme, intervalle et utilisateur attribué. Avec recherche et filtre libre/attribué.
+**Outils ▾ → « Inventaire des jetons … »** liste tous les jetons TOTP matériels du locataire : jetons libres (jaune), attribués et activés (vert), avec modèle, algorithme, intervalle et utilisateur attribué. Avec recherche et filtre libre/attribué.
 
 - **« Attribuer à l'utilisateur sélectionné … »** : sélectionnez d'abord un utilisateur dans la fenêtre principale, puis un jeton libre. Saisissez le code affiché sur le jeton : il est attribué et activé en une étape (comme dans le portail Entra).
 - **« Retirer l'attribution »** : l'utilisateur ne peut plus se connecter avec le jeton ; il reste dans l'inventaire comme jeton libre.
@@ -250,7 +250,7 @@ Modifier le fichier, l'algorithme ou l'intervalle nécessite un nouvel import de
 
 ## Temporary Access Pass en masse
 
-**« TAP en masse … »** crée un Temporary Access Pass pour de nombreux utilisateurs à la fois, p. ex. pour une vague d'intégration.
+**Outils ▾ → « TAP en masse … »** crée un Temporary Access Pass pour de nombreux utilisateurs à la fois, p. ex. pour une vague d'intégration.
 
 1. Choisissez les utilisateurs : un **fichier CSV** (colonne `UPN` ou un UPN par ligne) ou les **membres d'un groupe** (groupes imbriqués inclus).
 2. Définissez la **validité** (10–43200 minutes) et si le code est à **usage unique**.

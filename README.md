@@ -136,7 +136,7 @@ If the tenant is managed with hrdnr, the secret of a fake MFA token can be **sto
 
 A **break-glass account** is an emergency access account that still gets you into the tenant when normal admin access fails (e.g. due to a faulty Conditional Access policy).
 
-Click **"Break-glass account …"** in the top right:
+Open **Tools ▾ → "Break-glass account …"** at the top:
 
 ![Dialog "Create break-glass account"](docs/images/en/breakglass-dialog.png)
 
@@ -215,7 +215,7 @@ Administrative roles include active and PIM-eligible roles (marked "(PIM)") as w
 
 ## Bulk import of TOTP tokens
 
-For hardware TOTP tokens with a seed file from the vendor (e.g. key fob display tokens), click **"TOTP import …"** at the top.
+For hardware TOTP tokens with a seed file from the vendor (e.g. key fob display tokens), open **Tools ▾ → "TOTP import …"** at the top.
 
 1. **"Sample"** saves a sample CSV with the expected columns. The file needs one line per token:
 
@@ -237,7 +237,7 @@ Changing the file, algorithm or time step requires a new test import.
 
 ## Token inventory
 
-**"Token inventory …"** at the top lists all hardware TOTP tokens of the tenant: free tokens (yellow), assigned and activated ones (green), with model, algorithm, time step and the assigned user. Search and filter by free/assigned.
+**Tools ▾ → "Token inventory …"** lists all hardware TOTP tokens of the tenant: free tokens (yellow), assigned and activated ones (green), with model, algorithm, time step and the assigned user. Search and filter by free/assigned.
 
 - **"Assign to selected user …"**: select a user in the main window first, then a free token. Enter the code currently shown on the token – it is assigned and activated in one step (the same way as in the Entra portal).
 - **"Remove assignment"**: the user can no longer sign in with the token; it stays in the inventory as a free token.
@@ -247,7 +247,7 @@ Changing the file, algorithm or time step requires a new test import.
 
 ## Bulk Temporary Access Pass
 
-**"Bulk TAP …"** creates a Temporary Access Pass for many users at once, e.g. for an onboarding wave.
+**Tools ▾ → "Bulk TAP …"** creates a Temporary Access Pass for many users at once, e.g. for an onboarding wave.
 
 1. Choose the users: a **CSV file** (a `UPN` column, or one UPN per line) or the **members of a group** (incl. nested groups).
 2. Set the **lifetime** (10–43200 minutes) and whether the pass is for **single use**.

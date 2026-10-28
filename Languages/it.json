@@ -613,5 +613,7 @@
     "BulkTap.Done": "TAP di massa completato: {0} creati, {1} non riusciti, {2} non elaborati.",
     "BulkTap.ExportWarning": "Il file Excel contiene i pass in chiaro. Salvarlo solo in un luogo protetto ed eliminarlo dopo la consegna. Continuare?",
     "BulkTap.Exported": "Elenco TAP esportato (contiene i pass): {0}",
-    "BulkTap.Summary.Source": "Origine"
+    "BulkTap.Summary.Source": "Origine",
+    "Header.Tools": "Strumenti ▾",
+    "Header.Tools.ToolTip": "Importa TOTP, inventario token, TAP di massa, account di emergenza"
 }
