@@ -196,9 +196,9 @@ function Invoke-InteractiveSignIn {
         Runs an interactive sign-in so that the Microsoft sign-in dialog is visible in the foreground.
     .DESCRIPTION
         The sign-in dialog (Web Account Manager) belongs to the PowerShell console window. Start.cmd
-        starts the console minimized, and Windows hides windows whose owner is minimized - the dialog
-        would stay invisible behind the tool. Therefore the console is shown centered over the tool
-        while signing in and minimized again afterwards; then the tool is activated again.
+        starts the console hidden, and Windows hides windows whose owner is hidden or minimized - the
+        dialog would stay invisible behind the tool. Therefore the console is shown centered over the
+        tool while signing in and hidden (or minimized) again afterwards; then the tool is activated again.
     #>
     param([Parameter(Mandatory)][scriptblock]$Action)
 

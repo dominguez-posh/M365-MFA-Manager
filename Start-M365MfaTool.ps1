@@ -11,7 +11,12 @@
     In the XAML files, the Uid attribute refers to an element's text key.
 #>
 [CmdletBinding()]
-param()
+param(
+    # Set by Start.cmd: hide the console window. Windows Terminal ignores -WindowStyle and opens a tab,
+    # so the script hides the window itself. Not set when started from a terminal by hand, because that
+    # would hide the whole terminal window including other tabs.
+    [switch]$HideConsole
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -29,6 +34,12 @@ $script:AppRoot = Split-Path -Parent $PSCommandPath
 Import-Module (Join-Path $script:AppRoot 'Modules\Localization.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\Graph.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\Provisioning.psm1') -Force
+
+if ($HideConsole) {
+    # GA_ROOTOWNER (3): with Windows Terminal, the console window is a hidden pseudo window owned by the terminal.
+    $consoleWindow = [M365MfaTool.NativeWindow]::GetAncestor([M365MfaTool.NativeWindow]::GetConsoleWindow(), 3)
+    if ($consoleWindow -ne [IntPtr]::Zero) { [void][M365MfaTool.NativeWindow]::ShowWindow($consoleWindow, 0) }   # SW_HIDE
+}
 # -Global: the tenant report also reads the sending date of the MFA guide
 Import-Module (Join-Path $script:AppRoot 'Modules\MfaGuideMail.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\TenantReport.psm1') -Force
