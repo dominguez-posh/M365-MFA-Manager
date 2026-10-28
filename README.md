@@ -15,6 +15,7 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 - [Create a break-glass account](#create-a-break-glass-account)
 - [MFA setup guide by email](#mfa-setup-guide-by-email)
 - [Tenant MFA report](#tenant-mfa-report)
+- [Bulk import of TOTP tokens](#bulk-import-of-totp-tokens)
 - [FAQ and troubleshooting](#faq-and-troubleshooting)
 - [Security](#security)
 - [For administrators: requirements and permissions](#for-administrators-requirements-and-permissions)
@@ -34,6 +35,7 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 | ➕ | **Set up methods** – FIDO2 key, TOTP cards, Temporary Access Pass and fake MFA |
 | ✉️ | **MFA setup guide by email** – sends users without or with weak MFA a step-by-step guide for the Microsoft Authenticator app, in their language and with preview |
 | 📊 | **Tenant MFA report** – MFA status and last sign-in of all users as a traffic light, with search, filters and colored Excel export |
+| 📥 | **TOTP bulk import** – import hardware TOTP tokens (SHA-1 or SHA-256) from a CSV file, with test import |
 | 🆘 | **Break-glass account** – create an emergency access account with a FIDO2 key and an unknown password |
 | 🌐 | **Multilingual** – English (default), German, Spanish, French, Italian, Portuguese, Dutch and Polish |
 
@@ -199,13 +201,33 @@ Administrative roles include active and PIM-eligible roles (marked "(PIM)") as w
 
 ---
 
+## Bulk import of TOTP tokens
+
+For hardware TOTP tokens with a seed file from the vendor (e.g. key fob display tokens), click **"TOTP import …"** at the top.
+
+1. **"Sample"** saves a sample CSV with the expected columns. The file needs one line per token:
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anna.example@contoso.com
+   ```
+
+   Separator `;` or `,`; the column order does not matter. Optional columns: `Manufacturer`, `Model`.
+2. **"Select CSV …"** loads the file. Choose the **algorithm** (SHA-1 or SHA-256) and the **time step** (30 or 60 seconds) – both must match the tokens (see order or seed file).
+3. **"Test import"** checks every line without changing anything: Base32 secret, duplicate serial numbers, whether the user exists and whether the serial number is already assigned in the tenant. Lines are shown green/yellow/red.
+4. **"Start import"** creates the tokens without errors in the token inventory, assigns them to the users and activates them right away. Lines with errors are skipped; a failed token is rolled back. Every token is listed in the log (without secret).
+
+Changing the file, algorithm or time step requires a new test import.
+
+---
+
 ## FAQ and troubleshooting
 
 **Double-clicking `Start.cmd` does nothing or shows an error.**
 The tool only runs on Windows. If the folder was copied from the internet, Teams or a ZIP file, the files may be blocked. Run this once in PowerShell inside the folder: `Get-ChildItem -Recurse | Unblock-File`.
 
 **Sign-in asks for consent again.**
-This is normal when a new feature needs additional permissions – for example the first break-glass account.
+This happens once after an update when the tool needs new permissions. All permissions are requested at sign-in – afterwards no further sign-in dialog appears.
 
 **A newly created or deleted method does not show up immediately.**
 Microsoft needs a few seconds for this. The tool automatically waits up to approx. 16 seconds; afterwards click **"Refresh"** if needed.
@@ -256,49 +278,29 @@ This requires an **Entra ID P1/P2** license, the `AuditLog.Read.All` permission 
 
 ### Graph permissions (delegated)
 
-At sign-in:
+All permissions are requested once at sign-in, so no further sign-in dialog appears while working:
 
 | Permission | Purpose |
 |---|---|
 | `User.Read.All` | Find users |
 | `UserAuthenticationMethod.Read.All` | Show MFA methods |
 | `UserAuthenticationMethod.ReadWrite.All` | Set up and delete MFA methods |
-| `Policy.ReadWrite.AuthenticationMethod` | Create/delete TOTP cards and fake MFA in the token inventory |
+| `Policy.ReadWrite.AuthenticationMethod` | Create/delete TOTP cards, imported TOTP tokens and fake MFA in the token inventory |
 | `RoleManagement.Read.Directory` | Show a user's admin roles |
+| `User.ReadWrite.All` | Break-glass account; store the MFA guide sending date and the encrypted fake MFA secret in the user object |
+| `Domain.Read.All` | Break-glass account: show domains for selection |
+| `RoleManagement.ReadWrite.Directory` | Break-glass account: assign Global Administrator |
+| `GroupMember.Read.All` | MFA report: select a group as scope, resolve admin roles assigned via groups |
+| `AuditLog.Read.All` | MFA report: last sign-in |
+| `Mail.Send` | MFA guide from your own mailbox |
+| `Mail.Send.Shared` | MFA guide from a shared mailbox |
+| `Organization.Read.All` | Load the hrdnr key from the tenant |
 
-Additionally for the first break-glass account:
-
-| Permission | Purpose |
-|---|---|
-| `User.ReadWrite.All` | Create users |
-| `Domain.Read.All` | Show domains for selection |
-| `RoleManagement.ReadWrite.Directory` | Assign Global Administrator |
-
-Additionally for the tenant MFA report:
-
-| Permission | Purpose |
-|---|---|
-| `GroupMember.Read.All` | Select a group as scope, resolve admin roles assigned via groups |
-| `AuditLog.Read.All` | Last sign-in (optional – without it, the report is created without this column) |
+If a permission was not granted (consent declined), the affected feature reports it; sign out and in again to grant it.
 
 The last sign-in additionally requires an **Entra ID P1/P2** license and a role that may read sign-in data, e.g. **Reports Reader**, **Security Reader** or **Global Reader**. It shows the last successful sign-in (interactive or non-interactive); Microsoft records this since December 2023, older values are the last sign-in attempt.
 
-Additionally for the MFA setup guide:
-
-| Permission | Purpose |
-|---|---|
-| `Mail.Send` | Send the email from your own mailbox |
-| `Mail.Send.Shared` | Send the email from a shared mailbox (only if one is entered) |
-| `User.ReadWrite.All` | Store the sending date in the user object |
-
-Storing the sending date requires a role that may update users, e.g. **User Administrator**.
-
-Additionally for fake MFA with an hrdnr key:
-
-| Permission | Purpose |
-|---|---|
-| `User.ReadWrite.All` | Store the encrypted secret in the user object |
-| `Organization.Read.All` | Load the hrdnr key from the tenant (only for "Load from tenant") |
+Storing the MFA guide sending date requires a role that may update users, e.g. **User Administrator**.
 
 ### Required Entra roles for your own account
 
@@ -306,7 +308,7 @@ Additionally for fake MFA with an hrdnr key:
 |---|---|
 | Manage methods of regular users, TAP | **Authentication Administrator** |
 | Manage methods of administrators | **Privileged Authentication Administrator** |
-| TOTP cards and fake MFA | additionally **Authentication Policy Administrator** |
+| TOTP cards, TOTP import and fake MFA | additionally **Authentication Policy Administrator** |
 | Break-glass account | **Global Administrator** (or Privileged Role Administrator + User Administrator) |
 
 ### Tenant settings
@@ -334,6 +336,7 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 | `UI/MainWindow.xaml` | Main window layout |
 | `UI/BreakGlassDialog.xaml` | Dialog for new break-glass accounts |
 | `UI/TenantReportWindow.xaml` | Window of the tenant MFA report |
+| `UI/TotpImportWindow.xaml` | Window of the TOTP bulk import |
 | `UI/MfaGuideDialog.xaml` | Preview dialog of the MFA setup guide |
 | `Modules/Graph.psm1` | Sign-in, Graph requests, users, domains, roles, MFA traffic light, reading/deleting methods |
 | `Modules/Provisioning.psm1` | Setup of FIDO2, TOTP cards, fake MFA, TAP and break-glass accounts |

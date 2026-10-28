@@ -15,6 +15,7 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 - [Breakglass-Account erstellen](#breakglass-account-erstellen)
 - [MFA-Anleitung per E-Mail](#mfa-anleitung-per-e-mail)
 - [MFA-Report für den Tenant](#mfa-report-für-den-tenant)
+- [Massenimport von TOTP-Token](#massenimport-von-totp-token)
 - [Häufige Fragen und Fehlerbehebung](#häufige-fragen-und-fehlerbehebung)
 - [Sicherheit](#sicherheit)
 - [Für Administratoren: Voraussetzungen und Berechtigungen](#für-administratoren-voraussetzungen-und-berechtigungen)
@@ -34,6 +35,7 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 | ➕ | **Methoden einrichten** – FIDO2-Stick, TOTP-Karten, Temporary Access Pass und Fake-MFA |
 | ✉️ | **MFA-Anleitung per E-Mail** – schickt Benutzern ohne oder mit schwachem MFA eine Schritt-für-Schritt-Anleitung für die Microsoft Authenticator App, in ihrer Sprache und mit Vorschau |
 | 📊 | **MFA-Report für den Tenant** – MFA-Status und letzte Anmeldung aller Benutzer als Ampel, mit Suche, Filtern und farbigem Excel-Export |
+| 📥 | **TOTP-Massenimport** – Hardware-TOTP-Token (SHA-1 oder SHA-256) aus einer CSV-Datei importieren, mit Testimport |
 | 🆘 | **Breakglass-Account** – Notfallzugang mit FIDO2-Stick und unbekanntem Kennwort anlegen |
 | 🌐 | **Mehrsprachig** – Englisch (Standard), Deutsch, Spanisch, Französisch, Italienisch, Portugiesisch, Niederländisch und Polnisch |
 
@@ -199,13 +201,33 @@ Als administrative Rollen zählen aktive und PIM-berechtigte Rollen (markiert mi
 
 ---
 
+## Massenimport von TOTP-Token
+
+Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als Schlüsselanhänger) oben auf **„TOTP-Import …“** klicken.
+
+1. **„Sample“** speichert eine Beispiel-CSV mit den erwarteten Spalten. Pro Token eine Zeile:
+
+   ```csv
+   Secret;SerialNumber;UPN
+   JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000001;anna.beispiel@contoso.com
+   ```
+
+   Trennzeichen `;` oder `,`; die Reihenfolge der Spalten ist egal. Optionale Spalten: `Manufacturer`, `Model`.
+2. **„CSV auswählen …“** lädt die Datei. **Algorithmus** (SHA-1 oder SHA-256) und **Zeitintervall** (30 oder 60 Sekunden) wählen – beides muss zu den Token passen (siehe Bestellung bzw. Seed-File).
+3. **„Testimport“** prüft jede Zeile, ohne etwas zu ändern: Base32-Secret, doppelte Seriennummern, ob der Benutzer existiert und ob die Seriennummer im Tenant schon zugewiesen ist. Die Zeilen werden grün/gelb/rot angezeigt.
+4. **„Import starten“** legt die fehlerfreien Token im Token-Inventar an, weist sie den Benutzern zu und aktiviert sie sofort. Zeilen mit Fehlern werden übersprungen; ein fehlgeschlagenes Token wird zurückgerollt. Jedes Token steht im Protokoll (ohne Secret).
+
+Nach einer Änderung von Datei, Algorithmus oder Zeitintervall ist ein neuer Testimport nötig.
+
+---
+
 ## Häufige Fragen und Fehlerbehebung
 
 **Beim Doppelklick auf `Start.cmd` passiert nichts oder es erscheint eine Fehlermeldung.**
 Das Tool läuft nur unter Windows. Wurde der Ordner aus dem Internet, Teams oder einer ZIP-Datei kopiert, sind die Dateien eventuell blockiert. In PowerShell im Ordner einmal ausführen: `Get-ChildItem -Recurse | Unblock-File`.
 
 **Die Anmeldung fragt erneut nach Zustimmung.**
-Das ist normal, wenn eine neue Funktion zusätzliche Berechtigungen braucht – zum Beispiel beim ersten Breakglass-Account.
+Das passiert einmalig nach einem Update, wenn das Tool neue Berechtigungen braucht. Alle Berechtigungen werden bei der Anmeldung angefordert – danach erscheint kein weiterer Anmeldedialog.
 
 **Eine neu angelegte oder gelöschte Methode wird nicht sofort angezeigt.**
 Microsoft braucht dafür einige Sekunden. Das Tool wartet automatisch bis zu ca. 16 Sekunden; danach ggf. **„Aktualisieren“** klicken.
@@ -256,49 +278,29 @@ Dafür sind eine **Entra ID P1/P2**-Lizenz, die Berechtigung `AuditLog.Read.All`
 
 ### Graph-Berechtigungen (delegiert)
 
-Bei der Anmeldung:
+Alle Berechtigungen werden einmalig bei der Anmeldung angefordert – während der Arbeit erscheint kein weiterer Anmeldedialog:
 
 | Berechtigung | Wofür |
 |---|---|
 | `User.Read.All` | Benutzer suchen |
 | `UserAuthenticationMethod.Read.All` | MFA-Methoden anzeigen |
 | `UserAuthenticationMethod.ReadWrite.All` | MFA-Methoden einrichten und löschen |
-| `Policy.ReadWrite.AuthenticationMethod` | TOTP-Karten und Fake-MFA im Token-Inventar anlegen/löschen |
+| `Policy.ReadWrite.AuthenticationMethod` | TOTP-Karten, importierte TOTP-Token und Fake-MFA im Token-Inventar anlegen/löschen |
 | `RoleManagement.Read.Directory` | Admin-Rollen eines Benutzers anzeigen |
+| `User.ReadWrite.All` | Breakglass-Account; Versanddatum der MFA-Anleitung und verschlüsseltes Fake-MFA-Secret im Benutzerobjekt speichern |
+| `Domain.Read.All` | Breakglass-Account: Domains zur Auswahl anzeigen |
+| `RoleManagement.ReadWrite.Directory` | Breakglass-Account: Global Administrator zuweisen |
+| `GroupMember.Read.All` | MFA-Report: Gruppe als Umfang wählen, über Gruppen zugewiesene Admin-Rollen auflösen |
+| `AuditLog.Read.All` | MFA-Report: letzte Anmeldung |
+| `Mail.Send` | MFA-Anleitung aus dem eigenen Postfach |
+| `Mail.Send.Shared` | MFA-Anleitung aus einem freigegebenen Postfach |
+| `Organization.Read.All` | hrdnr-Schlüssel aus dem Mandanten laden |
 
-Zusätzlich beim ersten Breakglass-Account:
-
-| Berechtigung | Wofür |
-|---|---|
-| `User.ReadWrite.All` | Benutzer anlegen |
-| `Domain.Read.All` | Domains zur Auswahl anzeigen |
-| `RoleManagement.ReadWrite.Directory` | Global Administrator zuweisen |
-
-Zusätzlich für den MFA-Report:
-
-| Berechtigung | Wofür |
-|---|---|
-| `GroupMember.Read.All` | Gruppe als Umfang wählen, über Gruppen zugewiesene Admin-Rollen auflösen |
-| `AuditLog.Read.All` | Letzte Anmeldung (optional – ohne sie wird der Report ohne diese Spalte erstellt) |
+Wurde eine Berechtigung nicht erteilt (Zustimmung abgelehnt), meldet das die betroffene Funktion; zum Nachholen ab- und wieder anmelden.
 
 Für die letzte Anmeldung sind zusätzlich eine **Entra ID P1/P2**-Lizenz und eine Rolle nötig, die Anmeldedaten lesen darf, z. B. **Berichtsleser**, **Sicherheitsleseberechtigter** oder **Globaler Leser**. Angezeigt wird die letzte erfolgreiche Anmeldung (interaktiv oder nicht interaktiv); Microsoft erfasst diese seit Dezember 2023, ältere Werte sind der letzte Anmeldeversuch.
 
-Zusätzlich für die MFA-Anleitung:
-
-| Berechtigung | Wofür |
-|---|---|
-| `Mail.Send` | E-Mail aus dem eigenen Postfach senden |
-| `Mail.Send.Shared` | E-Mail aus einem freigegebenen Postfach senden (nur wenn eines eingetragen ist) |
-| `User.ReadWrite.All` | Versanddatum im Benutzerobjekt speichern |
-
-Zum Speichern des Versanddatums ist eine Rolle nötig, die Benutzer ändern darf, z. B. **Benutzeradministrator**.
-
-Zusätzlich für Fake-MFA mit hrdnr-Schlüssel:
-
-| Berechtigung | Wofür |
-|---|---|
-| `User.ReadWrite.All` | Verschlüsseltes Secret im Benutzerobjekt hinterlegen |
-| `Organization.Read.All` | hrdnr-Schlüssel aus dem Mandanten laden (nur für „Aus Mandant laden“) |
+Zum Speichern des Versanddatums der MFA-Anleitung ist eine Rolle nötig, die Benutzer ändern darf, z. B. **Benutzeradministrator**.
 
 ### Benötigte Entra-Rollen des eigenen Kontos
 
@@ -306,7 +308,7 @@ Zusätzlich für Fake-MFA mit hrdnr-Schlüssel:
 |---|---|
 | Methoden normaler Benutzer verwalten, TAP | **Authentication Administrator** |
 | Methoden von Administratoren verwalten | **Privileged Authentication Administrator** |
-| TOTP-Karten und Fake-MFA | zusätzlich **Authentication Policy Administrator** |
+| TOTP-Karten, TOTP-Import und Fake-MFA | zusätzlich **Authentication Policy Administrator** |
 | Breakglass-Account | **Global Administrator** (oder Privileged Role Administrator + User Administrator) |
 
 ### Tenant-Einstellungen
@@ -334,6 +336,7 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 | `UI/MainWindow.xaml` | Layout des Hauptfensters |
 | `UI/BreakGlassDialog.xaml` | Dialog für neue Breakglass-Accounts |
 | `UI/TenantReportWindow.xaml` | Fenster des MFA-Reports |
+| `UI/TotpImportWindow.xaml` | Fenster des TOTP-Massenimports |
 | `UI/MfaGuideDialog.xaml` | Vorschau-Dialog der MFA-Anleitung |
 | `Modules/Graph.psm1` | Anmeldung, Graph-Anfragen, Benutzer, Domains, Rollen, MFA-Ampel, Lesen/Löschen von Methoden |
 | `Modules/Provisioning.psm1` | Einrichtung von FIDO2, TOTP-Karten, Fake-MFA, TAP und Breakglass-Accounts |

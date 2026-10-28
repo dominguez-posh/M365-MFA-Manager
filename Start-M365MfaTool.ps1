@@ -84,7 +84,7 @@ $window = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($xam
 
 $controlNames = @(
     # Header and connection
-    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
+    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnTotpImport', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
     # User search (results in popup)
     'TxtSearch', 'BtnSearch', 'PopUsers', 'TxtUserHits', 'DgUsers'
     # MFA methods
@@ -314,6 +314,7 @@ function Set-Busy {
     $script:BtnLogin.IsEnabled           = -not $Busy -and -not $connected
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
     $script:BtnBreakGlass.IsEnabled      = -not $Busy -and $connected
+    $script:BtnTotpImport.IsEnabled      = -not $Busy -and $connected
     $script:BtnTenantReport.IsEnabled    = -not $Busy -and $connected
     $script:CmbLanguage.IsEnabled        = -not $Busy
     $script:BtnSearch.IsEnabled          = -not $Busy -and $connected
@@ -1477,6 +1478,7 @@ function Start-TenantReport {
         $result = Invoke-M365TenantMfaReport -GroupId $groupId -IncludeDisabled:(-not $enabledOnly) -IncludeGuests:$includeGuests -IncludeSignIn:$includeSignIn `
             -OnProgress { param($Message) Set-ReportStatus $Message } `
             -OnWarning { param($Message) Write-UiLog $Message 'Warning' } `
+            -OnInfo { param($Message) Write-UiLog $Message } `
             -OnRows { param($Rows, $Done, $Total) Add-ReportRows -Rows $Rows -Done $Done -Total $Total } `
             -ShouldCancel { $script:Rpt.Cancel } `
             -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
@@ -1702,6 +1704,244 @@ $BtnTenantReport.Add_Click({
     $user = Show-TenantReportWindow
     $script:Rpt = $null
     if ($null -ne $user) { Select-User -User $user }
+})
+
+#endregion
+
+#region Bulk import of hardware OATH tokens
+
+function Get-TiHashFunction {
+    # Algorithm chosen in the import window, $null if none is selected yet
+    $ti = $script:Ti
+    if ($ti.RbTiSha256.IsChecked) { 'hmacsha256' } elseif ($ti.RbTiSha1.IsChecked) { 'hmacsha1' } else { $null }
+}
+
+function Set-TiBusy {
+    param([bool]$Busy)
+    $ti = $script:Ti
+    $ti.Running = $Busy
+    foreach ($control in $ti.BtnTiBrowse, $ti.BtnTiSample, $ti.RbTiSha1, $ti.RbTiSha256, $ti.CmbTiTimeStep, $ti.BtnTiTest, $ti.BtnTiClose) {
+        $control.IsEnabled = -not $Busy
+    }
+    $ready = @($ti.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
+    $ti.BtnTiImport.IsEnabled = -not $Busy -and $ti.Tested -and $ready -gt 0
+    $ti.BtnTiCancel.IsEnabled = $Busy
+    $ti.PrgTi.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Set-TiStatus {
+    param([string]$Message)
+    $script:Ti.TxtTiStatus.Text = $Message
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Reset-TiTest {
+    # A changed file or algorithm invalidates the test import: the secrets are discarded.
+    $ti = $script:Ti
+    if (-not $ti.Tested) { return }
+    $ti.Tested = $false
+    foreach ($result in $ti.Results) { $result.Secret = $null }
+    $ti.Results = @()
+    $ti.DgTi.ItemsSource = $null
+    Set-TiStatus (T 'Import.Status.TestAgain')
+    Set-TiBusy $false
+}
+
+function Get-TiCounts {
+    $results = @($script:Ti.Results)
+    @{
+        Total    = $results.Count
+        OK       = @($results | Where-Object Status -eq 'OK').Count
+        Warning  = @($results | Where-Object Status -eq 'Warning').Count
+        Error    = @($results | Where-Object Status -eq 'Error').Count
+        Imported = @($results | Where-Object Status -eq 'Imported').Count
+        Failed   = @($results | Where-Object Status -eq 'Failed').Count
+    }
+}
+
+function Save-TotpImportSample {
+    $hashFunction = Get-TiHashFunction
+    if (-not $hashFunction) { $hashFunction = 'hmacsha1' }
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Import.Sample'
+    $dialog.Filter = (T 'Import.CsvFilter') + ' (*.csv)|*.csv'
+    $dialog.FileName = 'TOTP-Import-Sample.csv'
+    if (-not $dialog.ShowDialog($script:Ti.Window)) { return }
+
+    $domain = if ($script:Context -and $script:Context.Account -match '@(.+)$') { $Matches[1] } else { 'contoso.com' }
+    try {
+        # UTF-8 with BOM, so that Excel shows umlauts in UPNs correctly
+        $lines = @(Get-TotpImportSample -HashFunction $hashFunction -Domain $domain)
+        [System.IO.File]::WriteAllLines($dialog.FileName, [string[]]$lines, [System.Text.UTF8Encoding]::new($true))
+        Set-TiStatus (T 'Import.SampleSaved' $dialog.FileName)
+    }
+    catch {
+        Write-UiError -Message $_.Exception.Message -Title (T 'Import.Title')
+    }
+}
+
+function Select-TotpImportFile {
+    $dialog = New-Object Microsoft.Win32.OpenFileDialog
+    $dialog.Title = T 'Import.Browse'
+    $dialog.Filter = (T 'Import.CsvFilter') + ' (*.csv;*.txt)|*.csv;*.txt'
+    if (-not $dialog.ShowDialog($script:Ti.Window)) { return }
+    Reset-TiTest
+    $script:Ti.TxtTiFile.Text = $dialog.FileName
+    Set-TiStatus ''
+}
+
+function Start-TotpImportTest {
+    $ti = $script:Ti
+    $path = $ti.TxtTiFile.Text
+    $hashFunction = Get-TiHashFunction
+    if (-not $path) {
+        Show-Message -Text (T 'Import.NoFile') -Title (T 'Import.Title')
+        return
+    }
+    if (-not $hashFunction) {
+        Show-Message -Text (T 'Import.NoAlgorithm') -Title (T 'Import.Title')
+        return
+    }
+
+    Reset-TiTest
+    $ti.Cancel = $false
+    try {
+        Set-TiBusy $true
+        $ti.PrgTi.IsIndeterminate = $true
+        Set-TiStatus (T 'Import.Status.Reading')
+        $rows = @(Read-TotpImportFile -Path $path)
+        Set-ConnectionStatus (Request-M365GraphScopes -Scopes @('Policy.ReadWrite.AuthenticationMethod', 'UserAuthenticationMethod.ReadWrite.All', 'User.Read.All'))
+        $ti.Results = @(Test-TotpImport -Rows $rows -HashFunction $hashFunction -OnProgress {
+            param($Done, $Total)
+            if ($Done % 10 -eq 0 -or $Done -eq $Total) { Set-TiStatus (T 'Import.Status.Testing' $Done $Total) }
+        } -ShouldCancel { $script:Ti.Cancel })
+        $ti.DgTi.ItemsSource = $ti.Results
+        if ($ti.Cancel) {
+            # An incomplete test is not a basis for the import
+            Set-TiStatus (T 'Import.TestCancelled')
+            return
+        }
+        $ti.Tested = $true
+        $counts = Get-TiCounts
+        $summary = T 'Import.TestDone' $counts.Total $counts.OK $counts.Warning $counts.Error
+        Set-TiStatus $summary
+        Write-UiLog ('{0}: {1} ({2})' -f (T 'Import.Title'), $summary, [System.IO.Path]::GetFileName($path))
+    }
+    catch {
+        Set-TiStatus ''
+        Write-UiError -Message (T 'Import.Failed' $_.Exception.Message) -Title (T 'Import.Title')
+    }
+    finally {
+        $ti.PrgTi.IsIndeterminate = $false
+        Set-TiBusy $false
+        if ($ti.CloseRequested) { $ti.Window.Close() }
+    }
+}
+
+function Start-TotpImport {
+    $ti = $script:Ti
+    $hashFunction = Get-TiHashFunction
+    $timeStep = [int]$ti.CmbTiTimeStep.SelectedItem.Tag
+    $counts = Get-TiCounts
+    $ready = $counts.OK + $counts.Warning
+    $algorithm = if ($hashFunction -eq 'hmacsha256') { 'SHA-256' } else { 'SHA-1' }
+    $question = T 'Import.Confirm' $ready $algorithm $timeStep (Get-TiTenantLabel)
+    if ($counts.Error) { $question += "`n`n" + (T 'Import.ConfirmSkipErrors' $counts.Error) }
+    if (-not (Confirm-Action -Text $question -Title (T 'Import.Title'))) { return }
+
+    $ti.Cancel = $false
+    $ti.Tested = $false   # the secrets are used up: a new import needs a new test
+    try {
+        Set-TiBusy $true
+        $ti.PrgTi.Value = 0
+        Write-UiLog (T 'Import.Log.Started' $ready $algorithm $timeStep) 'Warning'
+        Invoke-TotpImport -Results $ti.Results -HashFunction $hashFunction -TimeIntervalInSeconds $timeStep `
+            -OnProgress {
+                param($Result, $Done, $Total)
+                # Secrets are never logged, only UPN and serial number.
+                if ($Result.Status -eq 'Imported') { Write-UiLog (T 'Import.Log.Imported' $Result.SerialNumber $Result.Upn) 'Success' }
+                else { Write-UiLog (T 'Import.Log.Failed' $Result.SerialNumber $Result.Upn $Result.Message) 'Error' }
+                $script:Ti.PrgTi.Value = if ($Total) { 100 * $Done / $Total } else { 100 }
+                $script:Ti.DgTi.Items.Refresh()
+                Set-TiStatus (T 'Import.Status.Importing' $Done $Total)
+            } `
+            -ShouldCancel { $script:Ti.Cancel } `
+            -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
+    }
+    catch {
+        Write-UiError -Message (T 'Import.Failed' $_.Exception.Message) -Title (T 'Import.Title')
+    }
+    finally {
+        # Not imported (cancelled or error before the start): discard the secrets as well
+        foreach ($result in $ti.Results) { $result.Secret = $null }
+        $ti.DgTi.Items.Refresh()
+        Set-TiBusy $false
+    }
+
+    $counts = Get-TiCounts
+    $summary = T 'Import.Done' $counts.Imported $counts.Failed ($ready - $counts.Imported - $counts.Failed)
+    Set-TiStatus $summary
+    Write-UiLog $summary $(if ($counts.Failed) { 'Warning' } else { 'Success' })
+    if ($ti.CloseRequested) { $ti.Window.Close() }
+}
+
+function Get-TiTenantLabel {
+    if ($script:Context) { $script:Context.TenantId } else { '-' }
+}
+
+function Show-TotpImportWindow {
+    [xml]$importXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\TotpImportWindow.xaml') -Raw -Encoding UTF8
+    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($importXaml))
+    $dialog.Owner = $window
+    Update-ElementTexts -Root $dialog
+
+    $script:Ti = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
+    foreach ($name in @(
+        'TxtTiTenant', 'TxtTiFile', 'BtnTiBrowse', 'BtnTiSample', 'RbTiSha1', 'RbTiSha256', 'CmbTiTimeStep'
+        'DgTi', 'TxtTiStatus', 'PrgTi', 'BtnTiTest', 'BtnTiImport', 'BtnTiCancel', 'BtnTiClose'
+    )) {
+        $script:Ti[$name] = $dialog.FindName($name)
+    }
+    $ti = $script:Ti
+    foreach ($column in $ti.DgTi.Columns) { $column.Header = T ([string]$column.Header) }
+    $ti.TxtTiTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
+    Set-TiBusy $false
+
+    $ti.BtnTiBrowse.Add_Click({ Select-TotpImportFile })
+    $ti.BtnTiSample.Add_Click({ Save-TotpImportSample })
+    $ti.BtnTiTest.Add_Click({ Start-TotpImportTest })
+    $ti.BtnTiImport.Add_Click({ Start-TotpImport })
+    $ti.BtnTiClose.Add_Click({ $script:Ti.Window.Close() })
+    $ti.BtnTiCancel.Add_Click({
+        $script:Ti.Cancel = $true
+        $script:Ti.BtnTiCancel.IsEnabled = $false
+        Set-TiStatus (T 'Import.Status.Cancelling')
+    })
+    # The algorithm and time step must match the tokens: changing them requires a new test.
+    foreach ($control in $ti.RbTiSha1, $ti.RbTiSha256) { $control.Add_Checked({ Reset-TiTest }) }
+    $ti.CmbTiTimeStep.Add_SelectionChanged({ Reset-TiTest })
+
+    # Closing during a running import: cancel first, the window closes after the current token.
+    $dialog.Add_Closing({
+        param($src, $closingArgs)
+        if ($script:Ti.Running) {
+            $script:Ti.Cancel = $true
+            $script:Ti.CloseRequested = $true
+            $closingArgs.Cancel = $true
+            Set-TiStatus (T 'Import.Status.Cancelling')
+        }
+    })
+
+    $dialog.ShowDialog() | Out-Null
+    foreach ($result in $script:Ti.Results) { $result.Secret = $null }
+}
+
+$BtnTotpImport.Add_Click({
+    Show-TotpImportWindow
+    $script:Ti = $null
+    # Imported tokens of the selected user should show up right away
+    if ($null -ne $script:SelectedUser) { Update-MfaView }
 })
 
 #endregion

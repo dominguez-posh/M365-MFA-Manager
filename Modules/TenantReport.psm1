@@ -27,12 +27,14 @@ $script:LevelOrder = @{ Red = 0; Yellow = 1; Green = 2; Unknown = 3 }
 #region Graph data
 
 function Get-GraphPages {
-    # Returns all items of a paged Graph collection.
-    param([Parameter(Mandatory)][string]$Uri, [hashtable]$Headers = @{})
+    # Returns all items of a paged Graph collection. OnPage is called with the number of items read so far.
+    param([Parameter(Mandatory)][string]$Uri, [hashtable]$Headers = @{}, [scriptblock]$OnPage = { param($Count) })
+    $count = 0
     while ($Uri) {
         $response = Invoke-M365GraphRequest -Uri $Uri -Headers $Headers
-        foreach ($item in @($response['value'])) { if ($null -ne $item) { $item } }
-        $Uri = $response['@odata.nextLink']
+        foreach ($item in @($response['value'])) { if ($null -ne $item) { $count++; $item } }
+        & $OnPage $count
+        $Uri = [string]$response['@odata.nextLink']
     }
 }
 
@@ -117,26 +119,29 @@ function Get-M365ReportUsers {
     param(
         [string]$GroupId,
         [switch]$IncludeSignIn,
-        [scriptblock]$OnWarning = { param($Message) }
+        [scriptblock]$OnWarning = { param($Message) },
+        [scriptblock]$OnProgress = { param($Message) }
     )
 
+    $onPage = { param($Count) & $OnProgress (T 'Report.Progress.UsersLoaded' $Count) }
     $signInKnown = $false
     if ($GroupId) {
         $uri = "v1.0/groups/$([uri]::EscapeDataString($GroupId))/transitiveMembers/microsoft.graph.user?`$select=$script:UserSelect&`$top=999&`$count=true"
-        $items = @(Get-GraphPages -Uri $uri -Headers @{ ConsistencyLevel = 'eventual' })
+        $items = @(Get-GraphPages -Uri $uri -Headers @{ ConsistencyLevel = 'eventual' } -OnPage $onPage)
     }
     else {
         $items = $null
         if ($IncludeSignIn) {
             try {
-                $items = @(Get-GraphPages -Uri "v1.0/users?`$select=$script:UserSelect,signInActivity&`$top=999")
+                # With signInActivity, Graph allows at most 120 users per page (larger values fail or are cut).
+                $items = @(Get-GraphPages -Uri "v1.0/users?`$select=$script:UserSelect,signInActivity&`$top=120" -OnPage $onPage)
                 $signInKnown = $true
             }
             catch {
                 & $OnWarning (T 'Report.SignInUnavailable' $_.Exception.Message)
             }
         }
-        if ($null -eq $items) { $items = @(Get-GraphPages -Uri "v1.0/users?`$select=$script:UserSelect&`$top=999") }
+        if ($null -eq $items) { $items = @(Get-GraphPages -Uri "v1.0/users?`$select=$script:UserSelect&`$top=999" -OnPage $onPage) }
     }
 
     $items | ForEach-Object {
@@ -468,6 +473,8 @@ function Invoke-M365TenantMfaReport {
         Creates the MFA report and passes the rows in portions to OnRows.
     .PARAMETER OnProgress
         Called with a status text.
+    .PARAMETER OnInfo
+        Called with information for the log (e.g. the number of loaded users).
     .PARAMETER OnRows
         Called after each batch with the new rows, the number of processed and of all users.
     .PARAMETER ShouldCancel
@@ -485,15 +492,18 @@ function Invoke-M365TenantMfaReport {
         [switch]$IncludeSignIn,
         [scriptblock]$OnProgress = { param($Message) },
         [scriptblock]$OnWarning = { param($Message) },
+        [scriptblock]$OnInfo = { param($Message) },
         [scriptblock]$OnRows = { param($Rows, $Done, $Total) },
         [scriptblock]$ShouldCancel = { $false },
         [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
     )
 
     & $OnProgress (T 'Report.Progress.Users')
-    $users = @(Get-M365ReportUsers -GroupId $GroupId -IncludeSignIn:$IncludeSignIn -OnWarning $OnWarning |
+    $allUsers = @(Get-M365ReportUsers -GroupId $GroupId -IncludeSignIn:$IncludeSignIn -OnWarning $OnWarning -OnProgress $OnProgress)
+    $users = @($allUsers |
         Where-Object { ($IncludeDisabled -or $_.AccountEnabled) -and ($IncludeGuests -or $_.UserType -ne 'Guest') } |
         Sort-Object Id -Unique)
+    & $OnInfo (T 'Report.UsersLoaded' $allUsers.Count $users.Count)
     # Group members come without sign-in data: read it per batch below.
     $readSignIn = $IncludeSignIn -and [bool]$GroupId
     $signInAvailable = @($users | Where-Object SignInKnown).Count -gt 0

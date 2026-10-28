@@ -139,6 +139,7 @@ function Get-TotpCode {
     param(
         [Parameter(Mandatory)][string]$Secret,
         [int]$TimeStepSeconds = 30,
+        [ValidateSet('hmacsha1', 'hmacsha256')][string]$HashFunction = 'hmacsha1',
         [DateTimeOffset]$Timestamp = [DateTimeOffset]::UtcNow
     )
     $key = ConvertFrom-Base32 -Secret $Secret
@@ -146,7 +147,8 @@ function Get-TotpCode {
     $counterBytes = [BitConverter]::GetBytes($counter)
     if ([BitConverter]::IsLittleEndian) { [Array]::Reverse($counterBytes) }
 
-    $hmac = New-Object System.Security.Cryptography.HMACSHA1 -ArgumentList (, $key)
+    $hmacType = if ($HashFunction -eq 'hmacsha256') { 'System.Security.Cryptography.HMACSHA256' } else { 'System.Security.Cryptography.HMACSHA1' }
+    $hmac = New-Object $hmacType -ArgumentList (, $key)
     $hash = $hmac.ComputeHash($counterBytes)
     $hmac.Dispose()
 
@@ -186,6 +188,7 @@ function New-HardwareOathTotp {
         Creates a hardware OATH device (or reuses an existing, unassigned one),
         assigns it to the user and activates it with a code calculated from the secret.
         Returns MethodId and DeviceId. Rolls back on errors.
+        Devices: serial number -> device, loaded once by the bulk import (instead of searching per token).
     #>
     param(
         [Parameter(Mandatory)]$User,
@@ -193,6 +196,10 @@ function New-HardwareOathTotp {
         [Parameter(Mandatory)][string]$SecretKey,
         [Parameter(Mandatory)][string]$DisplayName,
         [Parameter(Mandatory)][string]$Model,
+        [string]$Manufacturer = $script:OathManufacturer,
+        [ValidateSet('hmacsha1', 'hmacsha256')][string]$HashFunction = 'hmacsha1',
+        [ValidateSet(30, 60)][int]$TimeIntervalInSeconds = 30,
+        [hashtable]$Devices,
         [switch]$ReuseExistingDevice
     )
 
@@ -203,7 +210,7 @@ function New-HardwareOathTotp {
     $assignedMethodId = $null
 
     try {
-        $existing = Find-HardwareOathDevice -SerialNumber $SerialNumber
+        $existing = if ($null -ne $Devices) { $Devices[$SerialNumber] } else { Find-HardwareOathDevice -SerialNumber $SerialNumber }
         if ($null -ne $existing) {
             $assignedTo = $existing['assignedTo']
             if ($assignedTo -is [System.Collections.IDictionary] -and $assignedTo['id']) {
@@ -222,10 +229,11 @@ function New-HardwareOathTotp {
             $device = Invoke-M365GraphRequest -Method POST -Uri $devicesUri -Body @{
                 displayName           = $DisplayName
                 serialNumber          = $SerialNumber
-                manufacturer          = $script:OathManufacturer
+                manufacturer          = $Manufacturer
                 model                 = $Model
                 secretKey             = $SecretKey
-                timeIntervalInSeconds = 30
+                timeIntervalInSeconds = $TimeIntervalInSeconds
+                hashFunction          = $HashFunction
             }
             $deviceId = [string]$device['id']
             $createdDevice = $true
@@ -238,7 +246,7 @@ function New-HardwareOathTotp {
         if (-not $assignedMethodId) { $assignedMethodId = $deviceId }
 
         Invoke-M365GraphRequest -Method POST -Uri "beta/users/$userPart/authentication/hardwareOathMethods/$([uri]::EscapeDataString($assignedMethodId))/activate" -Body @{
-            verificationCode = Get-TotpCode -Secret $SecretKey
+            verificationCode = Get-TotpCode -Secret $SecretKey -TimeStepSeconds $TimeIntervalInSeconds -HashFunction $HashFunction
             displayName      = $DisplayName
         } | Out-Null
 
@@ -695,6 +703,248 @@ function New-M365BreakGlassAccount {
 
 #endregion
 
+#region Bulk import of hardware OATH tokens
+
+# Column names accepted in the import CSV (case-insensitive)
+$script:ImportColumns = [ordered]@{
+    Secret       = @('Secret', 'Base32Secret', 'SecretKey', 'Seed', 'Key')
+    SerialNumber = @('SerialNumber', 'Serial', 'SN', 'Seriennummer')
+    Upn          = @('UPN', 'UserPrincipalName', 'User')
+    Manufacturer = @('Manufacturer', 'Hersteller')
+    Model        = @('Model', 'Modell')
+}
+
+function Get-TotpImportSample {
+    <#
+    .SYNOPSIS
+        Returns the lines of a sample import CSV with random secrets of the usual length for the algorithm.
+    #>
+    param(
+        [ValidateSet('hmacsha1', 'hmacsha256')][string]$HashFunction = 'hmacsha1',
+        [string]$Domain = 'contoso.com'
+    )
+    $byteLength = if ($HashFunction -eq 'hmacsha256') { 32 } else { 20 }
+    'Secret;SerialNumber;UPN'
+    foreach ($i in 1..3) {
+        '{0};SN{1:D7};user{2}@{3}' -f (New-TotpSecret -ByteLength $byteLength), (1000000 + $i), $i, $Domain
+    }
+}
+
+function Read-TotpImportFile {
+    <#
+    .SYNOPSIS
+        Reads the import CSV (separator ; or , detected automatically, "sep=" line of Excel ignored).
+    .OUTPUTS
+        One object per data line: Line, Upn, SerialNumber, Secret, Manufacturer, Model.
+    #>
+    param([Parameter(Mandatory)][string]$Path)
+
+    $lines = @(Get-Content -LiteralPath $Path -Encoding UTF8 | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($lines.Count -and $lines[0] -match '^\s*sep=') { $lines = @($lines | Select-Object -Skip 1) }
+    if ($lines.Count -lt 2) { throw (T 'Import.EmptyFile') }
+
+    $delimiter = if ($lines[0].Split(';').Count -ge $lines[0].Split(',').Count) { ';' } else { ',' }
+    $headers = @($lines[0].Split($delimiter) | ForEach-Object { $_.Trim().Trim('"').Trim() })
+
+    # Internal name -> CSV header
+    $map = @{}
+    foreach ($name in $script:ImportColumns.Keys) {
+        $header = $headers | Where-Object { $script:ImportColumns[$name] -contains $_ } | Select-Object -First 1
+        if ($header) { $map[$name] = $header }
+    }
+    $missing = @('Secret', 'SerialNumber', 'Upn' | Where-Object { -not $map.ContainsKey($_) })
+    if ($missing.Count) { throw (T 'Import.MissingColumns' ($missing -join ', ') ($headers -join $delimiter)) }
+
+    $lineNumber = 1
+    foreach ($record in @($lines | ConvertFrom-Csv -Delimiter $delimiter)) {
+        $lineNumber++
+        $values = @{}
+        foreach ($name in $script:ImportColumns.Keys) {
+            $values[$name] = if ($map.ContainsKey($name)) { ([string]$record.($map[$name])).Trim() } else { '' }
+        }
+        [pscustomobject]@{
+            Line         = $lineNumber
+            Upn          = $values.Upn
+            SerialNumber = $values.SerialNumber
+            Secret       = $values.Secret
+            Manufacturer = $values.Manufacturer
+            Model        = $values.Model
+        }
+    }
+}
+
+function Get-HardwareOathDeviceMap {
+    # All hardware OATH devices of the tenant: serial number -> device
+    $devices = @{}
+    $uri = 'beta/directory/authenticationMethodDevices/hardwareOathDevices'
+    while ($uri) {
+        $response = Invoke-M365GraphRequest -Uri $uri
+        foreach ($device in @($response['value'])) {
+            if ($null -ne $device) { $devices[[string]$device['serialNumber']] = $device }
+        }
+        $uri = [string]$response['@odata.nextLink']
+    }
+    $devices
+}
+
+function Test-TotpImport {
+    <#
+    .SYNOPSIS
+        Test import: checks every line without changing anything in the tenant.
+    .DESCRIPTION
+        Checks the secret (Base32, length), duplicate serial numbers in the file, whether the user exists
+        and whether a token with the serial number already exists in the tenant.
+    .OUTPUTS
+        One result per line with Status OK, Warning or Error. Lines with OK or Warning are
+        imported by Invoke-TotpImport.
+    #>
+    param(
+        [Parameter(Mandatory)][object[]]$Rows,
+        [ValidateSet('hmacsha1', 'hmacsha256')][string]$HashFunction = 'hmacsha1',
+        [scriptblock]$OnProgress = { param($Done, $Total) },
+        [scriptblock]$ShouldCancel = { $false }
+    )
+
+    $devices = Get-HardwareOathDeviceMap
+    $serialCount = @{}
+    $upnCount = @{}
+    foreach ($row in $Rows) {
+        if ($row.SerialNumber) { $serialCount[$row.SerialNumber] = 1 + [int]$serialCount[$row.SerialNumber] }
+        if ($row.Upn) { $upnCount[$row.Upn] = 1 + [int]$upnCount[$row.Upn] }
+    }
+    # Usual seed length (Base32 characters): 160 bits for SHA-1, 256 bits for SHA-256
+    $expectedLength = if ($HashFunction -eq 'hmacsha256') { 52 } else { 32 }
+    $users = @{}
+    $done = 0
+
+    foreach ($row in $Rows) {
+        if (& $ShouldCancel) { break }
+        $errors = New-Object System.Collections.Generic.List[string]
+        $warnings = New-Object System.Collections.Generic.List[string]
+        $user = $null
+        $secret = $null
+
+        if (-not $row.Upn) { $errors.Add((T 'Import.Error.NoUpn')) }
+        if (-not $row.SerialNumber) { $errors.Add((T 'Import.Error.NoSerial')) }
+        elseif ($serialCount[$row.SerialNumber] -gt 1) { $errors.Add((T 'Import.Error.DuplicateSerial')) }
+        if ($row.Upn -and $upnCount[$row.Upn] -gt 1) { $warnings.Add((T 'Import.Warn.SeveralTokens' $upnCount[$row.Upn])) }
+
+        if (-not $row.Secret) { $errors.Add((T 'Import.Error.NoSecret')) }
+        else {
+            try {
+                $secret = ConvertTo-NormalizedTotpSecret -Secret $row.Secret
+                if ($secret.Length -gt 128) { throw (T 'Import.Error.SecretTooLong') }
+                if ($secret.Length -lt $expectedLength) { $warnings.Add((T 'Import.Warn.ShortSecret' $secret.Length $expectedLength)) }
+            }
+            catch {
+                $secret = $null
+                $errors.Add($_.Exception.Message)
+            }
+        }
+
+        if ($row.Upn) {
+            if (-not $users.ContainsKey($row.Upn)) {
+                try {
+                    $found = Invoke-M365GraphRequest -Uri "v1.0/users/$([uri]::EscapeDataString($row.Upn))?`$select=id,displayName,userPrincipalName,accountEnabled"
+                    $users[$row.Upn] = [pscustomobject]@{
+                        Id                = [string]$found['id']
+                        DisplayName       = [string]$found['displayName']
+                        UserPrincipalName = [string]$found['userPrincipalName']
+                        AccountEnabled    = [bool]$found['accountEnabled']
+                    }
+                }
+                catch {
+                    $users[$row.Upn] = $null
+                }
+            }
+            $user = $users[$row.Upn]
+            if ($null -eq $user) { $errors.Add((T 'Import.Error.UserNotFound')) }
+            elseif (-not $user.AccountEnabled) { $warnings.Add((T 'Import.Warn.UserDisabled')) }
+        }
+
+        if ($row.SerialNumber -and $devices.ContainsKey($row.SerialNumber)) {
+            $assignedTo = $devices[$row.SerialNumber]['assignedTo']
+            if ($assignedTo -is [System.Collections.IDictionary] -and $assignedTo['id']) {
+                $errors.Add((T 'Totp.AlreadyAssigned' $row.SerialNumber $assignedTo['displayName']))
+            }
+            else {
+                $warnings.Add((T 'Import.Warn.ReplaceDevice'))
+            }
+        }
+
+        $status = if ($errors.Count) { 'Error' } elseif ($warnings.Count) { 'Warning' } else { 'OK' }
+        [pscustomobject]@{
+            Line         = $row.Line
+            Upn          = $row.Upn
+            DisplayName  = if ($user) { $user.DisplayName } else { '' }
+            SerialNumber = $row.SerialNumber
+            Status       = $status
+            StatusText   = T "Import.Status.$status"
+            Message      = (@($errors) + @($warnings)) -join ' · '
+            User         = $user
+            Secret       = $secret
+            Manufacturer = if ($row.Manufacturer) { $row.Manufacturer } else { 'OATH' }
+            Model        = $row.Model
+        }
+        $done++
+        & $OnProgress $done $Rows.Count
+    }
+}
+
+function Invoke-TotpImport {
+    <#
+    .SYNOPSIS
+        Imports the lines of a test import with status OK or Warning: creates, assigns and activates each token.
+    .DESCRIPTION
+        An error does not stop the import: the token is rolled back and marked as failed.
+        When Graph throttles, the token is tried again after a pause.
+        Updates Status, StatusText and Message of the passed results and removes their secrets.
+    #>
+    param(
+        [Parameter(Mandatory)][object[]]$Results,
+        [ValidateSet('hmacsha1', 'hmacsha256')][string]$HashFunction = 'hmacsha1',
+        [ValidateSet(30, 60)][int]$TimeIntervalInSeconds = 30,
+        [scriptblock]$OnProgress = { param($Result, $Done, $Total) },
+        [scriptblock]$ShouldCancel = { $false },
+        [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
+    )
+
+    $devices = Get-HardwareOathDeviceMap
+    $pending = @($Results | Where-Object { $_.Status -in 'OK', 'Warning' })
+    $algorithm = if ($HashFunction -eq 'hmacsha256') { 'SHA-256' } else { 'SHA-1' }
+    $done = 0
+    foreach ($result in $pending) {
+        if (& $ShouldCancel) { break }
+        $model = if ($result.Model) { $result.Model } else { 'TOTP {0} {1}s' -f $algorithm, $TimeIntervalInSeconds }
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                New-HardwareOathTotp -User $result.User -SerialNumber $result.SerialNumber -SecretKey $result.Secret `
+                    -DisplayName "TOTP token $($result.SerialNumber)" -Model $model -Manufacturer $result.Manufacturer `
+                    -HashFunction $HashFunction -TimeIntervalInSeconds $TimeIntervalInSeconds -Devices $devices | Out-Null
+                $result.Status = 'Imported'
+                $result.Message = ''
+                break
+            }
+            catch {
+                if ($attempt -lt 4 -and $_.Exception.Message -match '429|TooManyRequests|throttl') {
+                    & $Wait (10000 * $attempt)
+                    continue
+                }
+                $result.Status = 'Failed'
+                $result.Message = $_.Exception.Message
+                break
+            }
+        }
+        $result.StatusText = T "Import.Status.$($result.Status)"
+        $result.Secret = $null
+        $done++
+        & $OnProgress $result $done $pending.Count
+    }
+}
+
+#endregion
+
+
 function Invoke-MfaProvisioning {
     <#
     .SYNOPSIS
@@ -720,4 +970,5 @@ function Invoke-MfaProvisioning {
     }
 }
 
-Export-ModuleMember -Function Invoke-MfaProvisioning, New-M365BreakGlassAccount, ConvertFrom-HrdnrFakeMfaKey, Get-HrdnrFakeMfaKeyFromTenant
+Export-ModuleMember -Function Invoke-MfaProvisioning, New-M365BreakGlassAccount, ConvertFrom-HrdnrFakeMfaKey, Get-HrdnrFakeMfaKeyFromTenant,
+    Get-TotpImportSample, Read-TotpImportFile, Test-TotpImport, Invoke-TotpImport

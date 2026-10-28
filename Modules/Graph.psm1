@@ -10,12 +10,22 @@
 
 Set-StrictMode -Version Latest
 
+# All permissions of every feature are requested at sign-in, so that no further sign-in dialog
+# appears later. Request-M365GraphScopes only checks that the feature's permissions were granted.
 $script:GraphScopes = @(
     'User.Read.All'
     'UserAuthenticationMethod.Read.All'
     'UserAuthenticationMethod.ReadWrite.All'
     'Policy.ReadWrite.AuthenticationMethod'   # Create/delete hardware OATH tokens in the directory
     'RoleManagement.Read.Directory'           # Show the user's administrative roles
+    'Organization.Read.All'                   # hrdnr key stored in the tenant
+    'User.ReadWrite.All'                      # Open extensions (MFA guide, fake MFA), break-glass account
+    'Mail.Send'                               # MFA setup guide from the own mailbox
+    'Mail.Send.Shared'                        # MFA setup guide from a shared mailbox
+    'Domain.Read.All'                         # Break-glass account: domain selection
+    'RoleManagement.ReadWrite.Directory'      # Break-glass account: assign Global Administrator
+    'GroupMember.Read.All'                    # MFA report: group scope, roles assigned via groups
+    'AuditLog.Read.All'                       # MFA report: last sign-in
 )
 
 $script:RoleDefinitionNames = $null   # Cache: role ID -> display name
@@ -266,23 +276,22 @@ function Connect-M365Graph {
 function Request-M365GraphScopes {
     <#
     .SYNOPSIS
-        Requests additional permissions (signs in again only if some are missing).
+        Checks that the permissions of a feature were granted at sign-in.
+    .DESCRIPTION
+        All permissions are requested by Connect-M365Graph, so no sign-in dialog is shown here.
+        If one is missing (consent declined), the error asks to sign out and in again.
     .OUTPUTS
-        Account and tenant of the (possibly new) session.
+        Account and tenant of the session.
     #>
     param([Parameter(Mandatory)][string[]]$Scopes)
 
     $context = Get-MgContext
-    $missing = @($Scopes | Where-Object { @($context.Scopes) -notcontains $_ })
+    # ReadWrite includes Read (e.g. User.ReadWrite.All covers User.Read.All)
+    $missing = @($Scopes | Where-Object {
+        @($context.Scopes) -notcontains $_ -and @($context.Scopes) -notcontains ($_ -replace '\.Read\.', '.ReadWrite.')
+    })
     if ($missing.Count) {
-        try {
-            $allScopes = @($script:GraphScopes) + $Scopes | Select-Object -Unique
-            Invoke-InteractiveSignIn { Connect-MgGraph -Scopes $allScopes -NoWelcome -ErrorAction Stop | Out-Null }
-        }
-        catch {
-            throw (T 'Graph.ScopesDenied' ($missing -join ', ') $_.Exception.Message)
-        }
-        $context = Get-MgContext
+        throw (T 'Graph.ScopesMissing' ($missing -join ', '))
     }
 
     [pscustomobject]@{
