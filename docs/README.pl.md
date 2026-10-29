@@ -139,7 +139,7 @@ Jeśli dzierżawa jest zarządzana za pomocą hrdnr, sekret tokenu fałszywego M
 
 **Konto awaryjne (break-glass)** to dostęp awaryjny, który pozwala dostać się do dzierżawy nawet wtedy, gdy zwykłe dostępy administratora nie działają (np. z powodu błędnej zasady dostępu warunkowego).
 
-Kliknij **„Konto awaryjne …”** w prawym górnym rogu:
+Otwórz u góry **Narzędzia ▾ → „Konto awaryjne …”**:
 
 ![Okno „Utwórz konto awaryjne”](images/en/breakglass-dialog.png)
 
@@ -228,13 +228,13 @@ W przypadku sprzętowych tokenów TOTP z plikiem seed od producenta (np. tokeny 
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Separator `;` lub `,`; kolejność kolumn nie ma znaczenia. **UPN jest opcjonalny**: wiersz bez UPN dodaje token tylko do inwentarza – przypisz go później w [inwentarzu tokenów](#inwentarz-tokenów). Kolumny opcjonalne: `Manufacturer`, `Model`.
+   Separator `;` lub `,`; kolejność kolumn nie ma znaczenia. **UPN jest opcjonalny**: wiersz bez UPN dodaje token tylko do inwentarza – przypisz go później w [inwentarzu tokenów](#inwentarz-tokenów) albo wybierz w polu **Tokeny bez UPN** **członków grupy** lub **użytkowników z listy CSV**: sprawdzenie rozdziela wtedy tokeny w kolejności pliku, po jednym na użytkownika, a import je aktywuje. Kolumny opcjonalne: `Manufacturer`, `Model`.
 2. **„Wybierz CSV …”** wczytuje plik. Wybierz **algorytm** (SHA-1 lub SHA-256) i **interwał czasu** (30 lub 60 sekund) – oba muszą pasować do tokenów (patrz zamówienie lub plik seed).
-3. **„Import testowy”** sprawdza każdy wiersz, niczego nie zmieniając: sekret Base32, powtórzone numery seryjne, istnienie użytkownika i czy numer seryjny jest już przypisany w dzierżawie. Wiersze są oznaczone na zielono/żółto/czerwono.
-4. **„Rozpocznij import”** tworzy bezbłędne tokeny w inwentarzu, przypisuje je użytkownikom i od razu aktywuje. Wiersze z błędami są pomijane; nieudany token jest wycofywany. Każdy token trafia do dziennika (bez sekretu).
-5. **„Eksport do Excela …”** zapisuje listę wyników jako potwierdzenie. **„Cofnij ostatni import”** ponownie usuwa tokeny utworzone w ostatnim przebiegu od użytkowników i z inwentarza (możliwe do następnego importu testowego).
+3. **„Sprawdź”** sprawdza każdy wiersz, niczego nie zmieniając: sekret Base32, powtórzone numery seryjne, istnienie użytkownika i czy numer seryjny jest już przypisany w dzierżawie. Wiersze są oznaczone na zielono/żółto/czerwono.
+4. **„Importuj”** tworzy bezbłędne tokeny w inwentarzu, przypisuje je użytkownikom i od razu aktywuje. Wiersze z błędami są pomijane; nieudany token jest wycofywany. Każdy token trafia do dziennika (bez sekretu).
+5. **„Eksport do Excela …”** zapisuje listę wyników (numer seryjny → użytkownik) jako potwierdzenie i dokument przekazania. **„Cofnij”** ponownie usuwa tokeny utworzone w ostatnim przebiegu od użytkowników i z inwentarza (możliwe do następnego importu testowego).
 
-Zmiana pliku, algorytmu lub interwału wymaga nowego importu testowego.
+Zmiana pliku, algorytmu, interwału lub rozdziału wymaga nowego sprawdzenia.
 
 ---
 
@@ -242,8 +242,10 @@ Zmiana pliku, algorytmu lub interwału wymaga nowego importu testowego.
 
 **Narzędzia ▾ → „Inwentarz tokenów …”** wyświetla wszystkie sprzętowe tokeny TOTP dzierżawy: wolne (żółte), przypisane i aktywowane (zielone), z modelem, algorytmem, interwałem i przypisanym użytkownikiem. Z wyszukiwaniem i filtrem wolne/przypisane.
 
-- **„Przypisz wybranemu użytkownikowi …”**: najpierw wybierz użytkownika w oknie głównym, potem wolny token. Wpisz kod aktualnie wyświetlany na tokenie – zostanie przypisany i aktywowany w jednym kroku (jak w portalu Entra).
-- **„Usuń przypisanie”**: użytkownik nie może już logować się tym tokenem; pozostaje on w inwentarzu jako wolny.
+- **„Przypisz …”**: najpierw wybierz użytkownika w oknie głównym, potem wolny token. Wpisz kod aktualnie wyświetlany na tokenie – zostanie przypisany i aktywowany w jednym kroku (jak w portalu Entra).
+- **„Rozdziel …”**: rozdziela wszystkie wolne tokeny członkom grupy lub użytkownikom z listy CSV, po jednym w kolejności numerów seryjnych – **bez aktywacji**, bo sekrety nie są już znane. Każdy użytkownik aktywuje token na [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo), wpisując wyświetlany kod, albo robisz to Ty przyciskiem **„Aktywuj …”**. Lista przypisań (numer seryjny → użytkownik) jest od razu proponowana jako Excel.
+- **„Aktywuj …”**: aktywuje przypisany, ale jeszcze nieaktywowany token kodem wyświetlanym na tokenie.
+- **„Odłącz”**: użytkownik nie może już logować się tym tokenem; pozostaje on w inwentarzu jako wolny.
 - **„Usuń”**: usuwa token z inwentarza (przypisany token jest najpierw usuwany od użytkownika).
 
 ---
@@ -254,7 +256,7 @@ Zmiana pliku, algorytmu lub interwału wymaga nowego importu testowego.
 
 1. Wybierz użytkowników: **plik CSV** (kolumna `UPN` lub jeden UPN w wierszu) albo **członków grupy** (łącznie z grupami zagnieżdżonymi).
 2. Ustaw **ważność** (10–43200 minut) i czy hasło ma być **jednorazowe**.
-3. **„Test”** rozwiązuje użytkowników, niczego nie zmieniając. **„Utwórz hasła”** tworzy następnie po jednym haśle na użytkownika; istniejące hasło użytkownika zostaje zastąpione.
+3. **„Sprawdź”** rozwiązuje użytkowników, niczego nie zmieniając. **„Utwórz”** tworzy następnie po jednym haśle na użytkownika; istniejące hasło użytkownika zostaje zastąpione.
 4. **„Eksport do Excela …”** zapisuje listę z hasłami – zawiera je w postaci jawnej, więc zapisuj ją tylko w chronionym miejscu i usuń po przekazaniu. Hasła nigdy nie trafiają do dziennika.
 
 ## Często zadawane pytania i rozwiązywanie problemów

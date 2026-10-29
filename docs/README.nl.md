@@ -139,7 +139,7 @@ Wordt de tenant met hrdnr beheerd, dan kan het geheim van een nep-MFA-token **ve
 
 Een **noodaccount (break-glass)** is een noodtoegang waarmee u ook in de tenant komt als normale beheerderstoegang niet werkt (bijv. door een foutief beleid voor voorwaardelijke toegang).
 
-Klik rechtsboven op **"Noodaccount …"**:
+Open bovenaan **Hulpmiddelen ▾ → "Noodaccount …"**:
 
 ![Dialoogvenster "Noodaccount aanmaken"](images/en/breakglass-dialog.png)
 
@@ -228,13 +228,13 @@ Voor hardware-TOTP-tokens met een seedbestand van de fabrikant (bijv. displaytok
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Scheidingsteken `;` of `,`; de kolomvolgorde maakt niet uit. **UPN is optioneel**: een regel zonder UPN voegt het token alleen aan de voorraad toe; wijs het later toe in de [tokenvoorraad](#tokenvoorraad). Optionele kolommen: `Manufacturer`, `Model`.
+   Scheidingsteken `;` of `,`; de kolomvolgorde maakt niet uit. **UPN is optioneel**: een regel zonder UPN voegt het token alleen aan de voorraad toe; wijs het later toe in de [tokenvoorraad](#tokenvoorraad), of kies onder **Tokens zonder UPN** de **leden van een groep** of de **gebruikers van een CSV-lijst**: de controle verdeelt de tokens dan in bestandsvolgorde, één per gebruiker, en de import activeert ze. Optionele kolommen: `Manufacturer`, `Model`.
 2. **"CSV kiezen …"** laadt het bestand. Kies het **algoritme** (SHA-1 of SHA-256) en het **tijdsinterval** (30 of 60 seconden) – beide moeten bij de tokens passen (zie bestelling of seedbestand).
-3. **"Testimport"** controleert elke regel zonder iets te wijzigen: Base32-secret, dubbele serienummers, of de gebruiker bestaat en of het serienummer in de tenant al is toegewezen. De regels worden groen/geel/rood weergegeven.
-4. **"Import starten"** maakt de foutloze tokens aan in de voorraad, wijst ze toe aan de gebruikers en activeert ze direct. Regels met fouten worden overgeslagen; een mislukt token wordt teruggedraaid. Elk token staat in het logboek (zonder secret).
-5. **"Excel-export …"** slaat de resultatenlijst op als bewijs. **"Laatste import ongedaan maken"** verwijdert de bij de laatste run aangemaakte tokens weer van de gebruikers en uit de voorraad (mogelijk tot de volgende testimport).
+3. **"Controleren"** controleert elke regel zonder iets te wijzigen: Base32-secret, dubbele serienummers, of de gebruiker bestaat en of het serienummer in de tenant al is toegewezen. De regels worden groen/geel/rood weergegeven.
+4. **"Importeren"** maakt de foutloze tokens aan in de voorraad, wijst ze toe aan de gebruikers en activeert ze direct. Regels met fouten worden overgeslagen; een mislukt token wordt teruggedraaid. Elk token staat in het logboek (zonder secret).
+5. **"Excel-export …"** slaat de resultatenlijst (serienummer → gebruiker) op als bewijs en uitgiftedocument. **"Ongedaan maken"** verwijdert de bij de laatste run aangemaakte tokens weer van de gebruikers en uit de voorraad (mogelijk tot de volgende testimport).
 
-Na wijziging van bestand, algoritme of tijdsinterval is een nieuwe testimport nodig.
+Na wijziging van bestand, algoritme, tijdsinterval of verdeling is een nieuwe controle nodig.
 
 ---
 
@@ -242,8 +242,10 @@ Na wijziging van bestand, algoritme of tijdsinterval is een nieuwe testimport no
 
 **Hulpmiddelen ▾ → "Tokenvoorraad …"** toont alle hardware-TOTP-tokens van de tenant: vrije tokens (geel), toegewezen en geactiveerde (groen), met model, algoritme, tijdsinterval en toegewezen gebruiker. Met zoeken en filter op vrij/toegewezen.
 
-- **"Aan geselecteerde gebruiker toewijzen …"**: selecteer eerst een gebruiker in het hoofdvenster en daarna een vrij token. Voer de code in die het token op dat moment toont – het wordt in één stap toegewezen en geactiveerd (zoals in de Entra-portal).
-- **"Toewijzing opheffen"**: de gebruiker kan zich niet meer met het token aanmelden; het blijft als vrij token in de voorraad.
+- **"Toewijzen …"**: selecteer eerst een gebruiker in het hoofdvenster en daarna een vrij token. Voer de code in die het token op dat moment toont – het wordt in één stap toegewezen en geactiveerd (zoals in de Entra-portal).
+- **"Verdelen …"**: verdeelt alle vrije tokens over de leden van een groep of de gebruikers van een CSV-lijst, elk één in volgorde van serienummer – **zonder activering**, omdat de secrets niet meer bekend zijn. Elke gebruiker activeert het token op [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) door de getoonde code in te voeren, of u doet het met **"Activeren …"**. De toewijzingslijst (serienummer → gebruiker) wordt direct daarna als Excel aangeboden.
+- **"Activeren …"**: activeert een toegewezen maar nog niet geactiveerd token met de code die het toont.
+- **"Opheffen"**: de gebruiker kan zich niet meer met het token aanmelden; het blijft als vrij token in de voorraad.
 - **"Verwijderen"**: verwijdert het token uit de voorraad (een toegewezen token wordt eerst bij de gebruiker verwijderd).
 
 ---
@@ -254,7 +256,7 @@ Na wijziging van bestand, algoritme of tijdsinterval is een nieuwe testimport no
 
 1. Kies de gebruikers: een **CSV-bestand** (kolom `UPN` of één UPN per regel) of de **leden van een groep** (incl. geneste groepen).
 2. Stel de **geldigheid** (10–43200 minuten) in en of de pas **eenmalig bruikbaar** is.
-3. **"Test"** zoekt de gebruikers op zonder iets te wijzigen. **"Passen maken"** maakt daarna per gebruiker een pas; een bestaande pas van de gebruiker wordt vervangen.
+3. **"Controleren"** zoekt de gebruikers op zonder iets te wijzigen. **"Maken"** maakt daarna per gebruiker een pas; een bestaande pas van de gebruiker wordt vervangen.
 4. **"Excel-export …"** slaat de lijst met de passen op – die bevat ze in leesbare tekst, dus alleen op een beveiligde plek opslaan en na de overdracht verwijderen. De passen komen nooit in het logboek.
 
 ## Veelgestelde vragen en probleemoplossing

@@ -139,7 +139,7 @@ Se il tenant è gestito con hrdnr, il segreto di un token di MFA fittizia può e
 
 Un **account di emergenza (break-glass)** è un accesso di emergenza che consente di entrare nel tenant anche quando i normali accessi amministrativi non funzionano (ad es. per un criterio di accesso condizionale errato).
 
-Fare clic su **"Account di emergenza …"** in alto a destra:
+Aprire in alto **Strumenti ▾ → "Account di emergenza …"**:
 
 ![Finestra "Crea account di emergenza"](images/en/breakglass-dialog.png)
 
@@ -228,13 +228,13 @@ Per token TOTP hardware con file dei seed del produttore (ad es. token con displ
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Separatore `;` o `,`; l'ordine delle colonne è libero. **UPN è facoltativo**: una riga senza UPN aggiunge il token solo all'inventario; assegnarlo poi nell'[inventario dei token](#inventario-dei-token). Colonne facoltative: `Manufacturer`, `Model`.
+   Separatore `;` o `,`; l'ordine delle colonne è libero. **UPN è facoltativo**: una riga senza UPN aggiunge il token solo all'inventario; assegnarlo poi nell'[inventario dei token](#inventario-dei-token), oppure scegliere in **Token senza UPN** i **membri di un gruppo** o gli **utenti di un elenco CSV**: la verifica distribuisce allora i token nell'ordine del file, uno per utente, e l'importazione li attiva. Colonne facoltative: `Manufacturer`, `Model`.
 2. **"Seleziona CSV …"** carica il file. Scegliere l'**algoritmo** (SHA-1 o SHA-256) e l'**intervallo** (30 o 60 secondi): entrambi devono corrispondere ai token (vedere l'ordine o il file dei seed).
-3. **"Importazione di prova"** controlla ogni riga senza modificare nulla: secret Base32, numeri di serie duplicati, esistenza dell'utente e numero di serie già assegnato nel tenant. Le righe sono mostrate in verde/giallo/rosso.
-4. **"Avvia importazione"** crea i token senza errori nell'inventario, li assegna agli utenti e li attiva subito. Le righe con errori vengono saltate; un token non riuscito viene annullato. Ogni token compare nel log (senza secret).
-5. **"Esportazione Excel …"** salva l'elenco dei risultati come prova. **"Annulla ultima importazione"** rimuove di nuovo i token creati nell'ultima esecuzione dagli utenti e dall'inventario (possibile fino alla prossima importazione di prova).
+3. **"Verifica"** controlla ogni riga senza modificare nulla: secret Base32, numeri di serie duplicati, esistenza dell'utente e numero di serie già assegnato nel tenant. Le righe sono mostrate in verde/giallo/rosso.
+4. **"Importa"** crea i token senza errori nell'inventario, li assegna agli utenti e li attiva subito. Le righe con errori vengono saltate; un token non riuscito viene annullato. Ogni token compare nel log (senza secret).
+5. **"Esporta in Excel …"** salva l'elenco dei risultati (numero di serie → utente) come prova e documento di consegna. **"Annulla"** rimuove di nuovo i token creati nell'ultima esecuzione dagli utenti e dall'inventario (possibile fino alla prossima importazione di prova).
 
-Cambiare file, algoritmo o intervallo richiede una nuova importazione di prova.
+Cambiare file, algoritmo, intervallo o distribuzione richiede una nuova verifica.
 
 ---
 
@@ -242,8 +242,10 @@ Cambiare file, algoritmo o intervallo richiede una nuova importazione di prova.
 
 **Strumenti ▾ → "Inventario token …"** elenca tutti i token TOTP hardware del tenant: token liberi (giallo), assegnati e attivati (verde), con modello, algoritmo, intervallo e utente assegnato. Con ricerca e filtro libero/assegnato.
 
-- **"Assegna all'utente selezionato …"**: selezionare prima un utente nella finestra principale, poi un token libero. Inserire il codice mostrato in quel momento sul token: viene assegnato e attivato in un solo passaggio (come nel portale Entra).
-- **"Rimuovi assegnazione"**: l'utente non può più accedere con il token; resta nell'inventario come token libero.
+- **"Assegna …"**: selezionare prima un utente nella finestra principale, poi un token libero. Inserire il codice mostrato in quel momento sul token: viene assegnato e attivato in un solo passaggio (come nel portale Entra).
+- **"Distribuisci …"**: distribuisce tutti i token liberi ai membri di un gruppo o agli utenti di un elenco CSV, uno ciascuno in ordine di numero di serie – **senza attivazione**, perché i secret non sono più noti. Ogni utente attiva il token su [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) inserendo il codice mostrato, oppure lo si fa con **"Attiva …"**. L'elenco delle assegnazioni (numero di serie → utente) viene proposto subito dopo come Excel.
+- **"Attiva …"**: attiva un token assegnato ma non ancora attivato con il codice mostrato sul token.
+- **"Rimuovi"**: l'utente non può più accedere con il token; resta nell'inventario come token libero.
 - **"Elimina"**: rimuove il token dall'inventario (un token assegnato viene prima rimosso dal suo utente).
 
 ---
@@ -254,8 +256,8 @@ Cambiare file, algoritmo o intervallo richiede una nuova importazione di prova.
 
 1. Scegliere gli utenti: un **file CSV** (colonna `UPN` o un UPN per riga) oppure i **membri di un gruppo** (inclusi i gruppi nidificati).
 2. Impostare la **validità** (10–43200 minuti) e se il pass è a **uso singolo**.
-3. **"Test"** risolve gli utenti senza modificare nulla. **"Crea pass"** crea poi un pass per utente; un pass esistente dell'utente viene sostituito.
-4. **"Esportazione Excel …"** salva l'elenco con i pass: li contiene in chiaro, quindi salvarlo solo in un luogo protetto ed eliminarlo dopo la consegna. I pass non vengono mai scritti nel log.
+3. **"Verifica"** risolve gli utenti senza modificare nulla. **"Crea"** crea poi un pass per utente; un pass esistente dell'utente viene sostituito.
+4. **"Esporta in Excel …"** salva l'elenco con i pass: li contiene in chiaro, quindi salvarlo solo in un luogo protetto ed eliminarlo dopo la consegna. I pass non vengono mai scritti nel log.
 
 ## Domande frequenti e risoluzione dei problemi
 

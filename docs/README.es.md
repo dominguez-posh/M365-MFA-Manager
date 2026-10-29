@@ -139,7 +139,7 @@ Si el inquilino se administra con hrdnr, el secreto de un token de MFA ficticia 
 
 Una **cuenta de emergencia (break-glass)** es un acceso de emergencia que permite entrar en el inquilino aunque los accesos de administrador normales fallen (p. ej. por una directiva de acceso condicional errónea).
 
-Haga clic en **"Cuenta de emergencia …"** en la parte superior derecha:
+Abra arriba **Herramientas ▾ → "Cuenta de emergencia …"**:
 
 ![Diálogo "Crear cuenta de emergencia"](images/en/breakglass-dialog.png)
 
@@ -228,13 +228,13 @@ Para tokens TOTP de hardware con archivo de semillas del fabricante (p. ej. toke
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Separador `;` o `,`; el orden de las columnas no importa. **UPN es opcional**: una línea sin UPN solo añade el token al inventario; asígnelo después en el [inventario de tokens](#inventario-de-tokens). Columnas opcionales: `Manufacturer`, `Model`.
+   Separador `;` o `,`; el orden de las columnas no importa. **UPN es opcional**: una línea sin UPN solo añade el token al inventario; asígnelo después en el [inventario de tokens](#inventario-de-tokens), o elija en **Tokens sin UPN** los **miembros de un grupo** o los **usuarios de una lista CSV**: la comprobación reparte entonces los tokens en el orden del archivo, uno por usuario, y la importación los activa. Columnas opcionales: `Manufacturer`, `Model`.
 2. **"Seleccionar CSV …"** carga el archivo. Elija el **algoritmo** (SHA-1 o SHA-256) y el **intervalo** (30 o 60 segundos); ambos deben coincidir con los tokens (véase el pedido o el archivo de semillas).
-3. **"Importación de prueba"** comprueba cada línea sin cambiar nada: secreto Base32, números de serie duplicados, si el usuario existe y si el número de serie ya está asignado en el inquilino. Las líneas se muestran en verde/amarillo/rojo.
-4. **"Iniciar importación"** crea los tokens sin errores en el inventario, los asigna a los usuarios y los activa de inmediato. Las líneas con errores se omiten; un token fallido se revierte. Cada token aparece en el registro (sin secreto).
-5. **"Exportar a Excel …"** guarda la lista de resultados como comprobante. **"Deshacer última importación"** elimina de nuevo los tokens creados en la última ejecución de los usuarios y del inventario (disponible hasta la próxima importación de prueba).
+3. **"Comprobar"** comprueba cada línea sin cambiar nada: secreto Base32, números de serie duplicados, si el usuario existe y si el número de serie ya está asignado en el inquilino. Las líneas se muestran en verde/amarillo/rojo.
+4. **"Importar"** crea los tokens sin errores en el inventario, los asigna a los usuarios y los activa de inmediato. Las líneas con errores se omiten; un token fallido se revierte. Cada token aparece en el registro (sin secreto).
+5. **"Exportar a Excel …"** guarda la lista de resultados (número de serie → usuario) como comprobante y documento de entrega. **"Deshacer"** elimina de nuevo los tokens creados en la última ejecución de los usuarios y del inventario (disponible hasta la próxima importación de prueba).
 
-Cambiar el archivo, el algoritmo o el intervalo requiere una nueva importación de prueba.
+Cambiar el archivo, el algoritmo, el intervalo o el reparto requiere una nueva comprobación.
 
 ---
 
@@ -242,8 +242,10 @@ Cambiar el archivo, el algoritmo o el intervalo requiere una nueva importación 
 
 **Herramientas ▾ → "Inventario de tokens …"** muestra todos los tokens TOTP de hardware del inquilino: tokens libres (amarillo), asignados y activados (verde), con modelo, algoritmo, intervalo y usuario asignado. Con búsqueda y filtro por libre/asignado.
 
-- **"Asignar al usuario seleccionado …"**: seleccione primero un usuario en la ventana principal y luego un token libre. Introduzca el código que muestra el token en ese momento: se asigna y activa en un solo paso (como en el portal de Entra).
-- **"Quitar asignación"**: el usuario ya no puede iniciar sesión con el token; permanece en el inventario como token libre.
+- **"Asignar …"**: seleccione primero un usuario en la ventana principal y luego un token libre. Introduzca el código que muestra el token en ese momento: se asigna y activa en un solo paso (como en el portal de Entra).
+- **"Repartir …"**: reparte todos los tokens libres entre los miembros de un grupo o los usuarios de una lista CSV, uno a cada uno en orden de número de serie, **sin activación**, porque los secretos ya no se conocen. Cada usuario activa su token en [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) introduciendo el código que muestra, o lo hace usted con **"Activar …"**. La lista de asignaciones (número de serie → usuario) se ofrece justo después como Excel.
+- **"Activar …"**: activa un token asignado pero aún no activado con el código que muestra.
+- **"Desasignar"**: el usuario ya no puede iniciar sesión con el token; permanece en el inventario como token libre.
 - **"Eliminar"**: quita el token del inventario (un token asignado se quita primero de su usuario).
 
 ---
@@ -254,7 +256,7 @@ Cambiar el archivo, el algoritmo o el intervalo requiere una nueva importación 
 
 1. Elija los usuarios: un **archivo CSV** (columna `UPN` o un UPN por línea) o los **miembros de un grupo** (incl. grupos anidados).
 2. Defina la **validez** (10–43200 minutos) y si el pase es de **uso único**.
-3. **"Prueba"** resuelve los usuarios sin cambiar nada. **"Crear pases"** crea después un pase por usuario; un pase existente del usuario se reemplaza.
+3. **"Comprobar"** resuelve los usuarios sin cambiar nada. **"Crear"** crea después un pase por usuario; un pase existente del usuario se reemplaza.
 4. **"Exportar a Excel …"** guarda la lista con los pases; los contiene en texto claro, así que guárdela solo en un lugar protegido y elimínela tras la entrega. Los pases nunca se escriben en el registro.
 
 ## Preguntas frecuentes y solución de problemas

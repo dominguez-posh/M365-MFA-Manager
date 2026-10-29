@@ -139,7 +139,7 @@ Si le locataire est géré avec hrdnr, le secret d'un jeton de MFA fictive peut 
 
 Un **compte d'urgence (break-glass)** est un accès de secours qui permet d'accéder au locataire même lorsque les accès administrateur normaux ne fonctionnent plus (p. ex. à cause d'une stratégie d'accès conditionnel erronée).
 
-Cliquez sur **« Compte d'urgence … »** en haut à droite :
+Ouvrez en haut **Outils ▾ → « Compte d'urgence … »** :
 
 ![Boîte de dialogue « Créer un compte d'urgence »](images/en/breakglass-dialog.png)
 
@@ -228,13 +228,13 @@ Pour les jetons TOTP matériels avec fichier de seeds du fabricant (p. ex. jeton
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Séparateur `;` ou `,` ; l'ordre des colonnes est libre. **UPN est facultatif** : une ligne sans UPN ajoute seulement le jeton à l'inventaire ; attribuez-le ensuite dans l'[inventaire des jetons](#inventaire-des-jetons). Colonnes facultatives : `Manufacturer`, `Model`.
+   Séparateur `;` ou `,` ; l'ordre des colonnes est libre. **UPN est facultatif** : une ligne sans UPN ajoute seulement le jeton à l'inventaire ; attribuez-le ensuite dans l'[inventaire des jetons](#inventaire-des-jetons), ou choisissez sous **Jetons sans UPN** les **membres d'un groupe** ou les **utilisateurs d'une liste CSV** : la vérification distribue alors les jetons dans l'ordre du fichier, un par utilisateur, et l'import les active. Colonnes facultatives : `Manufacturer`, `Model`.
 2. **« Choisir un CSV … »** charge le fichier. Choisissez l'**algorithme** (SHA-1 ou SHA-256) et l'**intervalle** (30 ou 60 secondes) ; les deux doivent correspondre aux jetons (voir la commande ou le fichier de seeds).
-3. **« Import de test »** vérifie chaque ligne sans rien modifier : secret Base32, numéros de série en double, existence de l'utilisateur et numéro de série déjà attribué dans le locataire. Les lignes sont affichées en vert/jaune/rouge.
-4. **« Lancer l'import »** crée les jetons sans erreur dans l'inventaire, les attribue aux utilisateurs et les active immédiatement. Les lignes en erreur sont ignorées ; un jeton en échec est annulé. Chaque jeton figure dans le journal (sans secret).
-5. **« Export Excel … »** enregistre la liste des résultats comme justificatif. **« Annuler le dernier import »** retire à nouveau les jetons créés lors de la dernière exécution des utilisateurs et de l'inventaire (possible jusqu'au prochain import de test).
+3. **« Vérifier »** vérifie chaque ligne sans rien modifier : secret Base32, numéros de série en double, existence de l'utilisateur et numéro de série déjà attribué dans le locataire. Les lignes sont affichées en vert/jaune/rouge.
+4. **« Importer »** crée les jetons sans erreur dans l'inventaire, les attribue aux utilisateurs et les active immédiatement. Les lignes en erreur sont ignorées ; un jeton en échec est annulé. Chaque jeton figure dans le journal (sans secret).
+5. **« Export Excel … »** enregistre la liste des résultats (numéro de série → utilisateur) comme justificatif et document de remise. **« Annuler »** retire à nouveau les jetons créés lors de la dernière exécution des utilisateurs et de l'inventaire (possible jusqu'au prochain import de test).
 
-Modifier le fichier, l'algorithme ou l'intervalle nécessite un nouvel import de test.
+Modifier le fichier, l'algorithme, l'intervalle ou la distribution nécessite une nouvelle vérification.
 
 ---
 
@@ -242,8 +242,10 @@ Modifier le fichier, l'algorithme ou l'intervalle nécessite un nouvel import de
 
 **Outils ▾ → « Inventaire des jetons … »** liste tous les jetons TOTP matériels du locataire : jetons libres (jaune), attribués et activés (vert), avec modèle, algorithme, intervalle et utilisateur attribué. Avec recherche et filtre libre/attribué.
 
-- **« Attribuer à l'utilisateur sélectionné … »** : sélectionnez d'abord un utilisateur dans la fenêtre principale, puis un jeton libre. Saisissez le code affiché sur le jeton : il est attribué et activé en une étape (comme dans le portail Entra).
-- **« Retirer l'attribution »** : l'utilisateur ne peut plus se connecter avec le jeton ; il reste dans l'inventaire comme jeton libre.
+- **« Attribuer … »** : sélectionnez d'abord un utilisateur dans la fenêtre principale, puis un jeton libre. Saisissez le code affiché sur le jeton : il est attribué et activé en une étape (comme dans le portail Entra).
+- **« Distribuer … »** : distribue tous les jetons libres aux membres d'un groupe ou aux utilisateurs d'une liste CSV, un chacun dans l'ordre des numéros de série – **sans activation**, car les secrets ne sont plus connus. Chaque utilisateur active son jeton sur [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) en saisissant le code affiché, ou vous le faites avec **« Activer … »**. La liste d'attribution (numéro de série → utilisateur) est proposée juste après en Excel.
+- **« Activer … »** : active un jeton attribué mais pas encore activé avec le code affiché dessus.
+- **« Retirer »** : l'utilisateur ne peut plus se connecter avec le jeton ; il reste dans l'inventaire comme jeton libre.
 - **« Supprimer »** : retire le jeton de l'inventaire (un jeton attribué est d'abord retiré de son utilisateur).
 
 ---
@@ -254,7 +256,7 @@ Modifier le fichier, l'algorithme ou l'intervalle nécessite un nouvel import de
 
 1. Choisissez les utilisateurs : un **fichier CSV** (colonne `UPN` ou un UPN par ligne) ou les **membres d'un groupe** (groupes imbriqués inclus).
 2. Définissez la **validité** (10–43200 minutes) et si le code est à **usage unique**.
-3. **« Test »** résout les utilisateurs sans rien modifier. **« Créer les codes »** crée ensuite un code par utilisateur ; un code existant de l'utilisateur est remplacé.
+3. **« Vérifier »** résout les utilisateurs sans rien modifier. **« Créer »** crée ensuite un code par utilisateur ; un code existant de l'utilisateur est remplacé.
 4. **« Export Excel … »** enregistre la liste avec les codes – elle les contient en clair : enregistrez-la uniquement dans un emplacement protégé et supprimez-la après la remise. Les codes ne sont jamais écrits dans le journal.
 
 ## Questions fréquentes et dépannage

@@ -139,7 +139,7 @@ Se o inquilino for gerido com o hrdnr, o segredo de um token de MFA fictícia po
 
 Uma **conta de emergência (break-glass)** é um acesso de emergência que permite entrar no locatário mesmo quando os acessos de administrador normais falham (p. ex. devido a uma política de acesso condicional errada).
 
-Clique em **"Conta de emergência …"** no canto superior direito:
+Abra no topo **Ferramentas ▾ → "Conta de emergência …"**:
 
 ![Caixa de diálogo "Criar conta de emergência"](images/en/breakglass-dialog.png)
 
@@ -228,13 +228,13 @@ Para tokens TOTP de hardware com ficheiro de seeds do fabricante (p. ex. tokens 
    JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP;SN1000002;
    ```
 
-   Separador `;` ou `,`; a ordem das colunas é indiferente. **O UPN é opcional**: uma linha sem UPN apenas adiciona o token ao inventário – atribua-o depois no [inventário de tokens](#inventário-de-tokens). Colunas opcionais: `Manufacturer`, `Model`.
+   Separador `;` ou `,`; a ordem das colunas é indiferente. **O UPN é opcional**: uma linha sem UPN apenas adiciona o token ao inventário – atribua-o depois no [inventário de tokens](#inventário-de-tokens), ou escolha em **Tokens sem UPN** os **membros de um grupo** ou os **utilizadores de uma lista CSV**: a verificação distribui então os tokens pela ordem do ficheiro, um por utilizador, e a importação ativa-os. Colunas opcionais: `Manufacturer`, `Model`.
 2. **"Selecionar CSV …"** carrega o ficheiro. Escolha o **algoritmo** (SHA-1 ou SHA-256) e o **intervalo** (30 ou 60 segundos) – ambos têm de corresponder aos tokens (ver encomenda ou ficheiro de seeds).
-3. **"Importação de teste"** verifica cada linha sem alterar nada: segredo Base32, números de série duplicados, se o utilizador existe e se o número de série já está atribuído no locatário. As linhas são apresentadas a verde/amarelo/vermelho.
-4. **"Iniciar importação"** cria os tokens sem erros no inventário, atribui-os aos utilizadores e ativa-os de imediato. As linhas com erros são ignoradas; um token falhado é revertido. Cada token consta do registo (sem segredo).
-5. **"Exportar para Excel …"** guarda a lista de resultados como comprovativo. **"Anular última importação"** remove novamente os tokens criados na última execução dos utilizadores e do inventário (possível até à próxima importação de teste).
+3. **"Verificar"** verifica cada linha sem alterar nada: segredo Base32, números de série duplicados, se o utilizador existe e se o número de série já está atribuído no locatário. As linhas são apresentadas a verde/amarelo/vermelho.
+4. **"Importar"** cria os tokens sem erros no inventário, atribui-os aos utilizadores e ativa-os de imediato. As linhas com erros são ignoradas; um token falhado é revertido. Cada token consta do registo (sem segredo).
+5. **"Exportar para Excel …"** guarda a lista de resultados (número de série → utilizador) como comprovativo e documento de entrega. **"Anular"** remove novamente os tokens criados na última execução dos utilizadores e do inventário (possível até à próxima importação de teste).
 
-Alterar o ficheiro, o algoritmo ou o intervalo exige uma nova importação de teste.
+Alterar o ficheiro, o algoritmo, o intervalo ou a distribuição exige uma nova verificação.
 
 ---
 
@@ -242,8 +242,10 @@ Alterar o ficheiro, o algoritmo ou o intervalo exige uma nova importação de te
 
 **Ferramentas ▾ → "Inventário de tokens …"** lista todos os tokens TOTP de hardware do locatário: tokens livres (amarelo), atribuídos e ativados (verde), com modelo, algoritmo, intervalo e utilizador atribuído. Com pesquisa e filtro por livre/atribuído.
 
-- **"Atribuir ao utilizador selecionado …"**: selecione primeiro um utilizador na janela principal e depois um token livre. Introduza o código apresentado nesse momento no token – é atribuído e ativado num só passo (como no portal Entra).
-- **"Remover atribuição"**: o utilizador deixa de poder iniciar sessão com o token; este permanece no inventário como token livre.
+- **"Atribuir …"**: selecione primeiro um utilizador na janela principal e depois um token livre. Introduza o código apresentado nesse momento no token – é atribuído e ativado num só passo (como no portal Entra).
+- **"Distribuir …"**: distribui todos os tokens livres pelos membros de um grupo ou pelos utilizadores de uma lista CSV, um a cada um por ordem de número de série – **sem ativação**, porque os segredos já não são conhecidos. Cada utilizador ativa o token em [aka.ms/mysecurityinfo](https://aka.ms/mysecurityinfo) introduzindo o código apresentado, ou fá-lo você com **"Ativar …"**. A lista de atribuições (número de série → utilizador) é proposta logo a seguir como Excel.
+- **"Ativar …"**: ativa um token atribuído mas ainda não ativado com o código apresentado no token.
+- **"Desatribuir"**: o utilizador deixa de poder iniciar sessão com o token; este permanece no inventário como token livre.
 - **"Eliminar"**: remove o token do inventário (um token atribuído é primeiro removido do seu utilizador).
 
 ---
@@ -254,7 +256,7 @@ Alterar o ficheiro, o algoritmo ou o intervalo exige uma nova importação de te
 
 1. Escolha os utilizadores: um **ficheiro CSV** (coluna `UPN` ou um UPN por linha) ou os **membros de um grupo** (incl. grupos aninhados).
 2. Defina a **validade** (10–43200 minutos) e se o passe é de **utilização única**.
-3. **"Teste"** resolve os utilizadores sem alterar nada. **"Criar passes"** cria depois um passe por utilizador; um passe existente do utilizador é substituído.
+3. **"Verificar"** resolve os utilizadores sem alterar nada. **"Criar"** cria depois um passe por utilizador; um passe existente do utilizador é substituído.
 4. **"Exportar para Excel …"** guarda a lista com os passes – contém-nos em texto simples, por isso guarde-a apenas num local protegido e elimine-a após a entrega. Os passes nunca são escritos no registo.
 
 ## Perguntas frequentes e resolução de problemas
