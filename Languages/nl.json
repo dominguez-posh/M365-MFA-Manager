@@ -589,7 +589,7 @@
     "Inventory.DeleteConfirm": "{0} token(s) uit de voorraad verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "Inventory.DeleteConfirmAssigned": "{0} daarvan zijn aan gebruikers toegewezen en worden daar eerst verwijderd.",
     "Inventory.Deleted": "Token {0} verwijderd",
-    "BulkTap.Title": "Bulk Temporary Access Pass",
+    "BulkTap.Title": "Temporary Access Pass in bulk",
     "BulkTap.Source": "Gebruikers",
     "BulkTap.Source.Csv": "CSV-bestand",
     "BulkTap.Source.Group": "Groep",

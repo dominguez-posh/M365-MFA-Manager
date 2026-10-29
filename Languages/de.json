@@ -198,7 +198,7 @@
 
     "BreakGlass.Title": "Breakglass-Account erstellen",
     "BreakGlass.Subtitle": "Notfallzugang mit FIDO2-Stick, ohne bekanntes Kennwort",
-    "BreakGlass.Domain": "Domain",
+    "BreakGlass.Domain": "Domäne",
     "BreakGlass.UpnHint": "UPN: <Objekt-ID, gekürzt>@{0} (max. 64 Zeichen für FIDO2)",
     "BreakGlass.AssignGlobalAdmin": "Rolle Global Administrator zuweisen",
     "BreakGlass.RegisterFido2": "FIDO2-Stick direkt registrieren",
@@ -473,7 +473,7 @@
     "Import.Title": "Massenimport von Hardware-TOTP-Token",
     "Import.File": "CSV-Datei",
     "Import.Browse": "CSV auswählen …",
-    "Import.Sample": "Sample",
+    "Import.Sample": "Beispiel",
     "Import.Sample.ToolTip": "Beispiel-CSV mit den erwarteten Spalten speichern",
     "Import.Algorithm": "Algorithmus",
     "Import.TimeStep": "Zeitintervall",

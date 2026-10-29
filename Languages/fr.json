@@ -384,7 +384,7 @@
     "Report.OpenFile": "Le fichier Excel a été enregistré :\n{0}\n\nL'ouvrir maintenant ?",
     "Report.Sheet.List": "État MFA",
     "Report.Sheet.Summary": "Synthèse",
-    "Report.Summary.Tenant": "Tenant",
+    "Report.Summary.Tenant": "Locataire",
     "Report.Summary.Created": "Créé le",
     "Report.Summary.Scope": "Périmètre",
     "Report.Summary.Filter": "Filtre",

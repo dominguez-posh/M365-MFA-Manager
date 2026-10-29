@@ -217,7 +217,7 @@ Als administrative Rollen zählen aktive und PIM-berechtigte Rollen (markiert mi
 
 Für Hardware-TOTP-Token mit Seed-File vom Hersteller (z. B. Display-Token als Schlüsselanhänger) oben **Werkzeuge ▾ → „TOTP-Import …“** öffnen.
 
-1. **„Sample“** speichert eine Beispiel-CSV mit den erwarteten Spalten. Pro Token eine Zeile:
+1. **„Beispiel“** speichert eine Beispiel-CSV mit den erwarteten Spalten. Pro Token eine Zeile:
 
    ```csv
    Secret;SerialNumber;UPN

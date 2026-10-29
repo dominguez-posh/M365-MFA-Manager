@@ -384,7 +384,7 @@
     "Report.OpenFile": "O ficheiro Excel foi guardado:\n{0}\n\nAbrir agora?",
     "Report.Sheet.List": "Estado MFA",
     "Report.Sheet.Summary": "Resumo",
-    "Report.Summary.Tenant": "Tenant",
+    "Report.Summary.Tenant": "Locatário",
     "Report.Summary.Created": "Criado em",
     "Report.Summary.Scope": "Âmbito",
     "Report.Summary.Filter": "Filtro",
