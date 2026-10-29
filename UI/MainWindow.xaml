@@ -3,7 +3,7 @@
         Title="M365 MFA Administration"
         Height="900" Width="1280" MinHeight="760" MinWidth="1080"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
     <!-- Styles and colors: UI\Theme.xaml (loaded into the application resources at startup) -->
 
     <Grid>

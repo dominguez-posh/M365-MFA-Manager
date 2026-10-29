@@ -3,7 +3,7 @@
         Uid="Report.Title"
         Height="860" Width="1360" MinHeight="600" MinWidth="1000"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Window.Resources>
         <Style TargetType="CheckBox">

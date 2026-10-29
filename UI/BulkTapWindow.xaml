@@ -3,7 +3,7 @@
         Uid="BulkTap.Title"
         Height="720" Width="1100" MinHeight="520" MinWidth="860"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Window.Resources>
         <Style x:Key="Mono" TargetType="TextBlock">

@@ -3,7 +3,7 @@
         Uid="Inventory.BulkAssign.Title"
         Width="640" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="White" FontFamily="Segoe UI">
+        Background="White" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Window.Resources>
         <Style TargetType="TextBlock">

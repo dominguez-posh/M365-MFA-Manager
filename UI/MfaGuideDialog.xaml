@@ -3,7 +3,7 @@
         Uid="Guide.Title"
         Width="860" Height="900" MinWidth="700" MinHeight="600"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Window.Resources>
         <Style TargetType="TextBlock">

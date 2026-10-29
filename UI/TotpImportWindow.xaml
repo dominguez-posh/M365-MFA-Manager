@@ -3,7 +3,7 @@
         Uid="Import.Title"
         Height="720" Width="1100" MinHeight="500" MinWidth="820"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Grid>
         <Grid.RowDefinitions>

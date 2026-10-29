@@ -3,7 +3,7 @@
         Uid="Inventory.Title"
         Height="680" Width="1150" MinHeight="460" MinWidth="860"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Grid>
         <Grid.RowDefinitions>
