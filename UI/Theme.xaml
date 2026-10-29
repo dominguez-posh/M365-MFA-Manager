@@ -68,8 +68,18 @@
     <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="{StaticResource Danger}"/>
     </Style>
+    <!-- Buttons on the dark header: outlined, light text, lighter on hover -->
     <Style x:Key="HeaderButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background" Value="#334155"/>
+        <Setter Property="Background" Value="#1E293B"/>
+        <Setter Property="BorderBrush" Value="#64748B"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#F1F5F9"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#334155"/>
+                <Setter Property="BorderBrush" Value="#94A3B8"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
     <!-- Small text button next to a value (copy, show/hide) -->
     <Style x:Key="CopyButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">

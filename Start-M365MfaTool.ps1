@@ -534,6 +534,9 @@ function Set-Busy {
     $script:BtnUpdate.IsEnabled          = -not $Busy
     $script:BtnLogin.IsEnabled           = -not $Busy -and -not $connected
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
+    # Only the button that fits the state is shown (no greyed-out button in the header)
+    $script:BtnLogin.Visibility          = if ($connected) { 'Collapsed' } else { 'Visible' }
+    $script:BtnLogout.Visibility         = if ($connected) { 'Visible' } else { 'Collapsed' }
     $script:BtnTools.IsEnabled           = -not $Busy -and $connected
     $script:BtnTenantReport.IsEnabled    = -not $Busy -and $connected
     $script:CmbLanguage.IsEnabled        = -not $Busy

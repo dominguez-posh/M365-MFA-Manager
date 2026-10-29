@@ -8,30 +8,30 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="86"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="30"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" Padding="24,15">
+        <!-- Header: title with subtitle and connection state on the left, actions on the right -->
+        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" Padding="24,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button Name="BtnTenantReport" Uid="Header.TenantReport" Tag="&#xE9D9;" IsEnabled="False" Style="{StaticResource HeaderButton}" Margin="0,0,20,0"/>
-                <StackPanel Grid.Column="1">
-                    <TextBlock Text="M365 MFA Administration" Foreground="White" FontSize="24" FontWeight="SemiBold"/>
-                    <TextBlock Uid="Header.Subtitle" Foreground="#CBD5E1" FontSize="13" Margin="0,4,0,0"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="M365 MFA Administration" Foreground="White" FontSize="22" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Uid="Header.Subtitle" Foreground="#94A3B8" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Name="TxtConnectionStatus" Text="-" Foreground="#FCA5A5" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Text="·" Foreground="#64748B" FontSize="12" Margin="8,0"/>
+                        <TextBlock Name="TxtTenant" Text="Tenant: -" Foreground="#CBD5E1" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
                 </StackPanel>
-                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0">
-                    <TextBlock Name="TxtConnectionStatus" Text="-" Foreground="#FCA5A5" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                    <TextBlock Name="TxtTenant" Text="Tenant: -" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Right"/>
-                </StackPanel>
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Update badge: shown only when a newer release exists -->
                     <Button Name="BtnUpdate" Uid="Update.Button" Tag="&#xE896;" Visibility="Collapsed" Background="#B45309"/>
                     <Button Name="BtnHelp" Uid="Header.Help" Tag="&#xE897;" Style="{StaticResource HeaderButton}"/>
