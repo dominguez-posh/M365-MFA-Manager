@@ -18,6 +18,8 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 - [Bulk import of TOTP tokens](#bulk-import-of-totp-tokens)
 - [Token inventory](#token-inventory)
 - [Bulk Temporary Access Pass](#bulk-temporary-access-pass)
+- [Bulk offboarding](#bulk-offboarding)
+- [Help, settings and updates](#help-settings-and-updates)
 - [FAQ and troubleshooting](#faq-and-troubleshooting)
 - [Security](#security)
 - [For administrators: requirements and permissions](#for-administrators-requirements-and-permissions)
@@ -72,6 +74,9 @@ In the **"1. Find user"** box, enter the beginning of a name, an email address o
 
 - **One result:** The user opens directly.
 - **Several results:** A list drops down below the search box – click the user you want. Press **Esc** or click elsewhere to close the list.
+- **Recently used:** Click into the empty search box to get the last 10 users of this tenant.
+
+Before a user is selected, the left side shows the three steps *sign in → find user → choose method*; the current step is highlighted.
 
 ### 3. Understand the MFA status
 
@@ -88,13 +93,19 @@ On the right under **"Selected user"**, the **MFA traffic light** shows how well
 
 Below the traffic light you will find specific recommendations, e.g. *"SMS/call is also registered and can be removed"*.
 
-Further down, **"Administrative roles"** shows whether the user has admin rights. Click **"Show"** to expand the list. For each role it also shows whether it is permanently active, assigned via a group or only activatable via PIM.
+Hover over the traffic light to see what the color means and the recommended next step.
+
+Further down, **"Administrative roles"** shows whether the user has admin rights. Click **"Show"** to expand the list. For each role it also shows whether it is permanently active, assigned via a group or only activatable via PIM. For administrators, **"Check CA exclusion"** checks whether the account is excluded from all enabled Conditional Access policies – required for break-glass accounts.
+
+**"Last sign-in"** shows the last interactive (or non-interactive) sign-in (Entra ID P1/P2). **"History …"** lists from the Entra audit log who changed the user's security info and when.
 
 ### 4. View and delete MFA methods
 
 On the left under **"2. Registered MFA methods"** you see all methods of the user. Clicking a method shows **all details** below it (e.g. device model, serial number, creation date).
 
-To delete a method, select it and click **"Delete method"**. A confirmation prompt appears before deletion. The password cannot be deleted.
+To delete a method, select it and click **"Delete method"**. The confirmation prompt names the consequence and warns when it is the user's last MFA method. The password cannot be deleted.
+
+**"Excel evidence …"** saves the user, the MFA status, the roles and all methods as an Excel file – e.g. as evidence for a ticket.
 
 > [!NOTE]
 > Microsoft applies changes with a delay of a few seconds. The tool automatically waits until the list shows the new state. If needed, click **"Refresh"**.
@@ -105,7 +116,11 @@ On the right under **"3. Configure method"**, select the method you want:
 
 ![Selecting the MFA method](docs/images/en/select-method.png)
 
-Depending on the method, matching input fields (e.g. the serial number) and a short hint appear. Then click **"Start configuration"** and confirm the prompt. The result appears in the **log** and the method list is refreshed automatically.
+Each method is a card with a one-line description. Depending on the method, matching input fields (e.g. the serial number) appear, and the box **"How it works"** explains in three numbered steps what happens next. Then click **"Start configuration"** and confirm the prompt. The result appears as a short confirmation at the bottom right and in the **log**, and the method list is refreshed automatically.
+
+- If the method is **disabled in the tenant's authentication methods policy**, a yellow warning appears before you start (the tool reads the policy at sign-in).
+- The **card secret** is checked while you type (Base32 characters, minimum length).
+- While Microsoft Graph is working, an overlay says what is going on (e.g. *"Loading the MFA methods of …"*).
 
 ---
 
@@ -157,7 +172,7 @@ At the end, a summary shows what was done, and the new account is displayed dire
 
 > [!WARNING]
 > **Then complete manually:**
-> - **Exclude** the account **from all Conditional Access policies**.
+> - **Exclude** the account **from all Conditional Access policies** – then check it with **"Check CA exclusion"** in the main window.
 > - Set up a **sign-in alert** so that every use is noticed.
 > - Store the FIDO2 key securely (e.g. in a safe).
 
@@ -258,6 +273,32 @@ Changing the file, algorithm, time step or hand-out requires a new check.
 
 ---
 
+## Bulk offboarding
+
+**Tools ▾ → "Bulk offboarding …"** removes the MFA methods of many users at once, e.g. for leavers or after compromised accounts.
+
+1. Choose the users: a **CSV file** (a `UPN` column, or one UPN per line) or the **members of a group**.
+2. Choose the actions: **remove all MFA methods**, **revoke sessions** (the user is signed out everywhere) and optionally **disable account**.
+3. **"Check"** resolves the users and shows how many methods and admin roles each one has – nothing is changed. Your own account is always skipped.
+4. **"Run offboarding"** – after confirming the summary.
+5. **"Excel export …"** saves the result list as evidence.
+
+> [!WARNING]
+> Removed methods cannot be restored. The users have to register them again, e.g. with a Temporary Access Pass.
+
+---
+
+## Help, settings and updates
+
+- **"Help"** at the top of every window opens a panel that explains *what it does, when to use it, what you need, step by step* and *the result*. Every button and field also has a tooltip.
+- On the first start, a **welcome screen** explains the three steps (can be switched off).
+- **Tools ▾ → "Settings …"**: default algorithm and time step for TOTP tokens, default lifetime and single use for TAPs (single and bulk), the sender mailbox of the MFA guide, and an optional **tenant** (ID or domain) for accounts that are guests in the managed tenant.
+- The **log** colors warnings and errors; **"Copy"** and **"Save …"** hand it over for a support ticket.
+- When a newer release exists, an **"Update …"** button appears in the header: it downloads the release and installs it into the tool folder (logs and settings are kept); restart the tool afterwards.
+- The tool remembers the window size and position.
+
+---
+
 ## FAQ and troubleshooting
 
 **Double-clicking `Start.cmd` does nothing or shows an error.**
@@ -269,8 +310,11 @@ This happens once after an update when the tool needs new permissions. All permi
 **A newly created or deleted method does not show up immediately.**
 Microsoft needs a few seconds for this. The tool automatically waits up to approx. 16 seconds; afterwards click **"Refresh"** if needed.
 
-**The log says a newer version is available.**
-The tool compares its version with the latest release on GitHub at start-up (only a log line, nothing is downloaded). Download the new version from the releases page and replace the folder.
+**An "Update …" button appears in the header.**
+A newer release is available on GitHub. Click the button to download and install it (logs and settings are kept), then restart the tool. Without internet access, download the release manually and replace the folder.
+
+**A yellow warning says the method is disabled in the tenant.**
+The method is switched off in the authentication methods policy. Enable it in the Entra admin center under Protection → Authentication methods → Policies, then sign out and in again.
 
 **FIDO2: "Fido credential policy …" or "not enabled".**
 FIDO2 is not enabled in the tenant. An administrator must enable it in the authentication methods policy (see [requirements](#for-administrators-requirements-and-permissions)).
@@ -331,7 +375,8 @@ All permissions are requested once at sign-in, so no further sign-in dialog appe
 | `Domain.Read.All` | Break-glass account: show domains for selection |
 | `RoleManagement.ReadWrite.Directory` | Break-glass account: assign Global Administrator |
 | `GroupMember.Read.All` | MFA report: select a group as scope, resolve admin roles assigned via groups |
-| `AuditLog.Read.All` | MFA report: last sign-in |
+| `AuditLog.Read.All` | MFA report and user: last sign-in; user history from the audit log |
+| `Policy.Read.All` | Warning when a method is disabled in the tenant; Conditional Access check |
 | `Mail.Send` | MFA guide from your own mailbox |
 | `Mail.Send.Shared` | MFA guide from a shared mailbox |
 | `Organization.Read.All` | Load the hrdnr key from the tenant |
@@ -363,7 +408,7 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 
 - Some features use the **beta API** of Microsoft Graph (e.g. for hardware OATH tokens), which may change.
 - PIM-eligible roles are only shown with Entra ID P2.
-- The selected language is stored in `%APPDATA%\M365MfaTool\settings.json`.
+- The selected language, the settings, the window position and the recently used users are stored in `%APPDATA%\M365MfaTool\settings.json`.
 
 ---
 
@@ -373,6 +418,7 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 |---|---|
 | `Start.cmd` | Launcher for double-click |
 | `Start-M365MfaTool.ps1` | User interface, state management and events |
+| `UI/Theme.xaml` | Shared look of all windows (colors, buttons, tables, help panel) |
 | `UI/MainWindow.xaml` | Main window layout |
 | `UI/BreakGlassDialog.xaml` | Dialog for new break-glass accounts |
 | `UI/TenantReportWindow.xaml` | Window of the tenant MFA report |
@@ -381,6 +427,9 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 | `UI/BulkTapWindow.xaml` | Window of the bulk Temporary Access Pass |
 | `UI/AssignTokensDialog.xaml` | Dialog of the bulk token assignment (group or user list) |
 | `UI/MfaGuideDialog.xaml` | Preview dialog of the MFA setup guide |
+| `UI/BulkOffboardWindow.xaml` | Window of the bulk offboarding |
+| `UI/SettingsDialog.xaml` | Settings dialog |
+| `UI/HistoryDialog.xaml` | Audit log history of a user |
 | `Modules/Graph.psm1` | Sign-in, Graph requests, users, domains, roles, MFA traffic light, reading/deleting methods |
 | `Modules/Provisioning.psm1` | Setup of FIDO2, TOTP cards, fake MFA, TAP and break-glass accounts |
 | `Modules/TenantReport.psm1` | Tenant MFA report: users, roles, batched method queries, traffic light rating, Excel export |

@@ -21,6 +21,8 @@ Con questo strumento, amministratori e help desk configurano l'**autenticazione 
 - [Importazione massiva di token TOTP](#importazione-massiva-di-token-totp)
 - [Inventario dei token](#inventario-dei-token)
 - [Temporary Access Pass di massa](#temporary-access-pass-di-massa)
+- [Offboarding di massa](#offboarding-di-massa)
+- [Guida, impostazioni e aggiornamenti](#guida-impostazioni-e-aggiornamenti)
 - [Domande frequenti e risoluzione dei problemi](#domande-frequenti-e-risoluzione-dei-problemi)
 - [Sicurezza](#sicurezza)
 - [Requisiti e autorizzazioni per gli amministratori](#requisiti-e-autorizzazioni-per-gli-amministratori)
@@ -259,6 +261,32 @@ Cambiare file, algoritmo, intervallo o distribuzione richiede una nuova verifica
 3. **"Verifica"** risolve gli utenti senza modificare nulla. **"Crea"** crea poi un pass per utente; un pass esistente dell'utente viene sostituito.
 4. **"Esporta in Excel …"** salva l'elenco con i pass: li contiene in chiaro, quindi salvarlo solo in un luogo protetto ed eliminarlo dopo la consegna. I pass non vengono mai scritti nel log.
 
+## Offboarding di massa
+
+**Strumenti ▾ → "Offboarding di massa …"** rimuove in una volta i metodi MFA di molti utenti, ad es. per uscite di personale o dopo account compromessi.
+
+1. Scegliere gli utenti: un **file CSV** (colonna `UPN` o un UPN per riga) oppure i **membri di un gruppo**.
+2. Scegliere le azioni: **rimuovi tutti i metodi MFA**, **revoca sessioni** (l'utente viene disconnesso ovunque) e facoltativamente **disattiva account**.
+3. **"Verifica"** risolve gli utenti e mostra quanti metodi e ruoli admin ha ciascuno – senza modificare nulla. Il proprio account viene sempre saltato.
+4. **"Esegui offboarding"** – dopo aver confermato il riepilogo.
+5. **"Esporta in Excel …"** salva l'elenco dei risultati come prova.
+
+> [!WARNING]
+> I metodi rimossi non si possono ripristinare. Gli utenti devono registrarli di nuovo, ad es. con un Temporary Access Pass.
+
+---
+
+## Guida, impostazioni e aggiornamenti
+
+- **"Guida"** in alto in ogni finestra apre un pannello laterale: *cosa fa, quando usarlo, cosa serve, passo per passo* e *risultato*. Ogni pulsante e campo ha anche un suggerimento.
+- Al primo avvio una **schermata di benvenuto** spiega i tre passi (disattivabile).
+- **Strumenti ▾ → "Impostazioni …"**: algoritmo e intervallo predefiniti dei token TOTP, validità e uso singolo predefiniti dei TAP, casella mittente della guida MFA e, facoltativamente, un **tenant** (ID o dominio) per account ospiti.
+- La finestra principale mostra l'**ultimo accesso**, la **cronologia** dal registro di controllo, una **prova Excel** dell'utente e, per gli amministratori, **"Verifica esclusione CA"**.
+- Se il metodo è disattivato nel criterio dei metodi di autenticazione del tenant, prima di iniziare compare un avviso giallo.
+- Quando esiste una nuova versione, in alto compare il pulsante **"Aggiorna …"**: scarica e installa la versione (log e impostazioni restano); poi riavviare lo strumento.
+
+---
+
 ## Domande frequenti e risoluzione dei problemi
 
 **Il doppio clic su `Start.cmd` non fa nulla o mostra un errore.**
@@ -333,6 +361,7 @@ Tutte le autorizzazioni vengono richieste una sola volta all'accesso, quindi dur
 | `RoleManagement.ReadWrite.Directory` | Account di emergenza: assegnare Global Administrator |
 | `GroupMember.Read.All` | Report MFA: scegliere un gruppo come ambito, risolvere i ruoli assegnati tramite gruppi |
 | `AuditLog.Read.All` | Report MFA: ultimo accesso |
+| `Policy.Read.All` | Avviso se un metodo è disattivato nel tenant; verifica dell'accesso condizionale |
 | `Mail.Send` | Guida MFA dalla propria casella di posta |
 | `Mail.Send.Shared` | Guida MFA da una casella condivisa |
 | `Organization.Read.All` | Caricare la chiave hrdnr dal tenant |
@@ -374,6 +403,7 @@ Nei **criteri dei metodi di autenticazione** (Interfaccia di amministrazione di 
 |---|---|
 | `Start.cmd` | Avvio con doppio clic |
 | `Start-M365MfaTool.ps1` | Interfaccia, gestione dello stato ed eventi |
+| `UI/Theme.xaml` | Aspetto comune di tutte le finestre |
 | `UI/MainWindow.xaml` | Layout della finestra principale |
 | `UI/BreakGlassDialog.xaml` | Finestra per i nuovi account di emergenza |
 | `UI/TenantReportWindow.xaml` | Finestra del report MFA |
@@ -381,6 +411,9 @@ Nei **criteri dei metodi di autenticazione** (Interfaccia di amministrazione di 
 | `UI/TokenInventoryWindow.xaml` | Finestra dell'inventario dei token |
 | `UI/BulkTapWindow.xaml` | Finestra del Temporary Access Pass di massa |
 | `UI/MfaGuideDialog.xaml` | Finestra di anteprima della guida MFA |
+| `UI/BulkOffboardWindow.xaml` | Finestra dell'offboarding di massa |
+| `UI/SettingsDialog.xaml` | Finestra delle impostazioni |
+| `UI/HistoryDialog.xaml` | Cronologia di un utente (registro di controllo) |
 | `Modules/Graph.psm1` | Accesso, richieste Graph, utenti, domini, ruoli, semaforo MFA, lettura/eliminazione dei metodi |
 | `Modules/Provisioning.psm1` | Configurazione di FIDO2, schede TOTP, MFA fittizia, TAP e account di emergenza |
 | `Modules/TenantReport.psm1` | Report MFA: utenti, ruoli, richieste di metodi raggruppate, valutazione a semaforo, esportazione Excel |

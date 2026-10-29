@@ -21,6 +21,8 @@ Avec cet outil, les administrateurs et le support informatique configurent **l'a
 - [Import en masse de jetons TOTP](#import-en-masse-de-jetons-totp)
 - [Inventaire des jetons](#inventaire-des-jetons)
 - [Temporary Access Pass en masse](#temporary-access-pass-en-masse)
+- [Offboarding en masse](#offboarding-en-masse)
+- [Aide, paramètres et mises à jour](#aide-paramètres-et-mises-à-jour)
 - [Questions fréquentes et dépannage](#questions-fréquentes-et-dépannage)
 - [Sécurité](#sécurité)
 - [Prérequis et autorisations pour les administrateurs](#prérequis-et-autorisations-pour-les-administrateurs)
@@ -259,6 +261,32 @@ Modifier le fichier, l'algorithme, l'intervalle ou la distribution nécessite un
 3. **« Vérifier »** résout les utilisateurs sans rien modifier. **« Créer »** crée ensuite un code par utilisateur ; un code existant de l'utilisateur est remplacé.
 4. **« Export Excel … »** enregistre la liste avec les codes – elle les contient en clair : enregistrez-la uniquement dans un emplacement protégé et supprimez-la après la remise. Les codes ne sont jamais écrits dans le journal.
 
+## Offboarding en masse
+
+**Outils ▾ → « Offboarding en masse … »** supprime d'un coup les méthodes MFA de nombreux utilisateurs, p. ex. pour les départs ou après des comptes compromis.
+
+1. Choisissez les utilisateurs : un **fichier CSV** (colonne `UPN` ou un UPN par ligne) ou les **membres d'un groupe**.
+2. Choisissez les actions : **supprimer toutes les méthodes MFA**, **révoquer les sessions** (l'utilisateur est déconnecté partout) et éventuellement **désactiver le compte**.
+3. **« Vérifier »** résout les utilisateurs et montre combien de méthodes et de rôles admin chacun possède – sans rien modifier. Votre propre compte est toujours ignoré.
+4. **« Lancer l'offboarding »** – après confirmation du récapitulatif.
+5. **« Export Excel … »** enregistre la liste des résultats comme justificatif.
+
+> [!WARNING]
+> Les méthodes supprimées ne se restaurent pas. Les utilisateurs doivent les réenregistrer, p. ex. avec un Temporary Access Pass.
+
+---
+
+## Aide, paramètres et mises à jour
+
+- **« Aide »** en haut de chaque fenêtre ouvre un panneau latéral : *ce que ça fait, quand l'utiliser, ce qu'il faut, étape par étape* et *résultat*. Chaque bouton et champ a aussi une info-bulle.
+- Au premier démarrage, un **écran d'accueil** explique les trois étapes (désactivable).
+- **Outils ▾ → « Paramètres … »** : algorithme et intervalle par défaut des jetons TOTP, validité et usage unique par défaut des TAP, boîte d'envoi du guide MFA et, en option, un **locataire** (ID ou domaine) pour les comptes invités.
+- La fenêtre principale affiche la **dernière connexion**, l'**historique** du journal d'audit, un **justificatif Excel** de l'utilisateur et, pour les admins, **« Vérifier l'exclusion CA »**.
+- Si la méthode est désactivée dans la stratégie des méthodes d'authentification du locataire, un avertissement jaune apparaît avant le démarrage.
+- Quand une nouvelle version existe, un bouton **« Mise à jour … »** apparaît en haut : il télécharge et installe la version (journaux et paramètres conservés) ; redémarrez ensuite l'outil.
+
+---
+
 ## Questions fréquentes et dépannage
 
 **Un double-clic sur `Start.cmd` ne fait rien ou affiche une erreur.**
@@ -333,6 +361,7 @@ Toutes les autorisations sont demandées une seule fois à la connexion ; aucun 
 | `RoleManagement.ReadWrite.Directory` | Compte d'urgence : attribuer Global Administrator |
 | `GroupMember.Read.All` | Rapport MFA : choisir un groupe comme périmètre, résoudre les rôles attribués via des groupes |
 | `AuditLog.Read.All` | Rapport MFA : dernière connexion |
+| `Policy.Read.All` | Avertissement si une méthode est désactivée dans le locataire ; vérification de l'accès conditionnel |
 | `Mail.Send` | Guide MFA depuis votre propre boîte aux lettres |
 | `Mail.Send.Shared` | Guide MFA depuis une boîte aux lettres partagée |
 | `Organization.Read.All` | Charger la clé hrdnr depuis le locataire |
@@ -374,6 +403,7 @@ Dans la **stratégie des méthodes d'authentification** (Centre d'administration
 |---|---|
 | `Start.cmd` | Lanceur par double-clic |
 | `Start-M365MfaTool.ps1` | Interface, gestion de l'état et événements |
+| `UI/Theme.xaml` | Apparence commune de toutes les fenêtres |
 | `UI/MainWindow.xaml` | Disposition de la fenêtre principale |
 | `UI/BreakGlassDialog.xaml` | Boîte de dialogue pour les nouveaux comptes d'urgence |
 | `UI/TenantReportWindow.xaml` | Fenêtre du rapport MFA |
@@ -381,6 +411,9 @@ Dans la **stratégie des méthodes d'authentification** (Centre d'administration
 | `UI/TokenInventoryWindow.xaml` | Fenêtre de l'inventaire des jetons |
 | `UI/BulkTapWindow.xaml` | Fenêtre du Temporary Access Pass en masse |
 | `UI/MfaGuideDialog.xaml` | Boîte de dialogue d'aperçu du guide MFA |
+| `UI/BulkOffboardWindow.xaml` | Fenêtre de l'offboarding en masse |
+| `UI/SettingsDialog.xaml` | Boîte de dialogue des paramètres |
+| `UI/HistoryDialog.xaml` | Historique d'un utilisateur (journal d'audit) |
 | `Modules/Graph.psm1` | Connexion, requêtes Graph, utilisateurs, domaines, rôles, feu tricolore MFA, lecture/suppression des méthodes |
 | `Modules/Provisioning.psm1` | Configuration de FIDO2, cartes TOTP, MFA fictive, TAP et comptes d'urgence |
 | `Modules/TenantReport.psm1` | Rapport MFA : utilisateurs, rôles, requêtes de méthodes groupées, évaluation en feu tricolore, export Excel |

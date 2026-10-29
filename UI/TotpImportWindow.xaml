@@ -3,112 +3,7 @@
         Uid="Import.Title"
         Height="720" Width="1100" MinHeight="500" MinWidth="820"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="#F5F7FA" FontFamily="Segoe UI">
-
-    <Window.Resources>
-        <SolidColorBrush x:Key="Primary" Color="#0067B8"/>
-        <SolidColorBrush x:Key="Secondary" Color="#64748B"/>
-        <SolidColorBrush x:Key="Text" Color="#242424"/>
-        <SolidColorBrush x:Key="MutedText" Color="#64748B"/>
-        <SolidColorBrush x:Key="Border" Color="#D0D7DE"/>
-
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="16,9"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="{StaticResource Primary}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{StaticResource Secondary}"/>
-        </Style>
-        <Style x:Key="ImportButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#107C41"/>
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
-        </Style>
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Text}"/>
-        </Style>
-        <Style TargetType="RadioButton">
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,16,0"/>
-        </Style>
-        <Style x:Key="Label" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-
-        <Style TargetType="DataGrid">
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="SelectionMode" Value="Extended"/>
-            <Setter Property="SelectionUnit" Value="FullRow"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#FFFFFF"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E1E5EA"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CanUserResizeRows" Value="False"/>
-            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="EnableRowVirtualization" Value="True"/>
-            <Setter Property="ClipboardCopyMode" Value="IncludeHeader"/>
-        </Style>
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F1F5F9"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="10,7"/>
-            <Setter Property="BorderBrush" Value="#E1E5EA"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        </Style>
-        <!-- Cells are colored by status; selection wins (last trigger) -->
-        <Style TargetType="DataGridCell">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Text}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="DataGridCell">
-                        <Border Background="{TemplateBinding Background}" Padding="10,6">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Status}" Value="Error">
-                    <Setter Property="Background" Value="#FEE2E2"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="Failed">
-                    <Setter Property="Background" Value="#FEE2E2"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="Warning">
-                    <Setter Property="Background" Value="#FEF3C7"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="Imported">
-                    <Setter Property="Background" Value="#DCFCE7"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="UndoFailed">
-                    <Setter Property="Background" Value="#FEE2E2"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Status}" Value="Reverted">
-                    <Setter Property="Background" Value="#F1F5F9"/>
-                </DataTrigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#BFDBFE"/>
-                    <Setter Property="Foreground" Value="#0F172A"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </Window.Resources>
+        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -118,11 +13,18 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#0F172A" Padding="24,16">
-            <StackPanel>
-                <TextBlock Uid="Import.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Name="TxtTiTenant" Text="" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
-            </StackPanel>
+        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Uid="Import.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Name="TxtTiTenant" Text="" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Name="BtnHelp" Uid="Header.Help" Tag="&#xE897;" Style="{StaticResource HeaderButton}"/>
+            </Grid>
         </Border>
 
         <StackPanel Grid.Row="1" Margin="20,16,20,0">
@@ -133,22 +35,22 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" Name="TxtTiFile" IsReadOnly="True" Margin="0,4,4,4" VerticalContentAlignment="Center"/>
-                <Button Grid.Column="1" Name="BtnTiBrowse" Uid="Import.Browse"/>
-                <Button Grid.Column="2" Name="BtnTiSample" Uid="Import.Sample" Style="{StaticResource SecondaryButton}"/>
+                <TextBox Grid.Column="0" Name="TxtTiFile" IsReadOnly="True" Margin="0,4,4,4"/>
+                <Button Grid.Column="1" Name="BtnTiBrowse" Uid="Import.Browse" Tag="&#xE8E5;"/>
+                <Button Grid.Column="2" Name="BtnTiSample" Uid="Import.Sample" Tag="&#xE8A5;" Style="{StaticResource SecondaryButton}"/>
             </Grid>
 
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                 <StackPanel>
                     <TextBlock Uid="Import.Algorithm" Style="{StaticResource Label}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <RadioButton Name="RbTiSha1" GroupName="TiAlgorithm" Content="SHA-1"/>
-                        <RadioButton Name="RbTiSha256" GroupName="TiAlgorithm" Content="SHA-256"/>
+                        <RadioButton Name="RbTiSha1" GroupName="TiAlgorithm" Content="SHA-1" Uid="Import.Sha1"/>
+                        <RadioButton Name="RbTiSha256" GroupName="TiAlgorithm" Content="SHA-256" Uid="Import.Sha256"/>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Margin="32,0,0,0">
                     <TextBlock Uid="Import.TimeStep" Style="{StaticResource Label}"/>
-                    <ComboBox Name="CmbTiTimeStep" Width="120" Padding="8,5" SelectedIndex="0">
+                    <ComboBox Name="CmbTiTimeStep" Uid="Import.TimeStepBox" Width="120" Padding="8,5" SelectedIndex="0">
                         <ComboBoxItem Tag="30" Content="30 s"/>
                         <ComboBoxItem Tag="60" Content="60 s"/>
                     </ComboBox>
@@ -158,23 +60,23 @@
             <!-- Tokens without UPN: inventory only, or assigned to the members of a group / a user list -->
             <TextBlock Uid="Import.AssignTo" Style="{StaticResource Label}" Margin="0,14,0,4"/>
             <StackPanel Orientation="Horizontal">
-                <ComboBox Name="CmbTiAssign" Width="300" Padding="8,7" Margin="0,4,4,4" VerticalContentAlignment="Center" SelectedIndex="0">
+                <ComboBox Name="CmbTiAssign" Uid="Import.AssignToBox" Width="300" Margin="0,4,4,4" SelectedIndex="0">
                     <ComboBoxItem Uid="Import.AssignTo.None" Tag="None"/>
                     <ComboBoxItem Uid="Import.AssignTo.Group" Tag="Group"/>
                     <ComboBoxItem Uid="Import.AssignTo.Users" Tag="Users"/>
                 </ComboBox>
                 <StackPanel Name="PnlTiGroup" Orientation="Horizontal" Visibility="Collapsed">
                     <TextBox Name="TxtTiGroupSearch" Uid="Report.GroupSearch" Width="220" Margin="4"/>
-                    <Button Name="BtnTiFindGroup" Uid="Report.FindGroup" Style="{StaticResource SecondaryButton}"/>
-                    <ComboBox Name="CmbTiGroup" Width="300" Padding="8,7" Margin="4" VerticalContentAlignment="Center" DisplayMemberPath="DisplayName"/>
+                    <Button Name="BtnTiFindGroup" Uid="Report.FindGroup" Tag="&#xE721;" Style="{StaticResource SecondaryButton}"/>
+                    <ComboBox Name="CmbTiGroup" Width="300" Margin="4" DisplayMemberPath="DisplayName"/>
                 </StackPanel>
                 <StackPanel Name="PnlTiUsers" Orientation="Horizontal" Visibility="Collapsed">
-                    <TextBox Name="TxtTiUsersFile" IsReadOnly="True" Width="420" Margin="4" VerticalContentAlignment="Center"/>
-                    <Button Name="BtnTiUsersBrowse" Uid="Import.Browse" Style="{StaticResource SecondaryButton}"/>
+                    <TextBox Name="TxtTiUsersFile" IsReadOnly="True" Width="420" Margin="4"/>
+                    <Button Name="BtnTiUsersBrowse" Uid="Import.Browse" Tag="&#xE8E5;" Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
             </StackPanel>
 
-            <Border Background="#E0ECF8" CornerRadius="4" Padding="12,10" Margin="0,14,0,12">
+            <Border Style="{StaticResource InfoBox}" Margin="0,14,0,12">
                 <StackPanel>
                     <TextBlock FontSize="12" TextWrapping="Wrap" Uid="Import.Info1"/>
                     <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" Uid="Import.Info2"/>
@@ -185,7 +87,7 @@
         <DataGrid Grid.Row="2" Name="DgTi" Margin="20,0,20,0">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Import.Col.Line" Binding="{Binding Line}" Width="60"/>
-                <DataGridTextColumn Header="Import.Col.Status" Binding="{Binding StatusText}" Width="110"/>
+                <DataGridTemplateColumn Header="Import.Col.Status" Width="120" SortMemberPath="Status" CellTemplate="{StaticResource StatusChip}"/>
                 <DataGridTextColumn Header="Import.Col.Upn" Binding="{Binding Upn}" Width="240"/>
                 <DataGridTextColumn Header="Import.Col.Name" Binding="{Binding DisplayName}" Width="170"/>
                 <DataGridTextColumn Header="Import.Col.Serial" Binding="{Binding SerialNumber}" Width="130"/>
@@ -195,15 +97,50 @@
 
         <StackPanel Grid.Row="3" Margin="20,10,20,16">
             <TextBlock Name="TxtTiStatus" Text="" TextWrapping="Wrap"/>
-                <ProgressBar Name="PrgTi" Height="4" Margin="0,6,0,0" Visibility="Hidden"/>
+            <ProgressBar Name="PrgTi" Height="4" Margin="0,6,0,0" Visibility="Hidden"/>
             <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
-                <Button Name="BtnTiTest" Uid="Import.Test"/>
-                <Button Name="BtnTiImport" Uid="Import.Start" Style="{StaticResource ImportButton}" IsEnabled="False"/>
-                <Button Name="BtnTiUndo" Uid="Import.Undo" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
-                <Button Name="BtnTiExport" Uid="Report.Export" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
-                <Button Name="BtnTiCancel" Uid="Common.Cancel" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <Button Name="BtnTiTest" Uid="Import.Test" Tag="&#xE73E;"/>
+                <Button Name="BtnTiImport" Uid="Import.Start" Tag="&#xE898;" Style="{StaticResource SuccessButton}" IsEnabled="False"/>
+                <Button Name="BtnTiUndo" Uid="Import.Undo" Tag="&#xE7A7;" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <Button Name="BtnTiExport" Uid="Report.Export" Tag="&#xE74E;" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <Button Name="BtnTiCancel" Uid="Common.Cancel" Tag="&#xE711;" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
                 <Button Name="BtnTiClose" Uid="Import.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
             </WrapPanel>
         </StackPanel>
+
+        <!-- Help flyout -->
+        <Border Name="PnlHelp" Grid.Row="1" Grid.RowSpan="3" Style="{StaticResource HelpPanel}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE897;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                        <TextBlock Uid="Help.Import.Title" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Name="BtnHelpClose" Uid="Help.Close" Style="{StaticResource CloseButton}"/>
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Uid="Help.What" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Import.What" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.When" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Import.When" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Need" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Import.Need" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Steps" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Import.Steps" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Result" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Import.Result" Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

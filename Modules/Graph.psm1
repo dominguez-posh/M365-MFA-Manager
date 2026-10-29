@@ -25,7 +25,8 @@ $script:GraphScopes = @(
     'Domain.Read.All'                         # Break-glass account: domain selection
     'RoleManagement.ReadWrite.Directory'      # Break-glass account: assign Global Administrator
     'GroupMember.Read.All'                    # MFA report: group scope, roles assigned via groups
-    'AuditLog.Read.All'                       # MFA report: last sign-in
+    'AuditLog.Read.All'                       # MFA report: last sign-in; user history (audit log)
+    'Policy.Read.All'                         # Authentication methods policy (is the method enabled?), Conditional Access check
 )
 
 $script:RoleDefinitionNames = $null   # Cache: role ID -> display name
@@ -268,11 +269,16 @@ function Connect-M365Graph {
     <#
     .SYNOPSIS
         Signs in to Microsoft Graph interactively and returns the account and tenant.
+    .PARAMETER TenantId
+        Optional tenant ID or domain, e.g. for guest accounts in several tenants (default: the account's home tenant).
     #>
+    param([string]$TenantId)
     Assert-GraphModules
 
     try {
-        Invoke-InteractiveSignIn { Connect-MgGraph -Scopes $script:GraphScopes -NoWelcome -ErrorAction Stop | Out-Null }
+        $connectParams = @{ Scopes = $script:GraphScopes; NoWelcome = $true; ErrorAction = 'Stop' }
+        if ($TenantId) { $connectParams.TenantId = $TenantId }
+        Invoke-InteractiveSignIn { Connect-MgGraph @connectParams | Out-Null }
     }
     catch {
         throw (T 'Graph.ConnectFailed' $_.Exception.Message)
@@ -855,6 +861,149 @@ function Remove-M365UserAuthMethod {
     }
 }
 
+function Revoke-M365UserSessions {
+    <#
+    .SYNOPSIS
+        Invalidates all refresh tokens and session cookies of a user (the user has to sign in again everywhere).
+    #>
+    param([Parameter(Mandatory)][string]$UserId)
+    Invoke-M365GraphRequest -Method POST -Uri "v1.0/users/$([uri]::EscapeDataString($UserId))/revokeSignInSessions" | Out-Null
+}
+
+function Set-M365UserAccountEnabled {
+    param([Parameter(Mandatory)][string]$UserId, [Parameter(Mandatory)][bool]$Enabled)
+    Invoke-M365GraphRequest -Method PATCH -Uri "v1.0/users/$([uri]::EscapeDataString($UserId))" -Body @{ accountEnabled = $Enabled } | Out-Null
+}
+
+#endregion
+
+#region Tenant policy, sign-in activity, audit log, Conditional Access
+
+# Method ID of the tool -> ID of the configuration in the authentication methods policy
+$script:MethodPolicyIds = @{
+    Fido2            = 'Fido2'
+    FixedTotp        = 'HardwareOath'
+    ProgrammableTotp = 'HardwareOath'
+    Tap              = 'TemporaryAccessPass'
+    FakeMfa          = 'HardwareOath'
+}
+
+function Get-M365AuthMethodPolicy {
+    <#
+    .SYNOPSIS
+        Reads which authentication methods are enabled in the tenant (authentication methods policy).
+    .OUTPUTS
+        Hashtable: configuration ID (e.g. Fido2, HardwareOath, TemporaryAccessPass) -> $true/$false.
+    #>
+    $policy = Invoke-M365GraphRequest -Uri 'beta/policies/authenticationMethodsPolicy'
+    $states = @{}
+    foreach ($configuration in @($policy.authenticationMethodConfigurations)) {
+        $states[[string]$configuration.id] = ([string]$configuration.state -eq 'enabled')
+    }
+    $states
+}
+
+function Test-M365MethodEnabled {
+    <#
+    .SYNOPSIS
+        $true if the tenant policy allows the method, $false if it is disabled, $null if unknown.
+    #>
+    param([Parameter(Mandatory)][hashtable]$Policy, [Parameter(Mandatory)][string]$MethodId)
+    if (-not $script:MethodPolicyIds.ContainsKey($MethodId)) { return $null }
+    $id = $script:MethodPolicyIds[$MethodId]
+    if ($Policy.ContainsKey($id)) { $Policy[$id] } else { $null }
+}
+
+function Get-M365UserSignInActivity {
+    <#
+    .SYNOPSIS
+        Last interactive and non-interactive sign-in of a user (requires Entra ID P1/P2; $null if not available).
+    #>
+    param([Parameter(Mandatory)][string]$UserId)
+    $user = Invoke-M365GraphRequest -Uri "v1.0/users/$([uri]::EscapeDataString($UserId))?`$select=id,signInActivity"
+    if (-not $user.ContainsKey('signInActivity') -or $null -eq $user.signInActivity) { return $null }
+    $activity = $user.signInActivity
+    [pscustomobject]@{
+        LastSignIn            = ConvertTo-LocalDate $activity.lastSignInDateTime
+        LastNonInteractive    = ConvertTo-LocalDate $activity.lastNonInteractiveSignInDateTime
+        LastSuccessfulSignIn  = if ($activity.ContainsKey('lastSuccessfulSignInDateTime')) { ConvertTo-LocalDate $activity.lastSuccessfulSignInDateTime } else { $null }
+    }
+}
+
+function Get-M365UserAuthAuditEvents {
+    <#
+    .SYNOPSIS
+        Audit log entries about the user's authentication methods and sign-in settings (who changed what, when).
+    #>
+    param([Parameter(Mandatory)][string]$UserId, [int]$Top = 100)
+    $filter = [uri]::EscapeDataString("targetResources/any(t: t/id eq '$UserId')")
+    $response = Invoke-M365GraphRequest -Uri "v1.0/auditLogs/directoryAudits?`$filter=$filter&`$top=$Top&`$orderby=activityDateTime desc"
+    foreach ($entry in @($response.value)) {
+        $activity = [string]$entry.activityDisplayName
+        # Only entries about security info, MFA methods, passwords and sessions; other user changes are noise here
+        if ($activity -notmatch 'security info|authentication|MFA|password|sign-?in|session|credential|Temporary Access|FIDO|passkey|OATH|device|Reset user') { continue }
+        $initiator = ''
+        if ($entry.initiatedBy) {
+            if ($entry.initiatedBy.user) { $initiator = [string]$entry.initiatedBy.user.userPrincipalName; if (-not $initiator) { $initiator = [string]$entry.initiatedBy.user.displayName } }
+            elseif ($entry.initiatedBy.app) { $initiator = [string]$entry.initiatedBy.app.displayName }
+        }
+        $details = @()
+        foreach ($target in @($entry.targetResources)) {
+            foreach ($property in @($target.modifiedProperties)) {
+                if ($property.displayName -and $property.newValue) { $details += '{0}: {1}' -f $property.displayName, ([string]$property.newValue).Trim('"') }
+            }
+        }
+        $date = ConvertTo-LocalDate $entry.activityDateTime
+        [pscustomobject]@{
+            Date        = $date
+            DateText    = if ($date) { $date.ToString((T 'Format.DateTime')) } else { '' }
+            Activity    = $activity
+            Result      = [string]$entry.result
+            InitiatedBy = $initiator
+            Details     = ($details | Select-Object -First 6) -join ' · '
+        }
+    }
+}
+
+function Test-M365ConditionalAccessExclusion {
+    <#
+    .SYNOPSIS
+        Checks whether a user (e.g. a break-glass account) is excluded from every enabled Conditional Access policy.
+    .DESCRIPTION
+        A policy counts as "covering" the user when it is enabled, includes all users (or the user / one of their groups)
+        and excludes neither the user nor one of their (transitive) groups. Role-based includes/excludes are not evaluated.
+    .OUTPUTS
+        Policies (all enabled ones), Covering (policies that still apply to the user) and GroupCount.
+    #>
+    param([Parameter(Mandatory)][string]$UserId)
+    $policies = @((Invoke-M365GraphRequest -Uri 'v1.0/identity/conditionalAccess/policies').value | Where-Object { $_.state -eq 'enabled' })
+    $groups = @()
+    $uri = "v1.0/users/$([uri]::EscapeDataString($UserId))/transitiveMemberOf/microsoft.graph.group?`$select=id&`$top=999"
+    while ($uri) {
+        $page = Invoke-M365GraphRequest -Uri $uri
+        $groups += @($page.value | ForEach-Object { [string]$_.id })
+        $uri = if ($page.ContainsKey('@odata.nextLink')) { $page['@odata.nextLink'] } else { $null }
+    }
+
+    $covering = foreach ($policy in $policies) {
+        $users = $policy.conditions.users
+        $includeUsers = @($users.includeUsers | ForEach-Object { [string]$_ })
+        $includeGroups = @($users.includeGroups | ForEach-Object { [string]$_ })
+        $excludeUsers = @($users.excludeUsers | ForEach-Object { [string]$_ })
+        $excludeGroups = @($users.excludeGroups | ForEach-Object { [string]$_ })
+
+        $included = ($includeUsers -contains 'All') -or ($includeUsers -contains $UserId) -or
+                    @($includeGroups | Where-Object { $groups -contains $_ }).Count -gt 0
+        $excluded = ($excludeUsers -contains $UserId) -or @($excludeGroups | Where-Object { $groups -contains $_ }).Count -gt 0
+        if ($included -and -not $excluded) { [string]$policy.displayName }
+    }
+    [pscustomobject]@{
+        Policies   = @($policies | ForEach-Object { [string]$_.displayName })
+        Covering   = @($covering)
+        GroupCount = $groups.Count
+    }
+}
+
 #endregion
 
 Export-ModuleMember -Function @(
@@ -878,4 +1027,11 @@ Export-ModuleMember -Function @(
     'Get-M365RoleDefinitionNames'
     'Get-M365UserAdminRoles'
     'Remove-M365UserAuthMethod'
+    'Revoke-M365UserSessions'
+    'Set-M365UserAccountEnabled'
+    'Get-M365AuthMethodPolicy'
+    'Test-M365MethodEnabled'
+    'Get-M365UserSignInActivity'
+    'Get-M365UserAuthAuditEvents'
+    'Test-M365ConditionalAccessExclusion'
 )

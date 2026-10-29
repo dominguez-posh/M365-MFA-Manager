@@ -21,6 +21,8 @@ Con esta herramienta, los administradores y el personal del servicio de asistenc
 - [Importación masiva de tokens TOTP](#importación-masiva-de-tokens-totp)
 - [Inventario de tokens](#inventario-de-tokens)
 - [Temporary Access Pass masivo](#temporary-access-pass-masivo)
+- [Baja masiva](#baja-masiva)
+- [Ayuda, configuración y actualizaciones](#ayuda-configuración-y-actualizaciones)
 - [Preguntas frecuentes y solución de problemas](#preguntas-frecuentes-y-solución-de-problemas)
 - [Seguridad](#seguridad)
 - [Para administradores: requisitos y permisos](#para-administradores-requisitos-y-permisos)
@@ -259,6 +261,32 @@ Cambiar el archivo, el algoritmo, el intervalo o el reparto requiere una nueva c
 3. **"Comprobar"** resuelve los usuarios sin cambiar nada. **"Crear"** crea después un pase por usuario; un pase existente del usuario se reemplaza.
 4. **"Exportar a Excel …"** guarda la lista con los pases; los contiene en texto claro, así que guárdela solo en un lugar protegido y elimínela tras la entrega. Los pases nunca se escriben en el registro.
 
+## Baja masiva
+
+**Herramientas ▾ → "Baja masiva …"** quita a la vez los métodos MFA de muchos usuarios, p. ej. por bajas de empleados o tras cuentas comprometidas.
+
+1. Elija los usuarios: un **archivo CSV** (columna `UPN` o un UPN por línea) o los **miembros de un grupo**.
+2. Elija las acciones: **quitar todos los métodos MFA**, **revocar sesiones** (el usuario queda desconectado en todas partes) y opcionalmente **deshabilitar cuenta**.
+3. **"Comprobar"** resuelve los usuarios y muestra cuántos métodos y roles de administrador tiene cada uno, sin cambiar nada. Su propia cuenta siempre se omite.
+4. **"Ejecutar baja"**, tras confirmar el resumen.
+5. **"Exportar a Excel …"** guarda la lista de resultados como comprobante.
+
+> [!WARNING]
+> Los métodos quitados no se pueden restaurar. Los usuarios tienen que registrarlos de nuevo, p. ej. con un Temporary Access Pass.
+
+---
+
+## Ayuda, configuración y actualizaciones
+
+- **"Ayuda"** arriba en cada ventana abre un panel lateral: *qué hace, cuándo usarlo, qué necesita, paso a paso* y *resultado*. Además, cada botón y campo tiene una descripción emergente.
+- En el primer inicio, una **pantalla de bienvenida** explica los tres pasos (se puede desactivar).
+- **Herramientas ▾ → "Configuración …"**: algoritmo e intervalo predeterminados de los tokens TOTP, validez y uso único predeterminados de los TAP, buzón remitente de la guía MFA y, opcionalmente, un **inquilino** (ID o dominio) para cuentas invitadas.
+- La ventana principal muestra el **último inicio de sesión**, el **historial** del registro de auditoría, un **comprobante Excel** del usuario y, para administradores, **"Comprobar exclusión CA"**.
+- Si el método está deshabilitado en la directiva de métodos de autenticación del inquilino, aparece un aviso amarillo antes de empezar.
+- Cuando hay una versión nueva, aparece arriba el botón **"Actualizar …"**: descarga e instala la versión (registros y configuración se conservan); después reinicie la herramienta.
+
+---
+
 ## Preguntas frecuentes y solución de problemas
 
 **Al hacer doble clic en `Start.cmd` no ocurre nada o aparece un error.**
@@ -333,6 +361,7 @@ Todos los permisos se solicitan una sola vez al iniciar sesión, por lo que no a
 | `RoleManagement.ReadWrite.Directory` | Cuenta de emergencia: asignar Global Administrator |
 | `GroupMember.Read.All` | Informe MFA: elegir un grupo como ámbito, resolver roles asignados mediante grupos |
 | `AuditLog.Read.All` | Informe MFA: último inicio de sesión |
+| `Policy.Read.All` | Aviso si un método está deshabilitado en el inquilino; comprobación de acceso condicional |
 | `Mail.Send` | Guía MFA desde el propio buzón |
 | `Mail.Send.Shared` | Guía MFA desde un buzón compartido |
 | `Organization.Read.All` | Cargar la clave hrdnr desde el inquilino |
@@ -374,6 +403,7 @@ En la **directiva de métodos de autenticación** (Centro de administración de 
 |---|---|
 | `Start.cmd` | Iniciador por doble clic |
 | `Start-M365MfaTool.ps1` | Interfaz, gestión de estado y eventos |
+| `UI/Theme.xaml` | Aspecto común de todas las ventanas |
 | `UI/MainWindow.xaml` | Diseño de la ventana principal |
 | `UI/BreakGlassDialog.xaml` | Diálogo para nuevas cuentas de emergencia |
 | `UI/TenantReportWindow.xaml` | Ventana del informe MFA |
@@ -381,6 +411,9 @@ En la **directiva de métodos de autenticación** (Centro de administración de 
 | `UI/TokenInventoryWindow.xaml` | Ventana del inventario de tokens |
 | `UI/BulkTapWindow.xaml` | Ventana del Temporary Access Pass masivo |
 | `UI/MfaGuideDialog.xaml` | Diálogo de vista previa de la guía de MFA |
+| `UI/BulkOffboardWindow.xaml` | Ventana de la baja masiva |
+| `UI/SettingsDialog.xaml` | Diálogo de configuración |
+| `UI/HistoryDialog.xaml` | Historial de un usuario (registro de auditoría) |
 | `Modules/Graph.psm1` | Inicio de sesión, solicitudes a Graph, usuarios, dominios, roles, semáforo de MFA, lectura/eliminación de métodos |
 | `Modules/Provisioning.psm1` | Configuración de FIDO2, tarjetas TOTP, MFA ficticia, TAP y cuentas de emergencia |
 | `Modules/TenantReport.psm1` | Informe MFA: usuarios, roles, consultas de métodos agrupadas, valoración en semáforo, exportación a Excel |

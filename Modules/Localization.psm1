@@ -94,7 +94,7 @@ function T {
     $text = if ($script:Strings.ContainsKey($Key) -and $script:Strings[$Key]) { $script:Strings[$Key] }
             elseif ($script:Fallback.ContainsKey($Key)) { $script:Fallback[$Key] }
             else { $Key }
-    if ($Arguments -and $Arguments.Count) { return ($text -f $Arguments) }
+    if ($null -ne $Arguments -and $Arguments.Count) { return ($text -f $Arguments) }
     $text
 }
 
@@ -121,7 +121,7 @@ function Get-LanguageText {
     $text = if ($strings.ContainsKey($Key) -and $strings[$Key]) { $strings[$Key] }
             elseif ($script:Fallback.ContainsKey($Key)) { $script:Fallback[$Key] }
             else { $Key }
-    if ($Arguments -and $Arguments.Count) { return ($text -f $Arguments) }
+    if ($null -ne $Arguments -and $Arguments.Count) { return ($text -f $Arguments) }
     $text
 }
 

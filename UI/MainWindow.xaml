@@ -3,151 +3,8 @@
         Title="M365 MFA Administration"
         Height="900" Width="1280" MinHeight="760" MinWidth="1080"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F7FA" FontFamily="Segoe UI">
-
-    <Window.Resources>
-        <!-- Colors -->
-        <SolidColorBrush x:Key="Primary" Color="#0067B8"/>
-        <SolidColorBrush x:Key="Secondary" Color="#64748B"/>
-        <SolidColorBrush x:Key="Danger" Color="#C42B1C"/>
-        <SolidColorBrush x:Key="Text" Color="#242424"/>
-        <SolidColorBrush x:Key="MutedText" Color="#64748B"/>
-        <SolidColorBrush x:Key="Border" Color="#D0D7DE"/>
-        <SolidColorBrush x:Key="ResultBackground" Color="#FFF8E1"/>
-        <SolidColorBrush x:Key="ResultBorder" Color="#F2C94C"/>
-
-        <!-- Default styles -->
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="16,9"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="{StaticResource Primary}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
-        </Style>
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,14"/>
-            <Setter Property="Padding" Value="12"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E1E5EA"/>
-        </Style>
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Text}"/>
-        </Style>
-        <!-- Tables: flat, white, subtle lines and selection -->
-        <Style TargetType="DataGrid">
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="SelectionMode" Value="Single"/>
-            <Setter Property="SelectionUnit" Value="FullRow"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#EEF1F4"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="RowBackground" Value="White"/>
-            <Setter Property="AlternatingRowBackground" Value="#FAFBFC"/>
-            <Setter Property="BorderBrush" Value="#E1E5EA"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CanUserResizeRows" Value="False"/>
-            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-        </Style>
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F1F5F9"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="10,7"/>
-            <Setter Property="BorderBrush" Value="#E1E5EA"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        </Style>
-        <Style TargetType="DataGridCell">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Text}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="DataGridCell">
-                        <Border Background="{TemplateBinding Background}" Padding="10,7">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#DBEAFE"/>
-                    <Setter Property="Foreground" Value="#0F172A"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        <Style x:Key="CellText" TargetType="TextBlock">
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
-        </Style>
-        <Style TargetType="DataGridRow">
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#F1F5F9"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Named styles -->
-        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{StaticResource Secondary}"/>
-        </Style>
-        <Style x:Key="HeaderButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#334155"/>
-        </Style>
-        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{StaticResource Danger}"/>
-        </Style>
-        <Style x:Key="CopyButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-            <Setter Property="Padding" Value="8,2"/>
-            <Setter Property="Margin" Value="8,0,0,0"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="IsEnabled" Value="False"/>
-        </Style>
-        <Style x:Key="CloseButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Content" Value="✕"/>
-            <Setter Property="Padding" Value="8,2"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-        </Style>
-        <Style x:Key="Label" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
-        </Style>
-        <Style x:Key="SelectableText" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Text}"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="ResultCard" TargetType="Border">
-            <Setter Property="Visibility" Value="Collapsed"/>
-            <Setter Property="Background" Value="{StaticResource ResultBackground}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ResultBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="14,12"/>
-            <Setter Property="Margin" Value="0,0,0,14"/>
-        </Style>
-        <Style x:Key="CardTitle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-    </Window.Resources>
+        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+    <!-- Styles and colors: UI\Theme.xaml (loaded into the application resources at startup) -->
 
     <Grid>
         <Grid.RowDefinitions>
@@ -157,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#0F172A" Padding="24,15">
+        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" Padding="24,15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -165,8 +22,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Button Name="BtnTenantReport" Uid="Header.TenantReport" IsEnabled="False" Style="{StaticResource HeaderButton}"
-                        VerticalAlignment="Center" Margin="0,0,20,0"/>
+                <Button Name="BtnTenantReport" Uid="Header.TenantReport" Tag="&#xE9D9;" IsEnabled="False" Style="{StaticResource HeaderButton}" Margin="0,0,20,0"/>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="M365 MFA Administration" Foreground="White" FontSize="24" FontWeight="SemiBold"/>
                     <TextBlock Uid="Header.Subtitle" Foreground="#CBD5E1" FontSize="13" Margin="0,4,0,0"/>
@@ -176,22 +32,27 @@
                     <TextBlock Name="TxtTenant" Text="Tenant: -" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Right"/>
                 </StackPanel>
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Update badge: shown only when a newer release exists -->
+                    <Button Name="BtnUpdate" Uid="Update.Button" Tag="&#xE896;" Visibility="Collapsed" Background="#B45309"/>
+                    <Button Name="BtnHelp" Uid="Header.Help" Tag="&#xE897;" Style="{StaticResource HeaderButton}"/>
                     <!-- Tools menu: the less frequent functions, so that the header stays uncluttered -->
-                    <Button Name="BtnTools" Uid="Header.Tools" IsEnabled="False" Style="{StaticResource HeaderButton}">
+                    <Button Name="BtnTools" Uid="Header.Tools" Tag="&#xE713;" IsEnabled="False" Style="{StaticResource HeaderButton}">
                         <Button.ContextMenu>
                             <ContextMenu Name="MnuTools" FontFamily="Segoe UI" FontSize="13">
                                 <MenuItem Name="BtnTotpImport" Uid="Header.TotpImport" Padding="10,6"/>
                                 <MenuItem Name="BtnTokenInventory" Uid="Header.TokenInventory" Padding="10,6"/>
                                 <MenuItem Name="BtnBulkTap" Uid="Header.BulkTap" Padding="10,6"/>
+                                <MenuItem Name="BtnOffboard" Uid="Header.Offboard" Padding="10,6"/>
                                 <Separator/>
                                 <MenuItem Name="BtnBreakGlass" Uid="Header.BreakGlass" Padding="10,6"/>
+                                <Separator/>
+                                <MenuItem Name="BtnSettings" Uid="Header.Settings" Padding="10,6"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
-                    <ComboBox Name="CmbLanguage" Uid="Header.Language" Width="120" Margin="4" Padding="8,7" VerticalContentAlignment="Center"
-                              DisplayMemberPath="Name"/>
-                    <Button Name="BtnLogin" Uid="Header.Login"/>
-                    <Button Name="BtnLogout" Uid="Header.Logout" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
+                    <ComboBox Name="CmbLanguage" Uid="Header.Language" Width="120" Margin="4" DisplayMemberPath="Name"/>
+                    <Button Name="BtnLogin" Uid="Header.Login" Tag="&#xE77B;"/>
+                    <Button Name="BtnLogout" Uid="Header.Logout" Tag="&#xE7E8;" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -217,19 +78,19 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox Name="TxtSearch" Uid="Search.Box" Margin="4"/>
-                        <Button Name="BtnSearch" Uid="Search.Button" Grid.Column="1" IsEnabled="False"/>
+                        <Button Name="BtnSearch" Uid="Search.Button" Tag="&#xE721;" Grid.Column="1" IsEnabled="False"/>
 
-                        <!-- Search results drop down below the search box -->
+                        <!-- Search results (or recently used users) drop down below the search box -->
                         <Popup Name="PopUsers" PlacementTarget="{Binding ElementName=SearchPanel}" Placement="Bottom"
                                Width="{Binding ActualWidth, ElementName=SearchPanel}"
                                StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade">
-                            <Border Background="White" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="4" Margin="0,4,8,8" Padding="8">
+                            <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="6" Margin="0,4,8,8" Padding="8">
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.25"/>
                                 </Border.Effect>
                                 <StackPanel>
                                     <TextBlock Name="TxtUserHits" Text="" Style="{StaticResource Label}" Margin="2,0,0,6"/>
-                                    <DataGrid Name="DgUsers" MaxHeight="320">
+                                    <DataGrid Name="DgUsers" MaxHeight="320" SelectionMode="Single" HorizontalScrollBarVisibility="Disabled">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Users.Col.Name" Binding="{Binding DisplayName}" Width="2*" ElementStyle="{StaticResource CellText}"/>
                                             <DataGridTextColumn Header="Users.Col.Upn" Binding="{Binding UserPrincipalName}" Width="2*" ElementStyle="{StaticResource CellText}"/>
@@ -251,7 +112,7 @@
                             <RowDefinition Height="1.3*" MinHeight="140"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <DataGrid Name="DgMethods">
+                        <DataGrid Name="DgMethods" SelectionMode="Single" HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Methods.Col.Type" Binding="{Binding TypeName}" Width="1.6*" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Methods.Col.Name" Binding="{Binding DisplayName}" Width="1.6*" ElementStyle="{StaticResource CellText}"/>
@@ -266,16 +127,63 @@
                                 </DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <TextBlock Name="TxtNoUser" Uid="Methods.NoUser"
-                                   Style="{StaticResource Label}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                        <!-- Guided empty state: the three steps, the current one is highlighted -->
+                        <Border Name="PnlGuide" Background="White" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="520" Padding="10">
+                            <StackPanel>
+                                <TextBlock Uid="Steps.Title" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,14"/>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Name="StepDot1" Style="{StaticResource StepDot}">
+                                        <TextBlock Name="StepNum1" Text="1" Style="{StaticResource StepNumber}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Name="StepTitle1" Uid="Steps.SignIn.Title" Style="{StaticResource StepTitle}"/>
+                                        <TextBlock Uid="Steps.SignIn.Text" Style="{StaticResource StepText}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Name="StepDot2" Style="{StaticResource StepDot}">
+                                        <TextBlock Name="StepNum2" Text="2" Style="{StaticResource StepNumber}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Name="StepTitle2" Uid="Steps.Search.Title" Style="{StaticResource StepTitle}"/>
+                                        <TextBlock Uid="Steps.Search.Text" Style="{StaticResource StepText}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Name="StepDot3" Style="{StaticResource StepDot}">
+                                        <TextBlock Name="StepNum3" Text="3" Style="{StaticResource StepNumber}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Name="StepTitle3" Uid="Steps.Method.Title" Style="{StaticResource StepTitle}"/>
+                                        <TextBlock Uid="Steps.Method.Text" Style="{StaticResource StepText}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Uid="Steps.HelpHint" Style="{StaticResource StepText}" Margin="0,16,0,0" FontSize="11"/>
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock Grid.Row="1" Uid="Methods.AllProperties" Style="{StaticResource Label}" Margin="0,10,0,4"/>
                         <TextBox Grid.Row="2" Name="TxtMethodDetails" IsReadOnly="True" TextWrapping="NoWrap"
                                  FontFamily="Consolas" FontSize="11" Background="#F8FAFC"
                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                            <Button Name="BtnRefreshMethods" Uid="Methods.Refresh" IsEnabled="False" Style="{StaticResource SecondaryButton}"/>
-                            <Button Name="BtnDeleteMethod" Uid="Methods.Delete" IsEnabled="False" Style="{StaticResource DangerButton}"/>
-                        </StackPanel>
+                        <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0,8,0,0">
+                            <Button Name="BtnExportUser" Uid="User.Export" Tag="&#xE74E;" IsEnabled="False" Style="{StaticResource SecondaryButton}"/>
+                            <Button Name="BtnRefreshMethods" Uid="Methods.Refresh" Tag="&#xE72C;" IsEnabled="False" Style="{StaticResource SecondaryButton}"/>
+                            <Button Name="BtnDeleteMethod" Uid="Methods.Delete" Tag="&#xE74D;" IsEnabled="False" Style="{StaticResource DangerButton}"/>
+                        </WrapPanel>
                     </Grid>
                 </GroupBox>
             </Grid>
@@ -296,7 +204,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Name="TxtSelectedUpn" Text="-" Style="{StaticResource SelectableText}"/>
-                                <Button Grid.Column="1" Name="BtnCopyUpn" Uid="User.CopyUpn" Style="{StaticResource CopyButton}"/>
+                                <Button Grid.Column="1" Name="BtnCopyUpn" Uid="User.CopyUpn" Tag="&#xE8C8;" Style="{StaticResource CopyButton}"/>
                             </Grid>
 
                             <TextBlock Uid="User.ObjectId" Style="{StaticResource Label}"/>
@@ -306,12 +214,12 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Name="TxtSelectedId" Text="-" Style="{StaticResource SelectableText}"/>
-                                <Button Grid.Column="1" Name="BtnCopyId" Uid="User.CopyId" Style="{StaticResource CopyButton}"/>
+                                <Button Grid.Column="1" Name="BtnCopyId" Uid="User.CopyId" Tag="&#xE8C8;" Style="{StaticResource CopyButton}"/>
                             </Grid>
 
                             <Separator Margin="0,2,0,10"/>
 
-                            <!-- MFA traffic light -->
+                            <!-- MFA traffic light: the badge explains the rating in its tooltip -->
                             <TextBlock Uid="User.MfaStatus" Style="{StaticResource Label}"/>
                             <Grid Margin="0,4,0,0">
                                 <Grid.ColumnDefinitions>
@@ -319,15 +227,15 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Name="BdgMfa" CornerRadius="12" Padding="10,4" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                        Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1">
+                                        Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Help">
                                     <StackPanel Orientation="Horizontal">
                                         <Ellipse Name="DotMfa" Width="10" Height="10" Fill="#94A3B8" VerticalAlignment="Center"/>
                                         <TextBlock Name="TxtMfaLevel" Text="-" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                                 <!-- Shown for users without or with weak MFA -->
-                                <Button Grid.Column="1" Name="BtnSendGuide" Uid="Guide.Button" Visibility="Collapsed"
-                                        Padding="10,5" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Name="BtnSendGuide" Uid="Guide.Button" Tag="&#xE715;" Visibility="Collapsed"
+                                        Padding="10,5" Margin="8,0,0,0" FontSize="12"/>
                             </Grid>
                             <TextBlock Name="TxtMfaHints" Text="" FontSize="11" Foreground="#475569" TextWrapping="Wrap" Margin="2,6,0,0" Visibility="Collapsed"/>
                             <TextBlock Name="TxtGuideStatus" Text="" FontSize="11" Foreground="#475569" TextWrapping="Wrap" Margin="2,6,0,0" Visibility="Collapsed"/>
@@ -357,33 +265,96 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <!-- Administrators: are they excluded from Conditional Access (break-glass check)? -->
+                            <Button Name="BtnCheckCa" Uid="User.CheckCa" Tag="&#xE8D7;" Visibility="Collapsed" HorizontalAlignment="Left"
+                                    Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="12" Margin="0,0,0,10"/>
 
                             <TextBlock Uid="User.MethodCount" Style="{StaticResource Label}"/>
                             <TextBlock Name="TxtMethodCount" Text="-" Margin="0,2,0,10"/>
                             <TextBlock Uid="User.PreferredMethod" Style="{StaticResource Label}"/>
                             <TextBlock Name="TxtPreferredMethod" Text="-" Margin="0,2,0,10"/>
                             <TextBlock Uid="User.SystemPreferred" Style="{StaticResource Label}"/>
-                            <TextBlock Name="TxtSystemPreferred" Text="-" Margin="0,2,0,0"/>
+                            <TextBlock Name="TxtSystemPreferred" Text="-" Margin="0,2,0,10"/>
+                            <TextBlock Uid="User.LastSignIn" Style="{StaticResource Label}"/>
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Name="TxtLastSignIn" Text="-" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Name="BtnHistory" Uid="User.History" Tag="&#xE823;" Style="{StaticResource CopyButton}"/>
+                            </Grid>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Uid="Config.Group">
                         <StackPanel>
-                            <ComboBox Name="CmbMethod" Padding="8" Margin="4">
-                                <!-- Tag = language-independent method ID for Invoke-MfaProvisioning -->
-                                <ComboBoxItem Tag="Fido2" Uid="Method.Fido2"/>
-                                <ComboBoxItem Tag="FixedTotp" Uid="Method.FixedTotp"/>
-                                <ComboBoxItem Tag="ProgrammableTotp" Uid="Method.ProgrammableTotp"/>
-                                <ComboBoxItem Tag="Tap" Uid="Method.Tap"/>
-                                <ComboBoxItem Tag="FakeMfa" Uid="Method.FakeMfa"/>
-                            </ComboBox>
+                            <!-- Method cards: Tag = language-independent method ID for Invoke-MfaProvisioning -->
+                            <ListBox Name="LstMethod" Style="{StaticResource MethodList}" Margin="4,0">
+                                <ListBoxItem Tag="Fido2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                                        <StackPanel>
+                                            <TextBlock Uid="Method.Fido2" FontWeight="SemiBold"/>
+                                            <TextBlock Uid="Method.Fido2.Desc" Style="{StaticResource StepText}" FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="FixedTotp">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE7C3;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                                        <StackPanel>
+                                            <TextBlock Uid="Method.FixedTotp" FontWeight="SemiBold"/>
+                                            <TextBlock Uid="Method.FixedTotp.Desc" Style="{StaticResource StepText}" FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="ProgrammableTotp">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE70F;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                                        <StackPanel>
+                                            <TextBlock Uid="Method.ProgrammableTotp" FontWeight="SemiBold"/>
+                                            <TextBlock Uid="Method.ProgrammableTotp.Desc" Style="{StaticResource StepText}" FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="Tap">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE823;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                                        <StackPanel>
+                                            <TextBlock Uid="Method.Tap" FontWeight="SemiBold"/>
+                                            <TextBlock Uid="Method.Tap.Desc" Style="{StaticResource StepText}" FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="FakeMfa">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE72E;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                                        <StackPanel>
+                                            <TextBlock Uid="Method.FakeMfa" FontWeight="SemiBold"/>
+                                            <TextBlock Uid="Method.FakeMfa.Desc" Style="{StaticResource StepText}" FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ListBoxItem>
+                            </ListBox>
+
+                            <!-- Warning when the tenant policy does not allow the selected method -->
+                            <Border Name="PnlPolicyWarning" Visibility="Collapsed" Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="4" Padding="10,8" Margin="4,8,4,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7BA;" Style="{StaticResource Glyph}" Foreground="#92400E" VerticalAlignment="Top" Margin="0,2,8,0"/>
+                                    <TextBlock Name="TxtPolicyWarning" Text="" FontSize="12" Foreground="#92400E" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
                             <StackPanel Name="PnlSerial" Visibility="Collapsed" Margin="4,10,4,0">
                                 <TextBlock Name="LblSerial" Style="{StaticResource Label}"/>
                                 <TextBox Name="TxtSerial" Margin="0,4,0,0"/>
                             </StackPanel>
                             <StackPanel Name="PnlSecret" Visibility="Collapsed" Margin="4,10,4,0">
                                 <TextBlock Uid="Config.Secret" Style="{StaticResource Label}"/>
-                                <PasswordBox Name="PwdSecret" Margin="0,4,0,0" Padding="10,8" BorderBrush="{StaticResource Border}"/>
+                                <PasswordBox Name="PwdSecret" Margin="0,4,0,0"/>
+                                <!-- Live check of the secret (Base32, length) -->
+                                <TextBlock Name="TxtSecretStatus" Text="" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"/>
                                 <Grid Margin="0,10,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -392,14 +363,14 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Uid="Import.Algorithm" Style="{StaticResource Label}" TextWrapping="Wrap"/>
-                                        <ComboBox Name="CmbTotpAlgorithm" Margin="0,4,0,0" Padding="8,6" SelectedIndex="0">
+                                        <ComboBox Name="CmbTotpAlgorithm" Uid="Import.AlgorithmBox" Margin="0,4,0,0" SelectedIndex="0">
                                             <ComboBoxItem Tag="hmacsha1" Content="SHA-1"/>
                                             <ComboBoxItem Tag="hmacsha256" Content="SHA-256"/>
                                         </ComboBox>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Uid="Import.TimeStep" Style="{StaticResource Label}" TextWrapping="Wrap"/>
-                                        <ComboBox Name="CmbTotpTimeStep" Margin="0,4,0,0" Padding="8,6" SelectedIndex="0">
+                                        <ComboBox Name="CmbTotpTimeStep" Uid="Import.TimeStepBox" Margin="0,4,0,0" SelectedIndex="0">
                                             <ComboBoxItem Tag="30" Content="30 s"/>
                                             <ComboBoxItem Tag="60" Content="60 s"/>
                                         </ComboBox>
@@ -415,12 +386,19 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox Name="TxtHrdnrKey" FontFamily="Consolas"/>
-                                    <Button Grid.Column="1" Name="BtnLoadHrdnrKey" Uid="Config.HrdnrKey.Load" Margin="6,0,0,0"/>
+                                    <Button Grid.Column="1" Name="BtnLoadHrdnrKey" Uid="Config.HrdnrKey.Load" Tag="&#xE896;" Margin="6,0,0,0"/>
                                 </Grid>
                                 <TextBlock Name="TxtHrdnrKeyStatus" Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                             </StackPanel>
-                            <TextBlock Name="TxtMethodHint" Style="{StaticResource Label}" TextWrapping="Wrap" Margin="4,10,4,0"/>
-                            <Button Name="BtnExecute" Uid="Config.Start" IsEnabled="False" Margin="4,12,4,4"/>
+
+                            <!-- What happens next, as numbered steps -->
+                            <Border Name="PnlMethodHint" Style="{StaticResource InfoBox}" Margin="4,12,4,0" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Uid="Config.HintTitle" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Primary}" Margin="0,0,0,4"/>
+                                    <TextBlock Name="TxtMethodHint" FontSize="12" TextWrapping="Wrap" LineHeight="18"/>
+                                </StackPanel>
+                            </Border>
+                            <Button Name="BtnExecute" Uid="Config.Start" Tag="&#xE768;" IsEnabled="False" Margin="4,12,4,4" Style="{StaticResource SuccessButton}"/>
                         </StackPanel>
                     </GroupBox>
 
@@ -443,7 +421,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox Name="TxtTapValue" IsReadOnly="True" FontFamily="Consolas" FontSize="22" FontWeight="Bold"
                                          Padding="8,6" Background="White" VerticalContentAlignment="Center"/>
-                                <Button Grid.Column="1" Name="BtnCopyTap" Uid="Common.Copy" Margin="8,0,0,0"/>
+                                <Button Grid.Column="1" Name="BtnCopyTap" Uid="Common.Copy" Tag="&#xE8C8;" Margin="8,0,0,0"/>
                             </Grid>
                             <TextBlock Name="TxtTapValidity" Text="-" Margin="0,8,0,0" TextWrapping="Wrap"/>
                             <TextBlock Uid="Tap.Note" Style="{StaticResource Label}" Margin="0,6,0,0" TextWrapping="Wrap"/>
@@ -473,22 +451,41 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox Name="TxtTotpSecret" IsReadOnly="True" FontFamily="Consolas" FontSize="13"
                                          Padding="6,6" Background="White" TextWrapping="Wrap" VerticalContentAlignment="Center"/>
-                                <Button Grid.Column="1" Name="BtnCopyTotpSecret" Uid="Common.Copy" Margin="8,0,0,0"/>
+                                <Button Grid.Column="1" Name="BtnCopyTotpSecret" Uid="Common.Copy" Tag="&#xE8C8;" Margin="8,0,0,0"/>
                             </Grid>
                             <TextBlock Name="TxtTotpInfo" Text="-" Margin="0,8,0,0" TextWrapping="Wrap"/>
-                            <Button Name="BtnSaveTotpQr" Uid="Totp.SaveQr" HorizontalAlignment="Left" Margin="0,8,0,0" Style="{StaticResource SecondaryButton}"/>
-                            <TextBlock Uid="Totp.Note"
-                                       Style="{StaticResource Label}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                            <Button Name="BtnSaveTotpQr" Uid="Totp.SaveQr" Tag="&#xE74E;" HorizontalAlignment="Left" Margin="0,8,0,0" Style="{StaticResource SecondaryButton}"/>
+                            <TextBlock Uid="Totp.Note" Style="{StaticResource Label}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
-                    <GroupBox Uid="Log.Group" Height="240" Margin="0">
-                        <TextBox Name="TxtLog" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" BorderThickness="0"
-                                 FontFamily="Consolas" FontSize="11"
-                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                    <GroupBox Uid="Log.Group" Height="270" Margin="0" Padding="6">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                                <Button Name="BtnLogCopy" Uid="Log.Copy" Tag="&#xE8C8;" Style="{StaticResource CopyButton}" IsEnabled="True"/>
+                                <Button Name="BtnLogSave" Uid="Log.Save" Tag="&#xE74E;" Style="{StaticResource CopyButton}" IsEnabled="True"/>
+                            </StackPanel>
+                            <ListBox Grid.Row="1" Name="LstLog" Style="{StaticResource LogList}" SelectionMode="Extended"/>
+                        </Grid>
                     </GroupBox>
                 </StackPanel>
             </ScrollViewer>
+
+            <!-- Toast: short confirmation at the bottom right, disappears by itself -->
+            <Border Name="PnlToast" Grid.Column="0" Grid.ColumnSpan="3" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Background="#0F172A" CornerRadius="6" Padding="14,10" Margin="0,0,8,8" MaxWidth="520">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.3"/>
+                </Border.Effect>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="TxtToastIcon" Text="&#xE8FB;" Style="{StaticResource Glyph}" Foreground="#4ADE80" FontSize="16"/>
+                    <TextBlock Name="TxtToast" Text="" Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Footer with progress bar -->
@@ -497,5 +494,105 @@
             <TextBlock Uid="Footer.Notice"
                        FontSize="11" Foreground="{StaticResource MutedText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
+
+        <!-- Busy overlay: blocks the window while Graph is working and says what is going on -->
+        <Border Name="PnlBusy" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Background="#B3F3F5F8">
+            <Border Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="24,18"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="320">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2"/>
+                </Border.Effect>
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Name="Spinner" Style="{StaticResource Spinner}" Margin="0,0,16,0">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform Angle="0"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <TextBlock Name="TxtBusy" Text="" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="420"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Help flyout -->
+        <Border Name="PnlHelp" Grid.Row="1" Grid.RowSpan="2" Style="{StaticResource HelpPanel}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE897;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                        <TextBlock Uid="Help.Main.Title" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Name="BtnHelpClose" Uid="Help.Close" Style="{StaticResource CloseButton}"/>
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Uid="Help.What" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Main.What" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Steps" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Main.Steps" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Methods" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Main.Methods" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Need" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Main.Need" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Tools" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Main.Tools" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Result" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Main.Result" Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Welcome overlay on the first start -->
+        <Border Name="PnlWelcome" Grid.Row="0" Grid.RowSpan="3" Visibility="Collapsed" Background="#99000000">
+            <Border Background="White" CornerRadius="10" Padding="30,26" Width="620" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.35"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Uid="Welcome.Title" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Uid="Welcome.Intro" Style="{StaticResource HelpText}" Margin="0,8,0,16"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Border Style="{StaticResource StepDot}" Background="{StaticResource Primary}"><TextBlock Text="1" Style="{StaticResource StepNumber}" Foreground="White"/></Border>
+                        <StackPanel Width="500">
+                            <TextBlock Uid="Steps.SignIn.Title" Style="{StaticResource StepTitle}"/>
+                            <TextBlock Uid="Welcome.Step1" Style="{StaticResource StepText}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Border Style="{StaticResource StepDot}" Background="{StaticResource Primary}"><TextBlock Text="2" Style="{StaticResource StepNumber}" Foreground="White"/></Border>
+                        <StackPanel Width="500">
+                            <TextBlock Uid="Steps.Search.Title" Style="{StaticResource StepTitle}"/>
+                            <TextBlock Uid="Welcome.Step2" Style="{StaticResource StepText}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Border Style="{StaticResource StepDot}" Background="{StaticResource Primary}"><TextBlock Text="3" Style="{StaticResource StepNumber}" Foreground="White"/></Border>
+                        <StackPanel Width="500">
+                            <TextBlock Uid="Steps.Method.Title" Style="{StaticResource StepTitle}"/>
+                            <TextBlock Uid="Welcome.Step3" Style="{StaticResource StepText}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Style="{StaticResource InfoBox}" Margin="0,8,0,16">
+                        <TextBlock Uid="Welcome.Tip" FontSize="12" TextWrapping="Wrap"/>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Name="ChkWelcomeDontShow" Uid="Welcome.DontShow"/>
+                        <Button Grid.Column="1" Name="BtnWelcomeStart" Uid="Welcome.Start" Tag="&#xE768;"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </Window>

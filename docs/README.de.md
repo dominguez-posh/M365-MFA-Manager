@@ -18,6 +18,8 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 - [Massenimport von TOTP-Token](#massenimport-von-totp-token)
 - [Token-Inventar](#token-inventar)
 - [Massen-Temporary-Access-Pass](#massen-temporary-access-pass)
+- [Massen-Offboarding](#massen-offboarding)
+- [Hilfe, Einstellungen und Updates](#hilfe-einstellungen-und-updates)
 - [Häufige Fragen und Fehlerbehebung](#häufige-fragen-und-fehlerbehebung)
 - [Sicherheit](#sicherheit)
 - [Für Administratoren: Voraussetzungen und Berechtigungen](#für-administratoren-voraussetzungen-und-berechtigungen)
@@ -72,6 +74,9 @@ Im Feld **„1. Benutzer suchen“** den Anfang eines Namens, einer E-Mail-Adres
 
 - **Ein Treffer:** Der Benutzer wird direkt geöffnet.
 - **Mehrere Treffer:** Eine Liste klappt unter dem Suchfeld auf – den gewünschten Benutzer anklicken. Mit **Esc** oder einem Klick daneben schließt sich die Liste wieder.
+- **Zuletzt verwendet:** Ein Klick in das leere Suchfeld zeigt die letzten 10 Benutzer dieses Tenants.
+
+Solange kein Benutzer gewählt ist, zeigt die linke Seite die drei Schritte *Anmelden → Benutzer suchen → Methode wählen*; der aktuelle Schritt ist hervorgehoben.
 
 ### 3. MFA-Status verstehen
 
@@ -88,13 +93,19 @@ Rechts unter **„Ausgewählter Benutzer“** zeigt die **MFA-Ampel**, wie gut d
 
 Unter der Ampel stehen konkrete Empfehlungen, zum Beispiel *„SMS/Anruf ist zusätzlich registriert und kann entfernt werden“*.
 
-Darunter zeigt **„Administrative Rollen“**, ob der Benutzer Admin-Rechte hat. Mit **„Anzeigen“** klappt die Liste auf. Dort steht pro Rolle auch, ob sie dauerhaft aktiv ist, über eine Gruppe vergeben wurde oder nur über PIM aktiviert werden kann.
+Fährt man mit der Maus über die Ampel, erklärt sie die Farbe und den empfohlenen nächsten Schritt.
+
+Darunter zeigt **„Administrative Rollen“**, ob der Benutzer Admin-Rechte hat. Mit **„Anzeigen“** klappt die Liste auf. Dort steht pro Rolle auch, ob sie dauerhaft aktiv ist, über eine Gruppe vergeben wurde oder nur über PIM aktiviert werden kann. Bei Administratoren prüft **„CA-Ausnahme prüfen“**, ob das Konto von allen aktiven Conditional-Access-Richtlinien ausgenommen ist – Pflicht für Breakglass-Accounts.
+
+**„Letzte Anmeldung“** zeigt die letzte interaktive (bzw. nicht interaktive) Anmeldung (Entra ID P1/P2). **„Verlauf …“** listet aus dem Entra-Überwachungsprotokoll, wer wann die Sicherheitsinformationen des Benutzers geändert hat.
 
 ### 4. MFA-Methoden ansehen und löschen
 
 Links unter **„2. Registrierte MFA-Methoden“** stehen alle Methoden des Benutzers. Ein Klick auf eine Methode zeigt darunter **alle Details** (z. B. Gerätemodell, Seriennummer, Erstellungsdatum).
 
-Zum Löschen eine Methode auswählen und auf **„Methode löschen“** klicken. Vor dem Löschen erscheint eine Sicherheitsabfrage. Das Kennwort kann nicht gelöscht werden.
+Zum Löschen eine Methode auswählen und auf **„Methode löschen“** klicken. Die Sicherheitsabfrage nennt die Folge und warnt, wenn es die letzte MFA-Methode des Benutzers ist. Das Kennwort kann nicht gelöscht werden.
+
+**„Excel-Nachweis …“** speichert Benutzer, MFA-Status, Rollen und alle Methoden als Excel-Datei – z. B. als Nachweis für ein Ticket.
 
 > [!NOTE]
 > Microsoft übernimmt Änderungen mit wenigen Sekunden Verzögerung. Das Tool wartet automatisch, bis die Liste den neuen Stand zeigt. Bei Bedarf hilft **„Aktualisieren“**.
@@ -105,7 +116,11 @@ Rechts unter **„3. Methode konfigurieren“** die gewünschte Methode auswähl
 
 ![Auswahl der MFA-Methode](images/de/select-method.png)
 
-Je nach Methode erscheinen passende Eingabefelder (z. B. die Seriennummer) und ein kurzer Hinweis. Dann auf **„Konfiguration starten“** klicken und die Sicherheitsabfrage bestätigen. Das Ergebnis erscheint im **Protokoll** und die Methodenliste wird automatisch aktualisiert.
+Jede Methode ist eine Karte mit einer kurzen Beschreibung. Je nach Methode erscheinen passende Eingabefelder (z. B. die Seriennummer), und der Kasten **„So geht's“** erklärt in drei nummerierten Schritten, was als Nächstes passiert. Dann auf **„Konfiguration starten“** klicken und die Sicherheitsabfrage bestätigen. Das Ergebnis erscheint als kurze Meldung unten rechts und im **Protokoll**, die Methodenliste wird automatisch aktualisiert.
+
+- Ist die Methode **in der Richtlinie für Authentifizierungsmethoden des Tenants deaktiviert**, erscheint schon vorher eine gelbe Warnung (das Tool liest die Richtlinie bei der Anmeldung).
+- Das **Karten-Secret** wird schon beim Tippen geprüft (Base32-Zeichen, Mindestlänge).
+- Solange Microsoft Graph arbeitet, sagt ein Overlay, was gerade passiert (z. B. *„Lade die MFA-Methoden von …“*).
 
 ---
 
@@ -157,7 +172,7 @@ Am Ende zeigt eine Zusammenfassung, was erledigt wurde, und das neue Konto wird 
 
 > [!WARNING]
 > **Danach noch manuell erledigen:**
-> - Den Account von **allen Conditional-Access-Richtlinien ausnehmen**.
+> - Den Account von **allen Conditional-Access-Richtlinien ausnehmen** – danach im Hauptfenster mit **„CA-Ausnahme prüfen“** kontrollieren.
 > - Eine **Benachrichtigung bei Anmeldung** einrichten, damit jede Nutzung auffällt.
 > - Den FIDO2-Stick sicher verwahren (z. B. im Tresor).
 
@@ -258,6 +273,32 @@ Nach einer Änderung von Datei, Algorithmus, Zeitintervall oder Verteilung ist e
 
 ---
 
+## Massen-Offboarding
+
+**Werkzeuge ▾ → „Massen-Offboarding …“** entfernt die MFA-Methoden vieler Benutzer auf einmal, z. B. bei Austritten oder nach kompromittierten Konten.
+
+1. Benutzer wählen: eine **CSV-Datei** (Spalte `UPN` oder ein UPN pro Zeile) oder die **Mitglieder einer Gruppe**.
+2. Aktionen wählen: **alle MFA-Methoden entfernen**, **Sitzungen widerrufen** (der Benutzer wird überall abgemeldet) und optional **Konto deaktivieren**.
+3. **„Prüfen“** löst die Benutzer auf und zeigt, wie viele Methoden und Admin-Rollen jeder hat – es wird nichts geändert. Das eigene Konto wird immer übersprungen.
+4. **„Offboarding ausführen“** – nach Bestätigung der Zusammenfassung.
+5. **„Excel-Export …“** speichert die Ergebnisliste als Nachweis.
+
+> [!WARNING]
+> Entfernte Methoden lassen sich nicht wiederherstellen. Die Benutzer müssen sie neu registrieren, z. B. mit einem Temporary Access Pass.
+
+---
+
+## Hilfe, Einstellungen und Updates
+
+- **„Hilfe“** oben in jedem Fenster öffnet ein Seitenpanel: *Was es macht, wann nutzen, was Sie brauchen, Schritt für Schritt* und *Ergebnis*. Zusätzlich hat jeder Button und jedes Feld einen Tooltip.
+- Beim ersten Start erklärt ein **Willkommensbildschirm** die drei Schritte (abschaltbar).
+- **Werkzeuge ▾ → „Einstellungen …“**: Standard-Algorithmus und -Zeitschritt für TOTP-Token, Standard-Gültigkeit und Einmaligkeit für TAPs (einzeln und Massen-TAP), das Absenderpostfach der MFA-Anleitung und optional ein **Tenant** (ID oder Domäne) für Konten, die im verwalteten Tenant Gast sind.
+- Das **Protokoll** färbt Warnungen und Fehler; **„Kopieren“** und **„Speichern …“** geben es z. B. für ein Support-Ticket weiter.
+- Gibt es ein neueres Release, erscheint oben ein Button **„Update …“**: Er lädt das Release herunter und installiert es in den Tool-Ordner (Protokolle und Einstellungen bleiben); danach das Tool neu starten.
+- Das Tool merkt sich Fenstergröße und -position.
+
+---
+
 ## Häufige Fragen und Fehlerbehebung
 
 **Beim Doppelklick auf `Start.cmd` passiert nichts oder es erscheint eine Fehlermeldung.**
@@ -269,8 +310,11 @@ Das passiert einmalig nach einem Update, wenn das Tool neue Berechtigungen brauc
 **Eine neu angelegte oder gelöschte Methode wird nicht sofort angezeigt.**
 Microsoft braucht dafür einige Sekunden. Das Tool wartet automatisch bis zu ca. 16 Sekunden; danach ggf. **„Aktualisieren“** klicken.
 
-**Im Protokoll steht, dass eine neuere Version verfügbar ist.**
-Das Tool vergleicht beim Start seine Version mit dem neuesten Release auf GitHub (nur eine Protokollzeile, es wird nichts heruntergeladen). Die neue Version von der Releases-Seite laden und den Ordner ersetzen.
+**Oben erscheint ein Button „Update …“.**
+Auf GitHub gibt es ein neueres Release. Ein Klick lädt es herunter und installiert es (Protokolle und Einstellungen bleiben), danach das Tool neu starten. Ohne Internetzugang das Release manuell laden und den Ordner ersetzen.
+
+**Eine gelbe Warnung sagt, die Methode sei im Tenant deaktiviert.**
+Die Methode ist in der Richtlinie für Authentifizierungsmethoden ausgeschaltet. Im Entra Admin Center unter Schutz → Authentifizierungsmethoden → Richtlinien aktivieren, dann ab- und wieder anmelden.
 
 **FIDO2: „Fido credential policy …“ oder „nicht aktiviert“.**
 FIDO2 ist im Tenant nicht freigeschaltet. Ein Administrator muss es in den Authentifizierungsmethoden-Richtlinien aktivieren (siehe [Voraussetzungen](#für-administratoren-voraussetzungen-und-berechtigungen)).
@@ -331,7 +375,8 @@ Alle Berechtigungen werden einmalig bei der Anmeldung angefordert – während d
 | `Domain.Read.All` | Breakglass-Account: Domains zur Auswahl anzeigen |
 | `RoleManagement.ReadWrite.Directory` | Breakglass-Account: Global Administrator zuweisen |
 | `GroupMember.Read.All` | MFA-Report: Gruppe als Umfang wählen, über Gruppen zugewiesene Admin-Rollen auflösen |
-| `AuditLog.Read.All` | MFA-Report: letzte Anmeldung |
+| `AuditLog.Read.All` | MFA-Report und Benutzer: letzte Anmeldung; Verlauf aus dem Überwachungsprotokoll |
+| `Policy.Read.All` | Warnung, wenn eine Methode im Tenant deaktiviert ist; Conditional-Access-Prüfung |
 | `Mail.Send` | MFA-Anleitung aus dem eigenen Postfach |
 | `Mail.Send.Shared` | MFA-Anleitung aus einem freigegebenen Postfach |
 | `Organization.Read.All` | hrdnr-Schlüssel aus dem Mandanten laden |
@@ -363,7 +408,7 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 
 - Einige Funktionen nutzen die **Beta-Schnittstelle** von Microsoft Graph (u. a. für Hardware-OATH-Token). Diese kann sich ändern.
 - PIM-berechtigte Rollen werden nur mit Entra ID P2 angezeigt.
-- Die gewählte Sprache wird in `%APPDATA%\M365MfaTool\settings.json` gespeichert.
+- Sprache, Einstellungen, Fensterposition und zuletzt verwendete Benutzer werden in `%APPDATA%\M365MfaTool\settings.json` gespeichert.
 
 ---
 
@@ -373,6 +418,7 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 |---|---|
 | `Start.cmd` | Starter per Doppelklick |
 | `Start-M365MfaTool.ps1` | Oberfläche, Zustandsverwaltung und Ereignisse |
+| `UI/Theme.xaml` | Gemeinsames Aussehen aller Fenster (Farben, Buttons, Tabellen, Hilfe-Panel) |
 | `UI/MainWindow.xaml` | Layout des Hauptfensters |
 | `UI/BreakGlassDialog.xaml` | Dialog für neue Breakglass-Accounts |
 | `UI/TenantReportWindow.xaml` | Fenster des MFA-Reports |
@@ -381,6 +427,9 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 | `UI/BulkTapWindow.xaml` | Fenster des Massen-Temporary-Access-Pass |
 | `UI/AssignTokensDialog.xaml` | Dialog der Massenzuweisung von Token (Gruppe oder Benutzerliste) |
 | `UI/MfaGuideDialog.xaml` | Vorschau-Dialog der MFA-Anleitung |
+| `UI/BulkOffboardWindow.xaml` | Fenster des Massen-Offboardings |
+| `UI/SettingsDialog.xaml` | Einstellungsdialog |
+| `UI/HistoryDialog.xaml` | Verlauf eines Benutzers aus dem Überwachungsprotokoll |
 | `Modules/Graph.psm1` | Anmeldung, Graph-Anfragen, Benutzer, Domains, Rollen, MFA-Ampel, Lesen/Löschen von Methoden |
 | `Modules/Provisioning.psm1` | Einrichtung von FIDO2, TOTP-Karten, Fake-MFA, TAP und Breakglass-Accounts |
 | `Modules/TenantReport.psm1` | MFA-Report: Benutzer, Rollen, gebündelte Methodenabfragen, Ampelbewertung, Excel-Export |

@@ -40,7 +40,7 @@ if ($PSVersionTable.PSEdition -ne 'Desktop') {
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
 
 $script:AppRoot = Split-Path -Parent $PSCommandPath
-$script:AppVersion = '1.3.0'
+$script:AppVersion = '1.4.0'
 $script:RepoUrl = 'https://github.com/dominguez-posh/M365-MFA-Manager'
 # -Global so that all modules can use each other's functions (T, Invoke-M365GraphRequest, etc.).
 Import-Module (Join-Path $script:AppRoot 'Modules\Localization.psm1') -Force -Global
@@ -71,6 +71,22 @@ function Read-Settings {
     [pscustomobject]@{ Language = 'en'; GuideSender = '' }
 }
 
+function Get-Setting {
+    # Value of a settings.json property, or the default if the file does not have it yet
+    param([Parameter(Mandatory)][string]$Name, $Default)
+    if ($settings.PSObject.Properties[$Name] -and $null -ne $settings.$Name) { $settings.$Name } else { $Default }
+}
+
+function ConvertTo-RecentUserMap {
+    # settings.json: RecentUsers = { "<tenant ID>": [ { Id, DisplayName, UserPrincipalName, Mail, AccountEnabled }, ... ] }
+    param($Value)
+    $map = @{}
+    if ($null -ne $Value) {
+        foreach ($p in $Value.PSObject.Properties) { $map[[string]$p.Name] = @($p.Value | Where-Object { $null -ne $_ -and $_.Id }) }
+    }
+    $map
+}
+
 function ConvertTo-HrdnrKeyMap {
     # settings.json: HrdnrKeys = { "<tenant ID>": "hrdnr-fakemfa:1:..." }
     param($Value)
@@ -85,18 +101,43 @@ function Save-Settings {
     try {
         $folder = Split-Path -Parent $script:SettingsPath
         if (-not (Test-Path -LiteralPath $folder)) { New-Item -ItemType Directory -Path $folder -Force | Out-Null }
-        [pscustomobject]@{ Language = Get-UiLanguage; GuideSender = $script:GuideSender; HrdnrKeys = [pscustomobject]$script:HrdnrKeys } |
-            ConvertTo-Json | Set-Content -LiteralPath $script:SettingsPath -Encoding UTF8
+        [pscustomobject]@{
+            Language      = Get-UiLanguage
+            GuideSender   = $script:GuideSender
+            HrdnrKeys     = [pscustomobject]$script:HrdnrKeys
+            TotpAlgorithm = $script:Prefs.TotpAlgorithm
+            TotpTimeStep  = $script:Prefs.TotpTimeStep
+            TapLifetime   = $script:Prefs.TapLifetime
+            TapUsableOnce = $script:Prefs.TapUsableOnce
+            TenantId      = $script:Prefs.TenantId
+            ShowWelcome   = $script:Prefs.ShowWelcome
+            Window        = $script:WindowPlacement
+            RecentUsers   = [pscustomobject]$script:RecentUsers
+        } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $script:SettingsPath -Encoding UTF8
     }
     catch { }
 }
 
 $settings = Read-Settings
-$script:GuideSender = if ($settings.PSObject.Properties['GuideSender']) { [string]$settings.GuideSender } else { '' }
+$script:GuideSender = [string](Get-Setting 'GuideSender' '')
 # Public hrdnr key per tenant (fake MFA with the secret stored encrypted for hrdnr)
 $script:HrdnrKeyTenant = ""
-$script:HrdnrKeys = ConvertTo-HrdnrKeyMap $(if ($settings.PSObject.Properties['HrdnrKeys']) { $settings.HrdnrKeys } else { $null })
-Initialize-Localization -Path (Join-Path $script:AppRoot 'Languages') -Language $(if ($settings.PSObject.Properties['Language']) { $settings.Language } else { 'en' })
+$script:HrdnrKeys = ConvertTo-HrdnrKeyMap (Get-Setting 'HrdnrKeys' $null)
+# Defaults the user can change in the settings dialog
+$script:Prefs = @{
+    TotpAlgorithm = [string](Get-Setting 'TotpAlgorithm' 'hmacsha1')
+    TotpTimeStep  = [int](Get-Setting 'TotpTimeStep' 30)
+    TapLifetime   = [int](Get-Setting 'TapLifetime' 120)
+    TapUsableOnce = [bool](Get-Setting 'TapUsableOnce' $false)
+    TenantId      = [string](Get-Setting 'TenantId' '')
+    ShowWelcome   = [bool](Get-Setting 'ShowWelcome' $true)
+}
+if ($script:Prefs.TotpAlgorithm -notin 'hmacsha1', 'hmacsha256') { $script:Prefs.TotpAlgorithm = 'hmacsha1' }
+if ($script:Prefs.TotpTimeStep -notin 30, 60) { $script:Prefs.TotpTimeStep = 30 }
+if ($script:Prefs.TapLifetime -lt 10 -or $script:Prefs.TapLifetime -gt 43200) { $script:Prefs.TapLifetime = 120 }
+$script:WindowPlacement = Get-Setting 'Window' $null   # size and position of the main window
+$script:RecentUsers = ConvertTo-RecentUserMap (Get-Setting 'RecentUsers' $null)   # tenant ID -> last selected users
+Initialize-Localization -Path (Join-Path $script:AppRoot 'Languages') -Language ([string](Get-Setting 'Language' 'en'))
 
 if ($Report) {
     # Headless: tenant MFA report as Excel without the GUI (e.g. a scheduled run). The GUI is never loaded.
@@ -105,7 +146,7 @@ if ($Report) {
     try {
         if (-not $OutFile) { $OutFile = Join-Path (Get-Location).Path ('MFA-Status_{0:yyyy-MM-dd}.xlsx' -f (Get-Date)) }
         Write-Host (T 'Log.SigningIn')
-        $context = Connect-M365Graph
+        $context = Connect-M365Graph -TenantId $script:Prefs.TenantId
         Write-Host (T 'Log.SignedIn' $context.Account) -ForegroundColor Green
 
         $groupId = $null
@@ -146,30 +187,43 @@ if ($Report) {
     exit $exitCode
 }
 
+# Shared styles (UI\Theme.xaml) are loaded once into the application resources, so every window
+# finds them via StaticResource and the implicit styles (buttons, tables, cards) apply everywhere.
+if ($null -eq [System.Windows.Application]::Current) {
+    $script:App = New-Object System.Windows.Application
+    $script:App.ShutdownMode = 'OnExplicitShutdown'
+}
+[xml]$themeXml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\Theme.xaml') -Raw -Encoding UTF8
+[System.Windows.Application]::Current.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($themeXml)))
+
 [xml]$xaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\MainWindow.xaml') -Raw -Encoding UTF8
 $window = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($xaml))
 $window.Title = "M365 MFA Administration $($script:AppVersion)"
 
 $controlNames = @(
     # Header and connection
-    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnTools', 'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnBreakGlass', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
+    'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnUpdate', 'BtnHelp', 'BtnTools'
+    'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnOffboard', 'BtnBreakGlass', 'BtnSettings', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
     # User search (results in popup)
     'TxtSearch', 'BtnSearch', 'PopUsers', 'TxtUserHits', 'DgUsers'
-    # MFA methods
-    'GrpMethods', 'TxtNoUser', 'DgMethods', 'TxtMethodDetails', 'BtnRefreshMethods', 'BtnDeleteMethod'
+    # MFA methods and guided steps
+    'GrpMethods', 'PnlGuide', 'StepDot1', 'StepDot2', 'StepDot3', 'StepNum1', 'StepNum2', 'StepNum3', 'StepTitle1', 'StepTitle2', 'StepTitle3'
+    'DgMethods', 'TxtMethodDetails', 'BtnExportUser', 'BtnRefreshMethods', 'BtnDeleteMethod'
     # Selected user
     'TxtSelectedName', 'TxtSelectedUpn', 'TxtSelectedId', 'BtnCopyUpn', 'BtnCopyId'
-    'TxtMethodCount', 'TxtPreferredMethod', 'TxtSystemPreferred'
+    'TxtMethodCount', 'TxtPreferredMethod', 'TxtSystemPreferred', 'TxtLastSignIn', 'BtnHistory', 'BtnCheckCa'
     'BdgMfa', 'DotMfa', 'TxtMfaLevel', 'TxtMfaHints', 'BtnSendGuide', 'TxtGuideStatus', 'TxtRoleSummary', 'BtnShowRoles', 'LstRoles'
     # Configure method
-    'CmbMethod', 'PnlSerial', 'LblSerial', 'TxtSerial', 'PnlSecret', 'PwdSecret', 'CmbTotpAlgorithm', 'CmbTotpTimeStep', 'TxtMethodHint', 'BtnExecute'
+    'LstMethod', 'PnlPolicyWarning', 'TxtPolicyWarning', 'PnlSerial', 'LblSerial', 'TxtSerial', 'PnlSecret', 'PwdSecret', 'TxtSecretStatus'
+    'CmbTotpAlgorithm', 'CmbTotpTimeStep', 'PnlMethodHint', 'TxtMethodHint', 'BtnExecute'
     'PnlHrdnrKey', 'TxtHrdnrKey', 'BtnLoadHrdnrKey', 'TxtHrdnrKeyStatus'
     # Result: Temporary Access Pass
     'PnlTap', 'TxtTapUser', 'TxtTapValue', 'TxtTapValidity', 'BtnCopyTap', 'BtnHideTap'
     # Result: programmable TOTP card
     'PnlTotp', 'TxtTotpUser', 'ImgTotpQr', 'TxtTotpSecret', 'TxtTotpInfo', 'BtnCopyTotpSecret', 'BtnSaveTotpQr', 'BtnHideTotp'
-    # Log and status
-    'TxtLog', 'ProgressBar'
+    # Log, status, overlays
+    'LstLog', 'BtnLogCopy', 'BtnLogSave', 'ProgressBar', 'PnlBusy', 'TxtBusy', 'PnlToast', 'TxtToast', 'TxtToastIcon'
+    'PnlHelp', 'PnlWelcome', 'ChkWelcomeDontShow', 'BtnWelcomeStart'
 )
 foreach ($name in $controlNames) {
     $control = $window.FindName($name)
@@ -188,14 +242,25 @@ $script:TotpSetup = $null
 $script:ColumnKeys = @{}
 $script:ReportData = $null   # Last tenant MFA report (kept while signed in)
 $script:Rpt = $null          # Controls and state of the open report window
+$script:Policy = $null       # Authentication methods policy of the tenant (which methods are enabled)
+$script:UpdateRelease = $null
 
-# Input fields and hints per method (key = method ID from the Tag in the dropdown)
+# Input fields and hints per method (key = method ID from the Tag of the method card)
 $script:MethodUi = @{
-    Fido2            = @{ Serial = 'Config.Serial.Fido2'; Secret = $false; HrdnrKey = $false; Hint = 'Config.Hint.Fido2' }
-    FixedTotp        = @{ Serial = 'Config.Serial.Card';  Secret = $true;  HrdnrKey = $false; Hint = 'Config.Hint.FixedTotp' }
-    ProgrammableTotp = @{ Serial = 'Config.Serial.Card';  Secret = $false; HrdnrKey = $false; Hint = 'Config.Hint.ProgrammableTotp' }
-    Tap              = @{ Serial = $null;                 Secret = $false; HrdnrKey = $false; Hint = 'Config.Hint.Tap' }
-    FakeMfa          = @{ Serial = $null;                 Secret = $false; HrdnrKey = $true;  Hint = 'Config.Hint.FakeMfa' }
+    Fido2            = @{ Serial = 'Config.Serial.Fido2'; Secret = $false; HrdnrKey = $false; Hint = 'Config.Hint.Fido2';            Policy = 'Fido2' }
+    FixedTotp        = @{ Serial = 'Config.Serial.Card';  Secret = $true;  HrdnrKey = $false; Hint = 'Config.Hint.FixedTotp';        Policy = 'HardwareOath' }
+    ProgrammableTotp = @{ Serial = 'Config.Serial.Card';  Secret = $false; HrdnrKey = $false; Hint = 'Config.Hint.ProgrammableTotp'; Policy = 'HardwareOath' }
+    Tap              = @{ Serial = $null;                 Secret = $false; HrdnrKey = $false; Hint = 'Config.Hint.Tap';              Policy = 'TemporaryAccessPass' }
+    FakeMfa          = @{ Serial = $null;                 Secret = $false; HrdnrKey = $true;  Hint = 'Config.Hint.FakeMfa';          Policy = 'HardwareOath' }
+}
+
+# Log lines shown in the window (colored by level); the file gets the same lines
+$script:LogLines = New-Object System.Collections.ObjectModel.ObservableCollection[object]
+$script:LogBrushes = @{}
+foreach ($pair in @{ Info = '#334155'; Success = '#166534'; Warning = '#B45309'; Error = '#B91C1C' }.GetEnumerator()) {
+    $brush = [System.Windows.Media.BrushConverter]::new().ConvertFromString($pair.Value)
+    $brush.Freeze()
+    $script:LogBrushes[$pair.Key] = $brush
 }
 
 #endregion
@@ -260,6 +325,10 @@ function Update-DynamicTexts {
     Update-MethodsHeader
     Update-RolesToggle
     Update-GuideView
+    Update-GuideSteps
+    Update-SecretStatus
+    Set-MfaIndicator $script:SelectedAssessment
+    if ($null -ne $script:UpdateRelease) { $script:BtnUpdate.Content = T 'Update.Badge' $script:UpdateRelease.Tag }
     if ($null -ne $script:TapResult) { Show-TapResult -Tap $script:TapResult }
     if ($null -ne $script:TotpSetup) { Show-TotpResult -Setup $script:TotpSetup }
     if (@($script:DgUsers.ItemsSource).Count -gt 1) { Set-UserHitsText @($script:DgUsers.ItemsSource).Count }
@@ -303,10 +372,22 @@ function Write-LogFile {
             }
             # Logging to file is not possible at all: keep the GUI log working, report it once.
             $script:LogFileDisabled = $true
-            $script:TxtLog.AppendText(('{0} [WARNING] {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), (T 'Log.FileFailed' $_.Exception.Message)) + [Environment]::NewLine)
+            Add-LogLine -Line ('{0} [WARNING] {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), (T 'Log.FileFailed' $_.Exception.Message)) -Level Warning
             return
         }
     }
+}
+
+function Add-LogLine {
+    # One line in the log list of the window, colored by level
+    param([Parameter(Mandatory)][string]$Line, [string]$Level = 'Info')
+    $script:LogLines.Add([pscustomobject]@{
+        Line   = $Line
+        Brush  = $script:LogBrushes[$Level]
+        Weight = if ($Level -eq 'Error') { [System.Windows.FontWeights]::SemiBold } else { [System.Windows.FontWeights]::Normal }
+    })
+    if ($script:LogLines.Count -gt 3000) { $script:LogLines.RemoveAt(0) }
+    $script:LstLog.ScrollIntoView($script:LogLines[$script:LogLines.Count - 1])
 }
 
 function Write-UiLog {
@@ -315,9 +396,62 @@ function Write-UiLog {
         [ValidateSet('Info', 'Success', 'Warning', 'Error')][string]$Level = 'Info'
     )
     $line = '{0} [{1}] {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Level.ToUpperInvariant(), $Message
-    $script:TxtLog.AppendText($line + [Environment]::NewLine)
-    $script:TxtLog.ScrollToEnd()
+    Add-LogLine -Line $line -Level $Level
     Write-LogFile -Line $line
+}
+
+function Get-LogText {
+    (@($script:LogLines | ForEach-Object { $_.Line })) -join [Environment]::NewLine
+}
+
+function Show-Toast {
+    <#
+    .SYNOPSIS
+        Short confirmation at the bottom right of the main window; disappears by itself after a few seconds.
+    #>
+    param([Parameter(Mandatory)][string]$Text, [ValidateSet('Success', 'Info', 'Warning')][string]$Level = 'Success')
+    $icon = switch ($Level) { 'Success' { [string][char]0xE8FB, '#4ADE80' } 'Info' { [string][char]0xE946, '#93C5FD' } 'Warning' { [string][char]0xE7BA, '#FCD34D' } }
+    $script:TxtToastIcon.Text = $icon[0]
+    $script:TxtToastIcon.Foreground = $icon[1]
+    $script:TxtToast.Text = $Text
+    $script:PnlToast.Visibility = 'Visible'
+    $script:ToastTimer.Stop()
+    $script:ToastTimer.Start()
+}
+
+function New-UiWindow {
+    <#
+    .SYNOPSIS
+        Loads a window from UI\<Name>.xaml, sets its texts and wires the help flyout (BtnHelp, PnlHelp, BtnHelpClose).
+    #>
+    param([Parameter(Mandatory)][string]$Name, $Owner)
+    [xml]$xml = Get-Content -LiteralPath (Join-Path $script:AppRoot "UI\$Name.xaml") -Raw -Encoding UTF8
+    $w = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($xml))
+    if ($null -ne $Owner) { $w.Owner = $Owner }
+    Update-ElementTexts -Root $w
+    Register-HelpPanel -Window $w
+    $w
+}
+
+function Register-HelpPanel {
+    # "?" in the header toggles the help flyout; ✕ and Escape close it
+    param([Parameter(Mandatory)]$Window)
+    $button = $Window.FindName('BtnHelp')
+    $panel = $Window.FindName('PnlHelp')
+    $close = $Window.FindName('BtnHelpClose')
+    if ($null -eq $button -or $null -eq $panel) { return }
+    $button.Add_Click({ $panel.Visibility = if ($panel.Visibility -eq 'Visible') { 'Collapsed' } else { 'Visible' } }.GetNewClosure())
+    if ($null -ne $close) { $close.Add_Click({ $panel.Visibility = 'Collapsed' }.GetNewClosure()) }
+    $Window.Add_PreviewKeyDown({
+        param($src, $keyArgs)
+        if ($keyArgs.Key -eq 'Escape' -and $panel.Visibility -eq 'Visible') { $panel.Visibility = 'Collapsed'; $keyArgs.Handled = $true }
+    }.GetNewClosure())
+}
+
+function Select-ComboItemByTag {
+    param([Parameter(Mandatory)]$ComboBox, [string]$Tag)
+    $item = $ComboBox.Items | Where-Object { [string]$_.Tag -eq $Tag } | Select-Object -First 1
+    if ($null -ne $item) { $ComboBox.SelectedItem = $item }
 }
 
 function Show-Message {
@@ -382,12 +516,22 @@ function Copy-ToClipboard {
 }
 
 function Set-Busy {
-    param([bool]$Busy)
+    <#
+    .SYNOPSIS
+        Enables/disables the controls for the current state; while busy, an overlay with the given text blocks the window.
+    #>
+    param([bool]$Busy, [string]$Text)
     $connected = Test-M365GraphConnection
     $hasUser = $null -ne $script:SelectedUser
     $canDelete = ($null -ne $script:SelectedMethod) -and $script:SelectedMethod.CanDelete
 
+    if ($Busy) { $script:TxtBusy.Text = if ($Text) { $Text } else { T 'Busy.Default' } }
+    $script:PnlBusy.Visibility           = if ($Busy) { 'Visible' } else { 'Collapsed' }
     $script:ProgressBar.Visibility       = if ($Busy) { 'Visible' } else { 'Collapsed' }
+    $script:BtnExportUser.IsEnabled      = -not $Busy -and $hasUser
+    $script:BtnHistory.IsEnabled         = -not $Busy -and $connected -and $hasUser
+    $script:BtnCheckCa.IsEnabled         = -not $Busy -and $connected -and $hasUser
+    $script:BtnUpdate.IsEnabled          = -not $Busy
     $script:BtnLogin.IsEnabled           = -not $Busy -and -not $connected
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
     $script:BtnTools.IsEnabled           = -not $Busy -and $connected
@@ -400,6 +544,13 @@ function Set-Busy {
     $script:BtnCopyUpn.IsEnabled         = $hasUser
     $script:BtnCopyId.IsEnabled          = $hasUser
     $script:BtnSendGuide.IsEnabled       = -not $Busy -and $connected -and $hasUser
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Set-BusyText {
+    # Progress text on the busy overlay (e.g. "3 of 12")
+    param([Parameter(Mandatory)][string]$Text)
+    $script:TxtBusy.Text = $Text
     [System.Windows.Forms.Application]::DoEvents()
 }
 
@@ -444,7 +595,7 @@ function Format-UiDate {
 }
 
 function Get-SelectedMethodId {
-    if ($script:CmbMethod.SelectedItem) { [string]$script:CmbMethod.SelectedItem.Tag } else { $null }
+    if ($script:LstMethod.SelectedItem) { [string]$script:LstMethod.SelectedItem.Tag } else { $null }
 }
 
 function Update-MethodInputs {
@@ -453,10 +604,101 @@ function Update-MethodInputs {
 
     $script:PnlSerial.Visibility = if ($ui -and $ui.Serial) { 'Visible' } else { 'Collapsed' }
     $script:PnlSecret.Visibility = if ($ui -and $ui.Secret) { 'Visible' } else { 'Collapsed' }
-    $script:TxtMethodHint.Text = if ($ui) { T $ui.Hint } else { '' }
+    # The steps of the selected method; the TAP hint shows the configured lifetime
+    $script:TxtMethodHint.Text = if ($null -eq $ui) { '' }
+        elseif ($methodId -eq 'Tap') { T $ui.Hint $script:Prefs.TapLifetime $(if ($script:Prefs.TapUsableOnce) { T 'Tap.UsableOnce' } else { T 'Tap.UsableMultiple' }) }
+        else { T $ui.Hint }
+    $script:PnlMethodHint.Visibility = if ($ui) { 'Visible' } else { 'Collapsed' }
     if ($ui -and $ui.Serial) { $script:LblSerial.Text = T $ui.Serial }
     $script:PnlHrdnrKey.Visibility = if ($ui -and $ui.HrdnrKey) { 'Visible' } else { 'Collapsed' }
     if ($ui -and $ui.HrdnrKey) { Update-HrdnrKeyInput }
+    Update-PolicyWarning
+}
+
+function Update-PolicyWarning {
+    # Warns before the attempt when the tenant's authentication methods policy has the method disabled
+    $methodId = Get-SelectedMethodId
+    $enabled = if ($methodId -and $null -ne $script:Policy) { Test-M365MethodEnabled -Policy $script:Policy -MethodId $methodId } else { $null }
+    if ($enabled -eq $false) {
+        $script:TxtPolicyWarning.Text = T 'Policy.Disabled' (T "Policy.Method.$($script:MethodUi[$methodId].Policy)")
+        $script:PnlPolicyWarning.Visibility = 'Visible'
+    }
+    else {
+        $script:PnlPolicyWarning.Visibility = 'Collapsed'
+    }
+}
+
+function Update-SecretStatus {
+    # Live check of the card secret: Base32 characters and minimum length, before anything is sent
+    $secret = $script:PwdSecret.Password
+    if ([string]::IsNullOrWhiteSpace($secret)) {
+        $script:TxtSecretStatus.Visibility = 'Collapsed'
+        return
+    }
+    $normalized = ($secret -replace '[\s-]', '').ToUpperInvariant().TrimEnd('=')
+    $invalid = @([regex]::Matches($normalized, '[^A-Z2-7]') | ForEach-Object { $_.Value } | Select-Object -Unique)
+    if ($invalid.Count) {
+        $script:TxtSecretStatus.Text = ([string][char]0x2717) + " " + (T 'Totp.InvalidChar' ($invalid -join ' '))
+        $script:TxtSecretStatus.Foreground = '#B91C1C'
+    }
+    elseif ($normalized.Length -lt 16) {
+        $script:TxtSecretStatus.Text = ([string][char]0x2717) + " " + (T 'Totp.SecretTooShort')
+        $script:TxtSecretStatus.Foreground = '#B91C1C'
+    }
+    else {
+        $script:TxtSecretStatus.Text = ([string][char]0x2713) + " " + (T 'Config.SecretValid' $normalized.Length)
+        $script:TxtSecretStatus.Foreground = '#166534'
+    }
+    $script:TxtSecretStatus.Visibility = 'Visible'
+}
+
+function Update-GuideSteps {
+    <#
+    .SYNOPSIS
+        Highlights the current step (sign in → find user → configure method) in the guided empty state.
+    #>
+    $current = if ($null -eq $script:Context) { 1 } elseif ($null -eq $script:SelectedUser) { 2 } else { 3 }
+    for ($step = 1; $step -le 3; $step++) {
+        $dot = Get-Variable -Name "StepDot$step" -Scope Script -ValueOnly
+        $number = Get-Variable -Name "StepNum$step" -Scope Script -ValueOnly
+        $title = Get-Variable -Name "StepTitle$step" -Scope Script -ValueOnly
+        if ($step -lt $current) {
+            $dot.Background = '#DCFCE7'; $number.Foreground = '#166534'; $number.Text = [string][char]0x2713; $title.Foreground = '#166534'
+        }
+        elseif ($step -eq $current) {
+            $dot.Background = '#0067B8'; $number.Foreground = 'White'; $number.Text = "$step"; $title.Foreground = '#0067B8'
+        }
+        else {
+            $dot.Background = '#E2E8F0'; $number.Foreground = '#475569'; $number.Text = "$step"; $title.Foreground = '#242424'
+        }
+    }
+}
+
+function Add-RecentUser {
+    # Remembers the last 10 selected users per tenant (shown when the empty search box is clicked)
+    param([Parameter(Mandatory)]$User)
+    $tenantId = if ($script:Context) { [string]$script:Context.TenantId } else { '' }
+    if (-not $tenantId) { return }
+    $entry = [pscustomobject]@{
+        Id = $User.Id; DisplayName = $User.DisplayName; UserPrincipalName = $User.UserPrincipalName
+        Mail = $(if ($User.PSObject.Properties['Mail']) { $User.Mail } else { '' })
+        AccountEnabled = $(if ($User.PSObject.Properties['AccountEnabled']) { [bool]$User.AccountEnabled } else { $true })
+    }
+    $list = @($entry) + @($(if ($script:RecentUsers.ContainsKey($tenantId)) { $script:RecentUsers[$tenantId] } else { @() }) | Where-Object { $_.Id -ne $User.Id })
+    $script:RecentUsers[$tenantId] = @($list | Select-Object -First 10)
+    Save-Settings
+}
+
+function Show-RecentUsers {
+    # Recently used users of this tenant in the search popup
+    $tenantId = if ($script:Context) { [string]$script:Context.TenantId } else { '' }
+    if (-not $tenantId -or -not $script:RecentUsers.ContainsKey($tenantId)) { return $false }
+    $recent = @($script:RecentUsers[$tenantId])
+    if (-not $recent.Count) { return $false }
+    $script:DgUsers.ItemsSource = $recent
+    $script:TxtUserHits.Text = T 'Search.Recent' $recent.Count
+    $script:PopUsers.IsOpen = $true
+    $true
 }
 
 function Get-TenantHrdnrKey {
@@ -563,6 +805,8 @@ function Set-MfaIndicator {
     $hints = @(if ($Assessment) { $Assessment.Hints })
     $script:TxtMfaHints.Text = ($hints | ForEach-Object { "• $_" }) -join [Environment]::NewLine
     $script:TxtMfaHints.Visibility = if ($hints.Count) { 'Visible' } else { 'Collapsed' }
+    # The badge explains the rating and the recommended next step
+    $script:BdgMfa.ToolTip = (T "Mfa.Explain.$level") + $(if ($hints.Count) { [Environment]::NewLine + [Environment]::NewLine + (T 'Mfa.Explain.Next') + [Environment]::NewLine + $script:TxtMfaHints.Text } else { '' })
 }
 
 function Update-GuideView {
@@ -626,6 +870,8 @@ function Clear-MfaView {
     $script:TxtMethodCount.Text = '-'
     $script:TxtPreferredMethod.Text = '-'
     $script:TxtSystemPreferred.Text = '-'
+    $script:TxtLastSignIn.Text = '-'
+    $script:BtnCheckCa.Visibility = 'Collapsed'
     Set-MfaIndicator $null
     Set-AdminRoles -Roles @() -Status '-'
     $script:SelectedAssessment = $null
@@ -645,8 +891,9 @@ function Clear-SelectedUser {
     $script:TxtSelectedUpn.Text = '-'
     $script:TxtSelectedId.Text = '-'
     Update-MethodsHeader
-    $script:TxtNoUser.Visibility = 'Visible'
+    $script:PnlGuide.Visibility = 'Visible'
     Clear-MfaView
+    Update-GuideSteps
 }
 
 function Select-User {
@@ -657,7 +904,9 @@ function Select-User {
     $script:TxtSelectedUpn.Text = $User.UserPrincipalName
     $script:TxtSelectedId.Text = $User.Id
     Update-MethodsHeader
-    $script:TxtNoUser.Visibility = 'Collapsed'
+    $script:PnlGuide.Visibility = 'Collapsed'
+    Update-GuideSteps
+    Add-RecentUser -User $User
     Write-UiLog (T 'Log.UserSelected' $User.UserPrincipalName)
     Update-MfaView
 }
@@ -681,6 +930,7 @@ function Set-ConnectionStatus {
         $script:TxtConnectionStatus.Foreground = '#4ADE80'
         $script:TxtTenant.Text = T 'Header.Tenant' $Context.TenantId
     }
+    Update-GuideSteps
 }
 
 function Update-MfaView {
@@ -711,7 +961,7 @@ function Update-MfaView {
     }
 
     try {
-        Set-Busy $true
+        Set-Busy $true (T 'Busy.LoadingMethods' $user.DisplayName)
         Write-UiLog (T 'Log.LoadingMethods' $user.UserPrincipalName)
         $methods = @(Get-M365UserAuthMethods -UserId $user.Id | Sort-Object TypeName, Created)
 
@@ -738,6 +988,8 @@ function Update-MfaView {
             Set-AdminRoles -Roles @() -Status (T 'Common.NotAvailable')
             Write-UiLog (T 'Log.RolesFailed' $_.Exception.Message) 'Warning'
         }
+        # Administrators: offer the Conditional Access exclusion check (break-glass accounts)
+        $script:BtnCheckCa.Visibility = if ($roles.Count) { 'Visible' } else { 'Collapsed' }
 
         $assessment = Get-M365MfaAssessment -Methods $methods -HasAdminRoles ($roles.Count -gt 0)
         Set-MfaIndicator $assessment
@@ -761,6 +1013,18 @@ function Update-MfaView {
             $script:TxtPreferredMethod.Text = T 'Common.NotAvailable'
             $script:TxtSystemPreferred.Text = T 'Common.NotAvailable'
             Write-UiLog (T 'Log.PreferencesFailed' $_.Exception.Message) 'Warning'
+        }
+
+        # Last sign-in (needs Entra ID P1/P2; otherwise "not available")
+        try {
+            $activity = Get-M365UserSignInActivity -UserId $user.Id
+            $script:TxtLastSignIn.Text = if ($null -eq $activity) { T 'Common.NotAvailable' }
+                elseif ($activity.LastSignIn) { Format-UiDate $activity.LastSignIn }
+                elseif ($activity.LastNonInteractive) { T 'User.LastSignIn.NonInteractive' (Format-UiDate $activity.LastNonInteractive) }
+                else { T 'User.NeverSignedIn' }
+        }
+        catch {
+            $script:TxtLastSignIn.Text = T 'Common.NotAvailable'
         }
     }
     catch {
@@ -797,18 +1061,31 @@ $BtnTools.Add_Click({
 
 $BtnLogin.Add_Click({
     try {
-        Set-Busy $true
+        Set-Busy $true (T 'Busy.SigningIn')
         # Install missing modules first, visibly in the GUI (instead of console prompts in the background)
         if (-not (Install-MissingModules)) { return }
         $TxtConnectionStatus.Text = T 'Header.SigningIn'
         $TxtConnectionStatus.Foreground = '#FCD34D'
         Write-UiLog (T 'Log.SigningIn')
         Update-UiNow
-        $context = Connect-M365Graph
+        $context = Connect-M365Graph -TenantId $script:Prefs.TenantId
         # The console was shown for the sign-in dialog; Windows Terminal may have taken it over meanwhile
         if ($HideConsole) { Hide-M365ConsoleWindow }
         Set-ConnectionStatus $context
         Write-UiLog (T 'Log.SignedIn' $context.Account) 'Success'
+        Show-Toast (T 'Log.SignedIn' $context.Account)
+
+        # Which methods does the tenant allow? Warns in the configuration before a doomed attempt.
+        try {
+            $script:Policy = Get-M365AuthMethodPolicy
+            $disabled = @($script:MethodUi.Values | ForEach-Object { $_.Policy } | Select-Object -Unique | Where-Object { $script:Policy.ContainsKey($_) -and -not $script:Policy[$_] })
+            if ($disabled.Count) { Write-UiLog (T 'Policy.DisabledSummary' (($disabled | ForEach-Object { T "Policy.Method.$_" }) -join ', ')) 'Warning' }
+        }
+        catch {
+            $script:Policy = $null
+            Write-UiLog (T 'Policy.ReadFailed' $_.Exception.Message) 'Warning'
+        }
+        Update-PolicyWarning
         $TxtSearch.Focus() | Out-Null
     }
     catch {
@@ -824,10 +1101,12 @@ $BtnLogout.Add_Click({
     try {
         Disconnect-M365Graph
         $script:ReportData = $null
+        $script:Policy = $null
         $PopUsers.IsOpen = $false
         $DgUsers.ItemsSource = $null
         Clear-SelectedUser
         Set-ConnectionStatus $null
+        Update-PolicyWarning
         Write-UiLog (T 'Log.SignedOut') 'Success'
     }
     catch {
@@ -845,7 +1124,7 @@ $BtnSearch.Add_Click({
         return
     }
     try {
-        Set-Busy $true
+        Set-Busy $true (T 'Busy.Searching' $term)
         Write-UiLog (T 'Log.Searching' $term)
         $users = @(Find-M365User -SearchTerm $term)
         Write-UiLog (T 'Log.UsersFound' $users.Count) 'Success'
@@ -889,9 +1168,11 @@ $DgUsers.Add_SelectionChanged({
     Select-User -User $user
 })
 
-# Clicking into the search box reopens the last results.
+# Clicking into the search box reopens the last results; an empty box shows the recently used users.
 $TxtSearch.Add_PreviewMouseLeftButtonUp({
-    if (-not $PopUsers.IsOpen -and @($DgUsers.ItemsSource).Count -gt 1) { $PopUsers.IsOpen = $true }
+    if ($PopUsers.IsOpen) { return }
+    if ([string]::IsNullOrWhiteSpace($TxtSearch.Text) -and (Test-M365GraphConnection)) { Show-RecentUsers | Out-Null; return }
+    if (@($DgUsers.ItemsSource).Count -gt 1) { $PopUsers.IsOpen = $true }
 })
 
 # Close the popup ourselves: StaysOpen="False" is unreliable when the popup is opened
@@ -914,6 +1195,7 @@ $window.Add_SizeChanged({ $PopUsers.IsOpen = $false })
 $BtnCopyUpn.Add_Click({
     if ($null -eq $script:SelectedUser) { return }
     Copy-ToClipboard -Text $script:SelectedUser.UserPrincipalName -LogMessage (T 'Log.UpnCopied' $script:SelectedUser.UserPrincipalName)
+    Show-Toast (T 'Toast.Copied') 'Info'
 })
 
 $BtnShowRoles.Add_Click({
@@ -924,6 +1206,7 @@ $BtnShowRoles.Add_Click({
 $BtnCopyId.Add_Click({
     if ($null -eq $script:SelectedUser) { return }
     Copy-ToClipboard -Text $script:SelectedUser.Id -LogMessage (T 'Log.IdCopied' $script:SelectedUser.Id)
+    Show-Toast (T 'Toast.Copied') 'Info'
 })
 
 #endregion
@@ -943,16 +1226,21 @@ $BtnDeleteMethod.Add_Click({
     $method = $script:SelectedMethod
     if ($null -eq $user -or $null -eq $method) { return }
 
+    # The confirmation names the consequence; a warning when it is the user's last real method
     $question = T 'Delete.Confirm' $user.UserPrincipalName $method.TypeName $method.DisplayName (Format-UiDate $method.Created) $method.Id
+    $question += "`n`n" + (T 'Delete.Consequence')
+    $remaining = @($DgMethods.ItemsSource | Where-Object { $null -ne $_ -and $_.CanDelete -and -not $_.IsFakeMfa -and $_.Id -ne $method.Id })
+    if (-not $remaining.Count -and -not $method.IsFakeMfa) { $question += "`n`n" + (T 'Delete.LastMethod') }
     if (-not (Confirm-Action -Text $question -Title (T 'Title.ConfirmDelete'))) { return }
 
     $deleted = $false
     try {
-        Set-Busy $true
+        Set-Busy $true (T 'Busy.Deleting' $method.TypeName)
         Write-UiLog (T 'Log.Deleting' $method.TypeName $method.DisplayName $method.Id $user.UserPrincipalName) 'Warning'
         Remove-M365UserAuthMethod -UserId $user.Id -Method $method -Confirm:$false
         $deleted = $true
         Write-UiLog (T 'Log.Deleted' $method.TypeName $method.DisplayName) 'Success'
+        Show-Toast (T 'Log.Deleted' $method.TypeName $method.DisplayName)
     }
     catch {
         Write-UiError -Message (T 'Log.DeleteFailed' $_.Exception.Message) -Title (T 'Title.DeleteFailed')
@@ -968,7 +1256,8 @@ $BtnDeleteMethod.Add_Click({
 
 #region Events: configure method
 
-$CmbMethod.Add_SelectionChanged({ Update-MethodInputs })
+$LstMethod.Add_SelectionChanged({ Update-MethodInputs })
+$PwdSecret.Add_PasswordChanged({ Update-SecretStatus })
 
 $TxtHrdnrKey.Add_LostFocus({ Update-HrdnrKeyInput })
 
@@ -1007,11 +1296,15 @@ $BtnExecute.Add_Click({
     }
 
     $user = $script:SelectedUser
-    $methodName = [string]$CmbMethod.SelectedItem.Content
+    $methodName = T "Method.$methodId"
     $ui = $script:MethodUi[$methodId]
 
     # Validate input before asking for confirmation
     $options = @{}
+    if ($methodId -eq 'Tap') {
+        $options.LifetimeMinutes = $script:Prefs.TapLifetime
+        $options.UsableOnce = $script:Prefs.TapUsableOnce
+    }
     if ($ui.Serial) {
         if ([string]::IsNullOrWhiteSpace($TxtSerial.Text)) {
             Show-Message -Text (T 'Prov.MissingInput' (T $ui.Serial)) -Title (T 'Title.MissingInput')
@@ -1054,14 +1347,16 @@ $BtnExecute.Add_Click({
     if ($options.ContainsKey('HashFunction')) { $question += "`n" + (T 'Config.ConfirmTotp' ([string]$CmbTotpAlgorithm.SelectedItem.Content) $options.TimeStep) }
     if ($hrdnrKey) { $question += "`n`n" + (T 'Config.ConfirmHrdnr' $hrdnrKey.KeyId) }
     if ($methodId -eq 'Tap') {
+        $question += "`n" + (T 'Config.ConfirmTap' $options.LifetimeMinutes $(if ($options.UsableOnce) { T 'Tap.UsableOnce' } else { T 'Tap.UsableMultiple' }))
         $existingTap = @($DgMethods.ItemsSource | Where-Object { $null -ne $_ -and $_.Type -eq '#microsoft.graph.temporaryAccessPassAuthenticationMethod' })
         if ($existingTap.Count) { $question += "`n`n" + (T 'Config.ConfirmReplaceTap') }
     }
+    if ($PnlPolicyWarning.Visibility -eq 'Visible') { $question += "`n`n" + $TxtPolicyWarning.Text }
     if (-not (Confirm-Action -Text $question -Title (T 'Title.ConfirmConfig'))) { return }
 
     $result = $null
     try {
-        Set-Busy $true
+        Set-Busy $true (T 'Busy.Provisioning' $methodName)
         Hide-Results
         Write-UiLog (T 'Log.Provisioning' $methodName $user.UserPrincipalName) 'Warning'
         if ($methodId -eq 'Fido2') { Write-UiLog (T 'Fido2.Prompt') }
@@ -1073,6 +1368,7 @@ $BtnExecute.Add_Click({
 
         # The TAP and TOTP secret are intentionally not logged, only displayed.
         Write-UiLog $result.Message 'Success'
+        Show-Toast $result.Message
         if ($null -ne $result.TemporaryAccessPass) { Show-TapResult -Tap $result.TemporaryAccessPass }
         if ($null -ne $result.TotpSetup) { Show-TotpResult -Setup $result.TotpSetup }
         $TxtSerial.Clear()
@@ -1099,12 +1395,14 @@ $BtnExecute.Add_Click({
 
 $BtnCopyTap.Add_Click({
     Copy-ToClipboard -Text $TxtTapValue.Text -LogMessage (T 'Log.TapCopied')
+    Show-Toast (T 'Log.TapCopied') 'Info'
 })
 
 $BtnHideTap.Add_Click({ Hide-TapResult })
 
 $BtnCopyTotpSecret.Add_Click({
     Copy-ToClipboard -Text $TxtTotpSecret.Text -LogMessage (T 'Log.SecretCopied')
+    Show-Toast (T 'Log.SecretCopied') 'Info'
 })
 
 $BtnSaveTotpQr.Add_Click({
@@ -1154,10 +1452,7 @@ function Show-MfaGuideDialog {
     #>
     param([Parameter(Mandatory)]$Recipient)
 
-    [xml]$dialogXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\MfaGuideDialog.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($dialogXaml))
-    $dialog.Owner = $window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'MfaGuideDialog' -Owner $window
 
     $script:GuideDialog = @{
         Window      = $dialog
@@ -1241,6 +1536,7 @@ $BtnSendGuide.Add_Click({
         Send-M365MfaGuideMail -Sender $result.Sender -Recipient $recipient -Mail $result.Mail
         $sent = $true
         Write-UiLog (T 'Guide.Sent' $recipient.Mail $languageName $result.Sender) 'Success'
+        Show-Toast (T 'Guide.Sent' $recipient.Mail $languageName $result.Sender)
 
         # Remember the sender mailbox for the next time
         $script:GuideSender = $result.Sender
@@ -1280,10 +1576,7 @@ function Show-BreakGlassDialog {
     #>
     param([Parameter(Mandatory)][string[]]$Domains)
 
-    [xml]$dialogXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\BreakGlassDialog.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($dialogXaml))
-    $dialog.Owner = $window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'BreakGlassDialog' -Owner $window
 
     $cmbDomain   = $dialog.FindName('CmbBgDomain')
     $txtUpnHint  = $dialog.FindName('TxtBgUpnHint')
@@ -1351,11 +1644,11 @@ $BtnBreakGlass.Add_Click({
 
     $result = $null
     try {
-        Set-Busy $true
+        Set-Busy $true (T 'Busy.BreakGlass')
         Hide-Results
         $result = New-M365BreakGlassAccount -Domain $options.Domain -AssignGlobalAdmin:$options.AssignGlobalAdmin `
             -Fido2SerialNumber $options.Fido2SerialNumber `
-            -OnProgress { param($Message) Write-UiLog "Breakglass: $Message" } `
+            -OnProgress { param($Message) Write-UiLog "Breakglass: $Message"; Set-BusyText "Breakglass: $Message" } `
             -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
     }
     catch {
@@ -1669,10 +1962,7 @@ function Show-TenantReportWindow {
     .SYNOPSIS
         Shows the tenant MFA report. Returns the user double-clicked in the list, otherwise $null.
     #>
-    [xml]$reportXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\TenantReportWindow.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($reportXaml))
-    $dialog.Owner = $window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'TenantReportWindow' -Owner $window
 
     $script:Rpt = @{
         Window = $dialog; View = $null; Running = $false; Cancel = $false; CloseRequested = $false
@@ -2111,10 +2401,7 @@ function Export-TotpImportResults {
 }
 
 function Show-TotpImportWindow {
-    [xml]$importXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\TotpImportWindow.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($importXaml))
-    $dialog.Owner = $window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'TotpImportWindow' -Owner $window
 
     $script:Ti = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
     foreach ($name in @(
@@ -2127,6 +2414,9 @@ function Show-TotpImportWindow {
     $ti = $script:Ti
     foreach ($column in $ti.DgTi.Columns) { $column.Header = T ([string]$column.Header) }
     $ti.TxtTiTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
+    # Defaults from the settings
+    if ($script:Prefs.TotpAlgorithm -eq 'hmacsha256') { $ti.RbTiSha256.IsChecked = $true } else { $ti.RbTiSha1.IsChecked = $true }
+    Select-ComboItemByTag -ComboBox $ti.CmbTiTimeStep -Tag ([string]$script:Prefs.TotpTimeStep)
     Set-TiBusy $false
 
     $ti.BtnTiBrowse.Add_Click({ Select-TotpImportFile })
@@ -2335,10 +2625,7 @@ function Show-AssignTokensDialog {
     #>
     param([int]$FreeCount)
 
-    [xml]$dialogXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\AssignTokensDialog.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($dialogXaml))
-    $dialog.Owner = $script:Inv.Window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'AssignTokensDialog' -Owner $script:Inv.Window
 
     $at = @{ Window = $dialog; Result = $null }
     foreach ($name in 'TxtAtFree', 'RbAtGroup', 'RbAtCsv', 'PnlAtGroup', 'TxtAtGroupSearch', 'BtnAtFindGroup', 'CmbAtGroup', 'PnlAtCsv', 'TxtAtFile', 'BtnAtBrowse', 'BtnAtStart') {
@@ -2522,10 +2809,7 @@ function Show-TokenInventoryWindow {
     .SYNOPSIS
         Shows the hardware OATH token inventory. Returns $true if tokens were changed.
     #>
-    [xml]$inventoryXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\TokenInventoryWindow.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($inventoryXaml))
-    $dialog.Owner = $window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'TokenInventoryWindow' -Owner $window
 
     $script:Inv = @{ Window = $dialog; Devices = (New-Object System.Collections.ObjectModel.ObservableCollection[object]); View = $null
                      Running = $false; Filter = 'All'; SearchText = ''; Changed = $false }
@@ -2799,22 +3083,38 @@ function Export-BtResults {
     }
 }
 
+function Update-BtLifetimeHint {
+    # Live check of the lifetime field: valid range or a red hint
+    $bt = $script:Bt
+    if ($null -eq (Get-BtLifetime)) {
+        $bt.TxtBtLifetimeHint.Text = T 'BulkTap.InvalidLifetime'
+        $bt.TxtBtLifetimeHint.Foreground = '#B91C1C'
+        $bt.TxtBtLifetime.BorderBrush = '#DC2626'
+    }
+    else {
+        $bt.TxtBtLifetimeHint.Text = T 'BulkTap.LifetimeRange'
+        $bt.TxtBtLifetimeHint.Foreground = '#64748B'
+        $bt.TxtBtLifetime.ClearValue([System.Windows.Controls.Control]::BorderBrushProperty)
+    }
+}
+
 function Show-BulkTapWindow {
-    [xml]$tapXaml = Get-Content -LiteralPath (Join-Path $script:AppRoot 'UI\BulkTapWindow.xaml') -Raw -Encoding UTF8
-    $dialog = [Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($tapXaml))
-    $dialog.Owner = $window
-    Update-ElementTexts -Root $dialog
+    $dialog = New-UiWindow -Name 'BulkTapWindow' -Owner $window
 
     $script:Bt = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
     foreach ($name in @(
         'TxtBtTenant', 'RbBtCsv', 'RbBtGroup', 'PnlBtCsv', 'TxtBtFile', 'BtnBtBrowse', 'PnlBtGroup', 'TxtBtGroupSearch', 'BtnBtFindGroup', 'CmbBtGroup'
-        'TxtBtLifetime', 'ChkBtUsableOnce', 'DgBt', 'TxtBtStatus', 'PrgBt', 'BtnBtTest', 'BtnBtStart', 'BtnBtExport', 'BtnBtCancel', 'BtnBtClose'
+        'TxtBtLifetime', 'TxtBtLifetimeHint', 'ChkBtUsableOnce', 'DgBt', 'TxtBtStatus', 'PrgBt', 'BtnBtTest', 'BtnBtStart', 'BtnBtExport', 'BtnBtCancel', 'BtnBtClose'
     )) {
         $script:Bt[$name] = $dialog.FindName($name)
     }
     $bt = $script:Bt
     foreach ($column in $bt.DgBt.Columns) { $column.Header = T ([string]$column.Header) }
     $bt.TxtBtTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
+    # Defaults from the settings
+    $bt.TxtBtLifetime.Text = [string]$script:Prefs.TapLifetime
+    $bt.ChkBtUsableOnce.IsChecked = $script:Prefs.TapUsableOnce
+    Update-BtLifetimeHint
     Set-BtBusy $false
 
     $updateSource = {
@@ -2840,7 +3140,7 @@ function Show-BulkTapWindow {
         if ($keyArgs.Key -eq 'Enter') { Find-BtGroup }
     })
     $bt.CmbBtGroup.Add_SelectionChanged({ Reset-BtTest })
-    $bt.TxtBtLifetime.Add_TextChanged({ Reset-BtTest })
+    $bt.TxtBtLifetime.Add_TextChanged({ Update-BtLifetimeHint; Reset-BtTest })
     $bt.ChkBtUsableOnce.Add_Click({ Reset-BtTest })
     $bt.BtnBtTest.Add_Click({ Start-BtTest })
     $bt.BtnBtStart.Add_Click({ Start-BtCreate })
@@ -2876,17 +3176,497 @@ $BtnBulkTap.Add_Click({
 
 #endregion
 
-#region Update check
+#region Bulk offboarding
+
+function Set-ObBusy {
+    param([bool]$Busy)
+    $ob = $script:Ob
+    $ob.Running = $Busy
+    foreach ($control in $ob.RbObCsv, $ob.RbObGroup, $ob.BtnObBrowse, $ob.TxtObGroupSearch, $ob.BtnObFindGroup, $ob.CmbObGroup,
+                         $ob.ChkObMethods, $ob.ChkObSessions, $ob.ChkObDisable, $ob.BtnObTest, $ob.BtnObClose) {
+        $control.IsEnabled = -not $Busy
+    }
+    $ready = @($ob.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
+    $ob.BtnObStart.IsEnabled = -not $Busy -and $ob.Tested -and $ready -gt 0
+    $ob.BtnObExport.IsEnabled = -not $Busy -and @($ob.Results).Count -gt 0
+    $ob.BtnObCancel.IsEnabled = $Busy
+    $ob.PrgOb.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Set-ObStatus {
+    param([string]$Message)
+    $script:Ob.TxtObStatus.Text = $Message
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Reset-ObTest {
+    $ob = $script:Ob
+    if (-not $ob.Tested) { return }
+    $ob.Tested = $false
+    $ob.Results = @()
+    $ob.DgOb.ItemsSource = $null
+    Set-ObStatus (T 'Import.Status.TestAgain')
+    Set-ObBusy $false
+}
+
+function Get-ObSourceText {
+    $ob = $script:Ob
+    if ($ob.RbObGroup.IsChecked) {
+        $group = $ob.CmbObGroup.SelectedItem
+        if ($group) { T 'Report.Scope.GroupName' $group.DisplayName } else { '' }
+    }
+    else {
+        [System.IO.Path]::GetFileName([string]$ob.TxtObFile.Text)
+    }
+}
+
+function Get-ObRows {
+    $ob = $script:Ob
+    if ($ob.RbObGroup.IsChecked) {
+        $group = $ob.CmbObGroup.SelectedItem
+        if ($null -eq $group) { throw (T 'Report.SelectGroup') }
+        $line = 0
+        foreach ($user in @(Get-M365ReportUsers -GroupId $group.Id | Sort-Object UserPrincipalName)) {
+            $line++
+            [pscustomobject]@{ Line = $line; Upn = $user.UserPrincipalName }
+        }
+    }
+    else {
+        if (-not $ob.TxtObFile.Text) { throw (T 'Import.NoFile') }
+        Read-UpnListFile -Path $ob.TxtObFile.Text
+    }
+}
+
+function Get-ObActionText {
+    # "remove MFA methods, revoke sessions" for confirmations, log and export
+    $ob = $script:Ob
+    $actions = @()
+    if ($ob.ChkObMethods.IsChecked) { $actions += T 'Offboard.RemoveMethods' }
+    if ($ob.ChkObSessions.IsChecked) { $actions += T 'Offboard.RevokeSessions' }
+    if ($ob.ChkObDisable.IsChecked) { $actions += T 'Offboard.DisableAccount' }
+    $actions -join ', '
+}
+
+function Find-ObGroup {
+    $ob = $script:Ob
+    $term = $ob.TxtObGroupSearch.Text.Trim()
+    if (-not $term) {
+        Show-Message -Text (T 'Report.GroupSearchEmpty') -Title (T 'Offboard.Title')
+        return
+    }
+    try {
+        Set-ObBusy $true
+        $groups = @(Find-M365Group -SearchTerm $term)
+    }
+    catch {
+        Write-UiError -Message $_.Exception.Message -Title (T 'Offboard.Title')
+        return
+    }
+    finally {
+        Set-ObBusy $false
+    }
+    Reset-ObTest
+    $ob.CmbObGroup.ItemsSource = $groups
+    if (-not $groups.Count) {
+        Show-Message -Text (T 'Report.NoGroups' $term) -Title (T 'Offboard.Title')
+        return
+    }
+    $ob.CmbObGroup.SelectedIndex = 0
+    if ($groups.Count -gt 1) { $ob.CmbObGroup.IsDropDownOpen = $true }
+    Set-ObStatus (T 'Report.GroupsFound' $groups.Count)
+}
+
+function Start-ObTest {
+    $ob = $script:Ob
+    Reset-ObTest
+    try {
+        Set-ObBusy $true
+        $ob.PrgOb.IsIndeterminate = $true
+        Set-ObStatus (T 'Import.Status.Reading')
+        $rows = @(Get-ObRows)
+        if (-not $rows.Count) { throw (T 'Import.EmptyFile') }
+        Set-ObStatus (T 'Offboard.Status.Checking' $rows.Count)
+        $ob.Results = @(Test-OffboardBulk -Rows $rows -OwnAccount $script:Context.Account -Wait { param($Milliseconds) Wait-Ui $Milliseconds })
+        $ob.DgOb.ItemsSource = $ob.Results
+        $ob.Tested = $true
+        $counts = @{ OK = 0; Warning = 0; Error = 0 }
+        foreach ($result in $ob.Results) { $counts[$result.Status]++ }
+        $summary = T 'Import.TestDone' $ob.Results.Count $counts.OK $counts.Warning $counts.Error
+        Set-ObStatus $summary
+        Write-UiLog ('{0}: {1} ({2})' -f (T 'Offboard.Title'), $summary, (Get-ObSourceText))
+    }
+    catch {
+        Set-ObStatus ''
+        Write-UiError -Message (T 'Offboard.Failed' $_.Exception.Message) -Title (T 'Offboard.Title')
+    }
+    finally {
+        $ob.PrgOb.IsIndeterminate = $false
+        Set-ObBusy $false
+    }
+}
+
+function Start-ObRun {
+    $ob = $script:Ob
+    if (-not ($ob.ChkObMethods.IsChecked -or $ob.ChkObSessions.IsChecked -or $ob.ChkObDisable.IsChecked)) {
+        Show-Message -Text (T 'Offboard.NoAction') -Title (T 'Offboard.Title')
+        return
+    }
+    $ready = @($ob.Results | Where-Object { $_.Status -in 'OK', 'Warning' }).Count
+    $methodTotal = ($ob.Results | Where-Object { $_.Status -in 'OK', 'Warning' } | Measure-Object -Property MethodCount -Sum).Sum
+    $question = T 'Offboard.Confirm' $ready (Get-ObActionText) $methodTotal (Get-TiTenantLabel)
+    if (-not (Confirm-Action -Text $question -Title (T 'Offboard.Title'))) { return }
+
+    $ob.Cancel = $false
+    $ob.Tested = $false
+    try {
+        Set-ObBusy $true
+        $ob.PrgOb.Value = 0
+        Write-UiLog (T 'Offboard.Log.Started' $ready (Get-ObActionText)) 'Warning'
+        Invoke-OffboardBulk -Results $ob.Results -RemoveMethods:$ob.ChkObMethods.IsChecked -RevokeSessions:$ob.ChkObSessions.IsChecked -DisableAccount:$ob.ChkObDisable.IsChecked `
+            -OnProgress {
+                param($Result, $Done, $Total)
+                if ($Result.Status -eq 'Done') { Write-UiLog (T 'Offboard.Log.Done' $Result.Upn $Result.Removed) 'Success' }
+                else { Write-UiLog (T 'Offboard.Log.Failed' $Result.Upn $Result.Message) 'Error' }
+                $script:Ob.PrgOb.Value = if ($Total) { 100 * $Done / $Total } else { 100 }
+                $script:Ob.DgOb.Items.Refresh()
+                Set-ObStatus (T 'Offboard.Status.Running' $Done $Total)
+            } `
+            -ShouldCancel { $script:Ob.Cancel } `
+            -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
+    }
+    catch {
+        Write-UiError -Message (T 'Offboard.Failed' $_.Exception.Message) -Title (T 'Offboard.Title')
+    }
+    finally {
+        $ob.DgOb.Items.Refresh()
+        Set-ObBusy $false
+    }
+
+    $done = @($ob.Results | Where-Object Status -eq 'Done').Count
+    $failed = @($ob.Results | Where-Object Status -eq 'Failed').Count
+    $summary = T 'Offboard.Done' $done $failed ($ready - $done - $failed)
+    Set-ObStatus $summary
+    Write-UiLog $summary $(if ($failed) { 'Warning' } else { 'Success' })
+    if ($ob.CloseRequested) { $ob.Window.Close() }
+}
+
+function Export-ObResults {
+    $ob = $script:Ob
+    $rows = @($ob.Results)
+    if (-not $rows.Count) {
+        Show-Message -Text (T 'Report.NothingToExport') -Title (T 'Offboard.Title')
+        return
+    }
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Report.Export'
+    $dialog.Filter = (T 'Report.ExcelFilter') + ' (*.xlsx)|*.xlsx'
+    $dialog.FileName = 'Offboarding_{0:yyyy-MM-dd_HHmm}.xlsx' -f (Get-Date)
+    if (-not $dialog.ShowDialog($ob.Window)) { return }
+    try {
+        Export-OffboardXlsx -Path $dialog.FileName -Rows $rows -Tenant (Get-TiTenantLabel) -Source (Get-ObSourceText) -Settings (Get-ObActionText)
+        Write-UiLog (T 'Report.Exported' $dialog.FileName) 'Success'
+    }
+    catch {
+        Write-UiError -Message (T 'Report.ExportFailed' $_.Exception.Message) -Title (T 'Offboard.Title')
+        return
+    }
+    if (Confirm-Action -Text (T 'Report.OpenFile' $dialog.FileName) -Title (T 'Offboard.Title') -Icon Question -DefaultYes) {
+        Start-Process -FilePath $dialog.FileName
+    }
+}
+
+function Show-BulkOffboardWindow {
+    $dialog = New-UiWindow -Name 'BulkOffboardWindow' -Owner $window
+
+    $script:Ob = @{ Window = $dialog; Results = @(); Tested = $false; Running = $false; Cancel = $false; CloseRequested = $false }
+    foreach ($name in @(
+        'TxtObTenant', 'RbObCsv', 'RbObGroup', 'PnlObCsv', 'TxtObFile', 'BtnObBrowse', 'PnlObGroup', 'TxtObGroupSearch', 'BtnObFindGroup', 'CmbObGroup'
+        'ChkObMethods', 'ChkObSessions', 'ChkObDisable', 'DgOb', 'TxtObStatus', 'PrgOb', 'BtnObTest', 'BtnObStart', 'BtnObExport', 'BtnObCancel', 'BtnObClose'
+    )) {
+        $script:Ob[$name] = $dialog.FindName($name)
+    }
+    $ob = $script:Ob
+    foreach ($column in $ob.DgOb.Columns) { $column.Header = T ([string]$column.Header) }
+    $ob.TxtObTenant.Text = T 'Header.Tenant' (Get-TiTenantLabel)
+    Set-ObBusy $false
+
+    $updateSource = {
+        $group = [bool]$script:Ob.RbObGroup.IsChecked
+        $script:Ob.PnlObCsv.Visibility = if ($group) { 'Collapsed' } else { 'Visible' }
+        $script:Ob.PnlObGroup.Visibility = if ($group) { 'Visible' } else { 'Collapsed' }
+        Reset-ObTest
+    }
+    $ob.RbObCsv.Add_Checked($updateSource)
+    $ob.RbObGroup.Add_Checked($updateSource)
+    $ob.BtnObBrowse.Add_Click({
+        $open = New-Object Microsoft.Win32.OpenFileDialog
+        $open.Title = T 'Import.Browse'
+        $open.Filter = (T 'Import.CsvFilter') + ' (*.csv;*.txt)|*.csv;*.txt'
+        if (-not $open.ShowDialog($script:Ob.Window)) { return }
+        Reset-ObTest
+        $script:Ob.TxtObFile.Text = $open.FileName
+        Set-ObStatus ''
+    })
+    $ob.BtnObFindGroup.Add_Click({ Find-ObGroup })
+    $ob.TxtObGroupSearch.Add_KeyDown({
+        param($src, $keyArgs)
+        if ($keyArgs.Key -eq 'Enter') { Find-ObGroup }
+    })
+    $ob.CmbObGroup.Add_SelectionChanged({ Reset-ObTest })
+    $ob.BtnObTest.Add_Click({ Start-ObTest })
+    $ob.BtnObStart.Add_Click({ Start-ObRun })
+    $ob.BtnObExport.Add_Click({ Export-ObResults })
+    $ob.BtnObClose.Add_Click({ $script:Ob.Window.Close() })
+    $ob.BtnObCancel.Add_Click({
+        $script:Ob.Cancel = $true
+        $script:Ob.BtnObCancel.IsEnabled = $false
+        Set-ObStatus (T 'Import.Status.Cancelling')
+    })
+    $dialog.Add_Closing({
+        param($src, $closingArgs)
+        if ($script:Ob.Running) {
+            $script:Ob.Cancel = $true
+            $script:Ob.CloseRequested = $true
+            $closingArgs.Cancel = $true
+            Set-ObStatus (T 'Import.Status.Cancelling')
+        }
+    })
+
+    $dialog.ShowDialog() | Out-Null
+}
+
+$BtnOffboard.Add_Click({
+    Show-BulkOffboardWindow
+    $script:Ob = $null
+    if ($null -ne $script:SelectedUser) { Update-MfaView }
+})
+
+#endregion
+
+#region Settings, user history, Conditional Access check, user evidence
+
+function Show-SettingsDialog {
+    $dialog = New-UiWindow -Name 'SettingsDialog' -Owner $window
+    $d = @{}
+    foreach ($name in 'CmbSetAlgorithm', 'CmbSetTimeStep', 'TxtSetTapLifetime', 'ChkSetTapOnce', 'TxtSetGuideSender', 'TxtSetTenantId',
+                      'ChkSetWelcome', 'TxtSetLogFolder', 'BtnSetOpenLog', 'TxtSetPath', 'BtnSetSave') {
+        $d[$name] = $dialog.FindName($name)
+    }
+    Select-ComboItemByTag -ComboBox $d.CmbSetAlgorithm -Tag $script:Prefs.TotpAlgorithm
+    Select-ComboItemByTag -ComboBox $d.CmbSetTimeStep -Tag ([string]$script:Prefs.TotpTimeStep)
+    $d.TxtSetTapLifetime.Text = [string]$script:Prefs.TapLifetime
+    $d.ChkSetTapOnce.IsChecked = $script:Prefs.TapUsableOnce
+    $d.TxtSetGuideSender.Text = $script:GuideSender
+    $d.TxtSetTenantId.Text = $script:Prefs.TenantId
+    $d.ChkSetWelcome.IsChecked = $script:Prefs.ShowWelcome
+    $d.TxtSetLogFolder.Text = $script:LogFolder
+    $d.TxtSetPath.Text = T 'Settings.Path' $script:SettingsPath
+
+    # Closures only see global functions and their captured variables, not the script's functions and $script: variables
+    $logFolder = $script:LogFolder
+    $d.BtnSetOpenLog.Add_Click({ if (Test-Path -LiteralPath $logFolder) { Start-Process -FilePath $logFolder } }.GetNewClosure())
+    $d.BtnSetSave.Add_Click({
+        $minutes = 0
+        if (-not ([int]::TryParse($d.TxtSetTapLifetime.Text.Trim(), [ref]$minutes) -and $minutes -ge 10 -and $minutes -le 43200)) {
+            [System.Windows.MessageBox]::Show((T 'BulkTap.InvalidLifetime'), (T 'Settings.Title'), 'OK', 'Information') | Out-Null
+            $d.TxtSetTapLifetime.Focus() | Out-Null
+            return
+        }
+        $senderMail = $d.TxtSetGuideSender.Text.Trim()
+        if ($senderMail -and $senderMail -notmatch '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+            [System.Windows.MessageBox]::Show((T 'Guide.InvalidSender'), (T 'Settings.Title'), 'OK', 'Information') | Out-Null
+            $d.TxtSetGuideSender.Focus() | Out-Null
+            return
+        }
+        $dialog.DialogResult = $true
+    }.GetNewClosure())
+
+    if (-not $dialog.ShowDialog()) { return }
+    $script:Prefs.TotpAlgorithm = [string]$d.CmbSetAlgorithm.SelectedItem.Tag
+    $script:Prefs.TotpTimeStep = [int]$d.CmbSetTimeStep.SelectedItem.Tag
+    $script:Prefs.TapLifetime = [int]$d.TxtSetTapLifetime.Text.Trim()
+    $script:Prefs.TapUsableOnce = [bool]$d.ChkSetTapOnce.IsChecked
+    $script:Prefs.TenantId = $d.TxtSetTenantId.Text.Trim()
+    $script:Prefs.ShowWelcome = [bool]$d.ChkSetWelcome.IsChecked
+    $script:GuideSender = $d.TxtSetGuideSender.Text.Trim()
+    Save-Settings
+    Set-UiDefaults
+    Write-UiLog (T 'Settings.Saved')
+    Show-Toast (T 'Settings.Saved')
+}
+
+function Set-UiDefaults {
+    # Defaults of the settings in the main window
+    Select-ComboItemByTag -ComboBox $script:CmbTotpAlgorithm -Tag $script:Prefs.TotpAlgorithm
+    Select-ComboItemByTag -ComboBox $script:CmbTotpTimeStep -Tag ([string]$script:Prefs.TotpTimeStep)
+    Update-MethodInputs
+}
+
+$BtnSettings.Add_Click({ Show-SettingsDialog })
+
+function Show-HistoryDialog {
+    # Audit log entries about the user's authentication methods (who changed what, when)
+    param([Parameter(Mandatory)]$User)
+    $events = @()
+    try {
+        Set-Busy $true (T 'Busy.History')
+        $events = @(Get-M365UserAuthAuditEvents -UserId $User.Id)
+    }
+    catch {
+        Write-UiError -Message (T 'History.Failed' $_.Exception.Message) -Title (T 'History.Title')
+        return
+    }
+    finally {
+        Set-Busy $false
+    }
+    $dialog = New-UiWindow -Name 'HistoryDialog' -Owner $window
+    $grid = $dialog.FindName('DgHist')
+    foreach ($column in $grid.Columns) { $column.Header = T ([string]$column.Header) }
+    $dialog.FindName('TxtHistUser').Text = '{0} ({1})' -f $User.DisplayName, $User.UserPrincipalName
+    $grid.ItemsSource = $events
+    $empty = $dialog.FindName('TxtHistEmpty')
+    $empty.Text = T 'History.Empty'
+    $empty.Visibility = if ($events.Count) { 'Collapsed' } else { 'Visible' }
+    $dialog.FindName('BtnHistClose').Add_Click({ $dialog.Close() }.GetNewClosure())
+    Write-UiLog (T 'History.Loaded' $events.Count $User.UserPrincipalName)
+    $dialog.ShowDialog() | Out-Null
+}
+
+$BtnHistory.Add_Click({
+    if ($null -ne $script:SelectedUser) { Show-HistoryDialog -User $script:SelectedUser }
+})
+
+$BtnCheckCa.Add_Click({
+    # Is the (administrative) user excluded from every enabled Conditional Access policy?
+    $user = $script:SelectedUser
+    if ($null -eq $user) { return }
+    $check = $null
+    try {
+        Set-Busy $true (T 'Busy.CaCheck')
+        $check = Test-M365ConditionalAccessExclusion -UserId $user.Id
+    }
+    catch {
+        Write-UiError -Message (T 'Ca.Failed' $_.Exception.Message) -Title (T 'Ca.Title')
+        return
+    }
+    finally {
+        Set-Busy $false
+    }
+    if (-not $check.Policies.Count) {
+        Write-UiLog (T 'Ca.NoPolicies') 'Warning'
+        Show-Message -Text (T 'Ca.NoPolicies') -Title (T 'Ca.Title') -Icon Warning
+    }
+    elseif (-not $check.Covering.Count) {
+        Write-UiLog (T 'Ca.Excluded' $user.UserPrincipalName $check.Policies.Count) 'Success'
+        Show-Message -Text ((T 'Ca.Excluded' $user.UserPrincipalName $check.Policies.Count) + "`n`n" + (T 'Ca.Note')) -Title (T 'Ca.Title')
+    }
+    else {
+        $list = ($check.Covering | ForEach-Object { "• $_" }) -join "`n"
+        Write-UiLog (T 'Ca.Covered' $user.UserPrincipalName $check.Covering.Count $check.Policies.Count) 'Warning'
+        Show-Message -Text ((T 'Ca.Covered' $user.UserPrincipalName $check.Covering.Count $check.Policies.Count) + "`n`n" + $list + "`n`n" + (T 'Ca.Hint')) -Title (T 'Ca.Title') -Icon Warning
+    }
+})
+
+$BtnExportUser.Add_Click({
+    # MFA methods of the selected user as Excel – evidence for a ticket
+    $user = $script:SelectedUser
+    if ($null -eq $user) { return }
+    $fileName = 'MFA_{0}_{1:yyyy-MM-dd}.xlsx' -f $user.UserPrincipalName, (Get-Date)
+    foreach ($char in [System.IO.Path]::GetInvalidFileNameChars()) { $fileName = $fileName.Replace([string]$char, '_') }
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'User.Export'
+    $dialog.Filter = (T 'Report.ExcelFilter') + ' (*.xlsx)|*.xlsx'
+    $dialog.FileName = $fileName
+    if (-not $dialog.ShowDialog($window)) { return }
+    try {
+        Export-UserMethodsXlsx -Path $dialog.FileName -User $user -Methods @($DgMethods.ItemsSource | Where-Object { $null -ne $_ }) `
+            -Assessment $script:SelectedAssessment -Roles @($LstRoles.ItemsSource | Where-Object { $null -ne $_ }) `
+            -Tenant (Get-TiTenantLabel) -CreatedBy $(if ($script:Context) { $script:Context.Account } else { '' })
+        Write-UiLog (T 'User.Exported' $dialog.FileName) 'Success'
+        Show-Toast (T 'User.Exported' $dialog.FileName)
+    }
+    catch {
+        Write-UiError -Message (T 'Report.ExportFailed' $_.Exception.Message) -Title (T 'User.Export')
+        return
+    }
+    if (Confirm-Action -Text (T 'Report.OpenFile' $dialog.FileName) -Title (T 'User.Export') -Icon Question -DefaultYes) {
+        Start-Process -FilePath $dialog.FileName
+    }
+})
+
+#endregion
+
+#region Log, welcome and window placement
+
+$BtnLogCopy.Add_Click({
+    $text = Get-LogText
+    if (-not $text) { return }
+    [System.Windows.Clipboard]::SetText($text)
+    Show-Toast (T 'Log.Copied') 'Info'
+})
+
+$BtnLogSave.Add_Click({
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Log.Save'
+    $dialog.Filter = (T 'Log.TextFilter') + ' (*.log;*.txt)|*.log;*.txt'
+    $dialog.FileName = 'M365MfaTool_{0:yyyy-MM-dd_HHmm}.log' -f (Get-Date)
+    if (-not $dialog.ShowDialog($window)) { return }
+    [System.IO.File]::WriteAllText($dialog.FileName, (Get-LogText), [System.Text.UTF8Encoding]::new($false))
+    Write-UiLog (T 'Log.Saved' $dialog.FileName)
+    Show-Toast (T 'Log.Saved' $dialog.FileName) 'Info'
+})
+
+$BtnWelcomeStart.Add_Click({
+    $PnlWelcome.Visibility = 'Collapsed'
+    if ($ChkWelcomeDontShow.IsChecked) {
+        $script:Prefs.ShowWelcome = $false
+        Save-Settings
+    }
+})
+
+function Restore-WindowPlacement {
+    # Size and position of the last session, if still on a screen
+    $p = $script:WindowPlacement
+    if ($null -eq $p) { return }
+    try {
+        $w = [double]$p.Width; $h = [double]$p.Height; $l = [double]$p.Left; $t = [double]$p.Top
+        $left = [System.Windows.SystemParameters]::VirtualScreenLeft
+        $top = [System.Windows.SystemParameters]::VirtualScreenTop
+        $right = $left + [System.Windows.SystemParameters]::VirtualScreenWidth
+        $bottom = $top + [System.Windows.SystemParameters]::VirtualScreenHeight
+        if ($w -ge $window.MinWidth -and $h -ge $window.MinHeight -and $l -ge ($left - 20) -and ($l + 200) -le $right -and $t -ge ($top - 20) -and ($t + 200) -le $bottom) {
+            $window.WindowStartupLocation = 'Manual'
+            $window.Width = $w; $window.Height = $h; $window.Left = $l; $window.Top = $t
+        }
+        if ([bool]$p.Maximized) { $window.WindowState = 'Maximized' }
+    }
+    catch { }
+}
+
+function Save-WindowPlacement {
+    $bounds = $window.RestoreBounds
+    if ($bounds.Width -le 0 -or $bounds.Height -le 0) { return }
+    $script:WindowPlacement = [pscustomobject]@{
+        Width = [int]$bounds.Width; Height = [int]$bounds.Height; Left = [int]$bounds.Left; Top = [int]$bounds.Top
+        Maximized = ($window.WindowState -eq 'Maximized')
+    }
+    Save-Settings
+}
+
+#endregion
+
+#region Update check and update
 
 function Start-UpdateCheck {
-    # Compares the version with the latest GitHub release in the background; the result is only a log line.
+    # Compares the version with the latest GitHub release in the background; shows a badge in the header when newer.
     try {
         $script:UpdateJob = Start-Job -ArgumentList $script:RepoUrl -ScriptBlock {
             param($RepoUrl)
             [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
             $api = $RepoUrl -replace '^https://github\.com/', 'https://api.github.com/repos/'
             $release = Invoke-RestMethod -Uri "$api/releases/latest" -Headers @{ 'User-Agent' = 'M365MfaTool' } -TimeoutSec 15
-            [pscustomobject]@{ Tag = [string]$release.tag_name; Url = [string]$release.html_url }
+            [pscustomobject]@{ Tag = [string]$release.tag_name; Url = [string]$release.html_url; Zip = [string]$release.zipball_url }
         }
     }
     catch { return }
@@ -2903,7 +3683,12 @@ function Start-UpdateCheck {
         try {
             $release = Receive-Job -Job $job -ErrorAction Stop
             $latest = [version](([string]$release.Tag) -replace '^v', '')
-            if ($latest -gt [version]$script:AppVersion) { Write-UiLog (T 'Update.Available' $release.Tag $release.Url) 'Warning' }
+            if ($latest -gt [version]$script:AppVersion) {
+                $script:UpdateRelease = $release
+                Write-UiLog (T 'Update.Available' $release.Tag $release.Url) 'Warning'
+                $script:BtnUpdate.Content = T 'Update.Badge' $release.Tag
+                $script:BtnUpdate.Visibility = 'Visible'
+            }
         }
         catch { }   # No internet, API limit etc.: silently ignored
         finally { Remove-Job -Job $job -Force -ErrorAction SilentlyContinue }
@@ -2911,23 +3696,75 @@ function Start-UpdateCheck {
     $script:UpdateTimer.Start()
 }
 
+$BtnUpdate.Add_Click({
+    # Downloads the release, unpacks it over the tool folder (Logs and settings are kept) and asks for a restart
+    $release = $script:UpdateRelease
+    if ($null -eq $release) { return }
+    if (-not (Confirm-Action -Text (T 'Update.Confirm' $release.Tag $script:AppRoot) -Title (T 'Update.Title') -Icon Question -DefaultYes)) { return }
+    $ok = $false
+    try {
+        Set-Busy $true (T 'Busy.Update' $release.Tag)
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        $temp = Join-Path ([IO.Path]::GetTempPath()) ('M365MfaTool-update-' + [guid]::NewGuid())
+        New-Item -ItemType Directory -Path $temp -Force | Out-Null
+        $zip = Join-Path $temp 'release.zip'
+        Invoke-WebRequest -Uri $release.Zip -OutFile $zip -UseBasicParsing -Headers @{ 'User-Agent' = 'M365MfaTool' } -TimeoutSec 120
+        $extract = Join-Path $temp 'extract'
+        Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
+        # The GitHub archive has one top-level folder (<owner>-<repo>-<sha>)
+        $source = Get-ChildItem -LiteralPath $extract -Directory | Select-Object -First 1
+        if ($null -eq $source -or -not (Test-Path -LiteralPath (Join-Path $source.FullName 'Start-M365MfaTool.ps1'))) { throw (T 'Update.BadArchive') }
+        foreach ($item in Get-ChildItem -LiteralPath $source.FullName -Force) {
+            if ($item.Name -in 'Logs', '.git', '.github') { continue }
+            Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $script:AppRoot $item.Name) -Recurse -Force
+        }
+        Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
+        $ok = $true
+        Write-UiLog (T 'Update.Done' $release.Tag) 'Success'
+    }
+    catch {
+        Write-UiError -Message (T 'Update.Failed' $_.Exception.Message $release.Url) -Title (T 'Update.Title')
+    }
+    finally {
+        Set-Busy $false
+    }
+    if ($ok) {
+        $script:BtnUpdate.Visibility = 'Collapsed'
+        $script:UpdateRelease = $null
+        Show-Message -Text (T 'Update.Done' $release.Tag) -Title (T 'Update.Title')
+    }
+})
+
 #endregion
 
 #region Start
 
 $window.Add_Closing({
+    Save-WindowPlacement
     if (Test-M365GraphConnection) { Disconnect-M365Graph }
+})
+
+# Toasts disappear by themselves
+$script:ToastTimer = New-Object System.Windows.Threading.DispatcherTimer
+$script:ToastTimer.Interval = [TimeSpan]::FromSeconds(4)
+$script:ToastTimer.Add_Tick({
+    $script:ToastTimer.Stop()
+    $script:PnlToast.Visibility = 'Collapsed'
 })
 
 # Fill the language selection and set all texts
 $languages = @(Get-UiLanguages)
 $CmbLanguage.ItemsSource = $languages
 $CmbLanguage.SelectedItem = $languages | Where-Object Code -eq (Get-UiLanguage) | Select-Object -First 1
+$LstLog.ItemsSource = $script:LogLines
+Register-HelpPanel -Window $window
 Update-UiTexts
 Set-ConnectionStatus $null
 Clear-SelectedUser
-Update-MethodInputs
+Set-UiDefaults
 Set-Busy $false
+Restore-WindowPlacement
+if ($script:Prefs.ShowWelcome) { $PnlWelcome.Visibility = 'Visible' }
 
 # Separator in the log file so that several sessions per day can be told apart
 Write-LogFile -Line ('{0} ===== M365 MFA Administration Tool {4} started by {1}\{2} on {3} =====' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $env:USERDOMAIN, $env:USERNAME, $env:COMPUTERNAME, $script:AppVersion)

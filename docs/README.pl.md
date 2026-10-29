@@ -21,6 +21,8 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 - [Masowy import tokenów TOTP](#masowy-import-tokenów-totp)
 - [Inwentarz tokenów](#inwentarz-tokenów)
 - [Masowy Temporary Access Pass](#masowy-temporary-access-pass)
+- [Masowy offboarding](#masowy-offboarding)
+- [Pomoc, ustawienia i aktualizacje](#pomoc-ustawienia-i-aktualizacje)
 - [Często zadawane pytania i rozwiązywanie problemów](#często-zadawane-pytania-i-rozwiązywanie-problemów)
 - [Bezpieczeństwo](#bezpieczeństwo)
 - [Wymagania i uprawnienia dla administratorów](#wymagania-i-uprawnienia-dla-administratorów)
@@ -259,6 +261,32 @@ Zmiana pliku, algorytmu, interwału lub rozdziału wymaga nowego sprawdzenia.
 3. **„Sprawdź”** rozwiązuje użytkowników, niczego nie zmieniając. **„Utwórz”** tworzy następnie po jednym haśle na użytkownika; istniejące hasło użytkownika zostaje zastąpione.
 4. **„Eksport do Excela …”** zapisuje listę z hasłami – zawiera je w postaci jawnej, więc zapisuj ją tylko w chronionym miejscu i usuń po przekazaniu. Hasła nigdy nie trafiają do dziennika.
 
+## Masowy offboarding
+
+**Narzędzia ▾ → „Masowy offboarding …”** usuwa naraz metody MFA wielu użytkowników, np. przy odejściach lub po przejęciu kont.
+
+1. Wybierz użytkowników: **plik CSV** (kolumna `UPN` lub jeden UPN w wierszu) albo **członków grupy**.
+2. Wybierz akcje: **usuń wszystkie metody MFA**, **unieważnij sesje** (użytkownik zostaje wszędzie wylogowany) i opcjonalnie **wyłącz konto**.
+3. **„Sprawdź”** rozwiązuje użytkowników i pokazuje, ile metod i ról administracyjnych ma każdy – niczego nie zmienia. Własne konto jest zawsze pomijane.
+4. **„Wykonaj offboarding”** – po potwierdzeniu podsumowania.
+5. **„Eksport do Excela …”** zapisuje listę wyników jako potwierdzenie.
+
+> [!WARNING]
+> Usuniętych metod nie da się przywrócić. Użytkownicy muszą je zarejestrować ponownie, np. przez Temporary Access Pass.
+
+---
+
+## Pomoc, ustawienia i aktualizacje
+
+- **„Pomoc”** na górze każdego okna otwiera panel boczny: *co robi, kiedy używać, czego potrzebujesz, krok po kroku* i *wynik*. Każdy przycisk i pole ma też podpowiedź.
+- Przy pierwszym uruchomieniu **ekran powitalny** objaśnia trzy kroki (można wyłączyć).
+- **Narzędzia ▾ → „Ustawienia …”**: domyślny algorytm i interwał tokenów TOTP, domyślna ważność i jednorazowość TAP, skrzynka nadawcy instrukcji MFA oraz opcjonalnie **dzierżawa** (ID lub domena) dla kont gościa.
+- Okno główne pokazuje **ostatnie logowanie**, **historię** z dziennika inspekcji, **potwierdzenie Excel** użytkownika oraz dla administratorów **„Sprawdź wykluczenie CA”**.
+- Jeśli metoda jest wyłączona w zasadach metod uwierzytelniania dzierżawy, przed rozpoczęciem pojawia się żółte ostrzeżenie.
+- Gdy jest nowsza wersja, u góry pojawia się przycisk **„Aktualizacja …”**: pobiera i instaluje wersję (dzienniki i ustawienia zostają); potem uruchom narzędzie ponownie.
+
+---
+
 ## Często zadawane pytania i rozwiązywanie problemów
 
 **Dwukrotne kliknięcie `Start.cmd` nic nie robi lub wyświetla błąd.**
@@ -333,6 +361,7 @@ Wszystkie uprawnienia są żądane jednorazowo przy logowaniu, dzięki czemu pod
 | `RoleManagement.ReadWrite.Directory` | Konto awaryjne: przypisanie roli Global Administrator |
 | `GroupMember.Read.All` | Raport MFA: wybór grupy jako zakresu, rozwiązywanie ról przypisanych przez grupy |
 | `AuditLog.Read.All` | Raport MFA: ostatnie logowanie |
+| `Policy.Read.All` | Ostrzeżenie, gdy metoda jest wyłączona w dzierżawie; sprawdzenie dostępu warunkowego |
 | `Mail.Send` | Instrukcja MFA z własnej skrzynki |
 | `Mail.Send.Shared` | Instrukcja MFA ze skrzynki współdzielonej |
 | `Organization.Read.All` | Wczytanie klucza hrdnr z dzierżawy |
@@ -374,6 +403,7 @@ W **zasadach metod uwierzytelniania** (Centrum administracyjne Entra → Ochrona
 |---|---|
 | `Start.cmd` | Uruchamianie dwukrotnym kliknięciem |
 | `Start-M365MfaTool.ps1` | Interfejs, zarządzanie stanem i zdarzenia |
+| `UI/Theme.xaml` | Wspólny wygląd wszystkich okien |
 | `UI/MainWindow.xaml` | Układ okna głównego |
 | `UI/BreakGlassDialog.xaml` | Okno dla nowych kont awaryjnych |
 | `UI/TenantReportWindow.xaml` | Okno raportu MFA |
@@ -381,6 +411,9 @@ W **zasadach metod uwierzytelniania** (Centrum administracyjne Entra → Ochrona
 | `UI/TokenInventoryWindow.xaml` | Okno inwentarza tokenów |
 | `UI/BulkTapWindow.xaml` | Okno masowego Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Okno podglądu instrukcji MFA |
+| `UI/BulkOffboardWindow.xaml` | Okno masowego offboardingu |
+| `UI/SettingsDialog.xaml` | Okno ustawień |
+| `UI/HistoryDialog.xaml` | Historia użytkownika (dziennik inspekcji) |
 | `Modules/Graph.psm1` | Logowanie, żądania Graph, użytkownicy, domeny, role, sygnalizator MFA, odczyt/usuwanie metod |
 | `Modules/Provisioning.psm1` | Konfiguracja FIDO2, kart TOTP, pozornego MFA, TAP i kont awaryjnych |
 | `Modules/TenantReport.psm1` | Raport MFA: użytkownicy, role, zbiorcze zapytania o metody, ocena w formie sygnalizacji, eksport do Excela |

@@ -21,6 +21,8 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 - [Importação em massa de tokens TOTP](#importação-em-massa-de-tokens-totp)
 - [Inventário de tokens](#inventário-de-tokens)
 - [Temporary Access Pass em massa](#temporary-access-pass-em-massa)
+- [Offboarding em massa](#offboarding-em-massa)
+- [Ajuda, definições e atualizações](#ajuda-definições-e-atualizações)
 - [Perguntas frequentes e resolução de problemas](#perguntas-frequentes-e-resolução-de-problemas)
 - [Segurança](#segurança)
 - [Requisitos e permissões para administradores](#requisitos-e-permissões-para-administradores)
@@ -259,6 +261,32 @@ Alterar o ficheiro, o algoritmo, o intervalo ou a distribuição exige uma nova 
 3. **"Verificar"** resolve os utilizadores sem alterar nada. **"Criar"** cria depois um passe por utilizador; um passe existente do utilizador é substituído.
 4. **"Exportar para Excel …"** guarda a lista com os passes – contém-nos em texto simples, por isso guarde-a apenas num local protegido e elimine-a após a entrega. Os passes nunca são escritos no registo.
 
+## Offboarding em massa
+
+**Ferramentas ▾ → "Offboarding em massa …"** remove de uma vez os métodos MFA de muitos utilizadores, p. ex. em saídas de colaboradores ou após contas comprometidas.
+
+1. Escolha os utilizadores: um **ficheiro CSV** (coluna `UPN` ou um UPN por linha) ou os **membros de um grupo**.
+2. Escolha as ações: **remover todos os métodos MFA**, **revogar sessões** (o utilizador termina sessão em todo o lado) e opcionalmente **desativar conta**.
+3. **"Verificar"** resolve os utilizadores e mostra quantos métodos e funções de administrador tem cada um – sem alterar nada. A sua própria conta é sempre ignorada.
+4. **"Executar offboarding"** – após confirmar o resumo.
+5. **"Exportar para Excel …"** guarda a lista de resultados como comprovativo.
+
+> [!WARNING]
+> Os métodos removidos não podem ser restaurados. Os utilizadores têm de os registar de novo, p. ex. com um Temporary Access Pass.
+
+---
+
+## Ajuda, definições e atualizações
+
+- **"Ajuda"** no topo de cada janela abre um painel lateral: *o que faz, quando usar, o que é preciso, passo a passo* e *resultado*. Cada botão e campo tem também uma descrição.
+- No primeiro arranque, um **ecrã de boas-vindas** explica os três passos (pode ser desativado).
+- **Ferramentas ▾ → "Definições …"**: algoritmo e intervalo predefinidos dos tokens TOTP, validade e utilização única predefinidas dos TAP, caixa de correio remetente do guia MFA e, opcionalmente, um **locatário** (ID ou domínio) para contas convidadas.
+- A janela principal mostra o **último início de sessão**, o **histórico** do registo de auditoria, um **comprovativo Excel** do utilizador e, para administradores, **"Verificar exclusão CA"**.
+- Se o método estiver desativado na política de métodos de autenticação do locatário, aparece um aviso amarelo antes de começar.
+- Quando existe uma versão nova, aparece no topo o botão **"Atualizar …"**: transfere e instala a versão (registos e definições mantêm-se); reinicie depois a ferramenta.
+
+---
+
 ## Perguntas frequentes e resolução de problemas
 
 **O duplo clique em `Start.cmd` não faz nada ou mostra um erro.**
@@ -333,6 +361,7 @@ Todas as permissões são pedidas uma única vez no início de sessão, pelo que
 | `RoleManagement.ReadWrite.Directory` | Conta de emergência: atribuir Global Administrator |
 | `GroupMember.Read.All` | Relatório MFA: escolher um grupo como âmbito, resolver funções atribuídas através de grupos |
 | `AuditLog.Read.All` | Relatório MFA: último início de sessão |
+| `Policy.Read.All` | Aviso se um método estiver desativado no locatário; verificação de acesso condicional |
 | `Mail.Send` | Guia de MFA a partir da própria caixa de correio |
 | `Mail.Send.Shared` | Guia de MFA a partir de uma caixa de correio partilhada |
 | `Organization.Read.All` | Carregar a chave hrdnr do locatário |
@@ -374,6 +403,7 @@ Na **política de métodos de autenticação** (Centro de administração do Ent
 |---|---|
 | `Start.cmd` | Arranque com duplo clique |
 | `Start-M365MfaTool.ps1` | Interface, gestão de estado e eventos |
+| `UI/Theme.xaml` | Aspeto comum de todas as janelas |
 | `UI/MainWindow.xaml` | Esquema da janela principal |
 | `UI/BreakGlassDialog.xaml` | Caixa de diálogo para novas contas de emergência |
 | `UI/TenantReportWindow.xaml` | Janela do relatório MFA |
@@ -381,6 +411,9 @@ Na **política de métodos de autenticação** (Centro de administração do Ent
 | `UI/TokenInventoryWindow.xaml` | Janela do inventário de tokens |
 | `UI/BulkTapWindow.xaml` | Janela do Temporary Access Pass em massa |
 | `UI/MfaGuideDialog.xaml` | Caixa de diálogo de pré-visualização do guia de MFA |
+| `UI/BulkOffboardWindow.xaml` | Janela do offboarding em massa |
+| `UI/SettingsDialog.xaml` | Caixa de diálogo das definições |
+| `UI/HistoryDialog.xaml` | Histórico de um utilizador (registo de auditoria) |
 | `Modules/Graph.psm1` | Início de sessão, pedidos ao Graph, utilizadores, domínios, funções, semáforo de MFA, leitura/eliminação de métodos |
 | `Modules/Provisioning.psm1` | Configuração de FIDO2, cartões TOTP, MFA fictícia, TAP e contas de emergência |
 | `Modules/TenantReport.psm1` | Relatório MFA: utilizadores, funções, pedidos de métodos agrupados, avaliação em semáforo, exportação para Excel |

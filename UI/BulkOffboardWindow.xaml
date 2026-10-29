@@ -1,0 +1,124 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Uid="Offboard.Title"
+        Height="720" Width="1100" MinHeight="520" MinWidth="860"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource WindowBackground}" FontFamily="Segoe UI">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Uid="Offboard.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Name="TxtObTenant" Text="" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Name="BtnHelp" Uid="Header.Help" Tag="&#xE897;" Style="{StaticResource HeaderButton}"/>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="20,16,20,0">
+            <TextBlock Uid="BulkTap.Source" Style="{StaticResource Label}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                <RadioButton Name="RbObCsv" GroupName="ObSource" Uid="BulkTap.Source.Csv" IsChecked="True"/>
+                <RadioButton Name="RbObGroup" GroupName="ObSource" Uid="BulkTap.Source.Group"/>
+            </StackPanel>
+            <Grid Name="PnlObCsv">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Name="TxtObFile" IsReadOnly="True" Margin="0,4,4,4"/>
+                <Button Grid.Column="1" Name="BtnObBrowse" Uid="Import.Browse" Tag="&#xE8E5;"/>
+            </Grid>
+            <StackPanel Name="PnlObGroup" Orientation="Horizontal" Visibility="Collapsed">
+                <TextBox Name="TxtObGroupSearch" Uid="Report.GroupSearch" Width="260" Margin="0,4,4,4"/>
+                <Button Name="BtnObFindGroup" Uid="Report.FindGroup" Tag="&#xE721;" Style="{StaticResource SecondaryButton}"/>
+                <ComboBox Name="CmbObGroup" Width="320" Margin="4" DisplayMemberPath="DisplayName"/>
+            </StackPanel>
+
+            <TextBlock Uid="Offboard.Actions" Style="{StaticResource Label}" Margin="0,12,0,4"/>
+            <WrapPanel>
+                <CheckBox Name="ChkObMethods" Uid="Offboard.RemoveMethods" IsChecked="True" Margin="0,0,20,0"/>
+                <CheckBox Name="ChkObSessions" Uid="Offboard.RevokeSessions" IsChecked="True" Margin="0,0,20,0"/>
+                <CheckBox Name="ChkObDisable" Uid="Offboard.DisableAccount" IsChecked="False"/>
+            </WrapPanel>
+
+            <Border Style="{StaticResource InfoBox}" Margin="0,14,0,12">
+                <StackPanel>
+                    <TextBlock FontSize="12" TextWrapping="Wrap" Uid="Offboard.Info1"/>
+                    <TextBlock FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" Uid="Offboard.Info2"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <DataGrid Grid.Row="2" Name="DgOb" Margin="20,0,20,0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Import.Col.Line" Binding="{Binding Line}" Width="60"/>
+                <DataGridTemplateColumn Header="Import.Col.Status" Width="120" SortMemberPath="Status" CellTemplate="{StaticResource StatusChip}"/>
+                <DataGridTextColumn Header="Import.Col.Upn" Binding="{Binding Upn}" Width="240"/>
+                <DataGridTextColumn Header="Import.Col.Name" Binding="{Binding DisplayName}" Width="170"/>
+                <DataGridTextColumn Header="Offboard.Col.Methods" Binding="{Binding MethodCount}" Width="90"/>
+                <DataGridTextColumn Header="Offboard.Col.Roles" Binding="{Binding RoleCount}" Width="80"/>
+                <DataGridTextColumn Header="Import.Col.Message" Binding="{Binding Message}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="3" Margin="20,10,20,16">
+            <TextBlock Name="TxtObStatus" Text="" TextWrapping="Wrap"/>
+            <ProgressBar Name="PrgOb" Height="4" Margin="0,6,0,0" Visibility="Hidden"/>
+            <WrapPanel HorizontalAlignment="Right" Margin="0,8,0,0">
+                <Button Name="BtnObTest" Uid="BulkTap.Test" Tag="&#xE73E;"/>
+                <Button Name="BtnObStart" Uid="Offboard.Start" Tag="&#xE74D;" Style="{StaticResource DangerButton}" IsEnabled="False"/>
+                <Button Name="BtnObExport" Uid="Report.Export" Tag="&#xE74E;" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <Button Name="BtnObCancel" Uid="Common.Cancel" Tag="&#xE711;" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <Button Name="BtnObClose" Uid="Common.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+            </WrapPanel>
+        </StackPanel>
+
+        <!-- Help flyout -->
+        <Border Name="PnlHelp" Grid.Row="1" Grid.RowSpan="3" Style="{StaticResource HelpPanel}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE897;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                        <TextBlock Uid="Help.Offboard.Title" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Name="BtnHelpClose" Uid="Help.Close" Style="{StaticResource CloseButton}"/>
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Uid="Help.What" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Offboard.What" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.When" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Offboard.When" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Need" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Offboard.Need" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Steps" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Offboard.Steps" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Result" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Offboard.Result" Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

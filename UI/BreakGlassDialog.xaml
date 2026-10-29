@@ -1,70 +1,97 @@
 ﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Uid="BreakGlass.Title"
-        Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        Width="560" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="White" FontFamily="Segoe UI">
 
     <Window.Resources>
-        <SolidColorBrush x:Key="Primary" Color="#0067B8"/>
-        <SolidColorBrush x:Key="MutedText" Color="#64748B"/>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="16,9"/>
-            <Setter Property="Margin" Value="8,0,0,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="{StaticResource Primary}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="#D0D7DE"/>
-        </Style>
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#242424"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
-        <Style x:Key="Label" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+        <Style x:Key="FormLabel" TargetType="TextBlock" BasedOn="{StaticResource Label}">
             <Setter Property="Margin" Value="0,14,0,4"/>
         </Style>
     </Window.Resources>
 
-    <StackPanel>
-        <Border Background="#0F172A" Padding="24,16">
-            <StackPanel>
-                <TextBlock Uid="BreakGlass.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Uid="BreakGlass.Subtitle" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
-            </StackPanel>
-        </Border>
-
-        <StackPanel Margin="24,10,24,20">
-            <TextBlock Uid="BreakGlass.Domain" Style="{StaticResource Label}"/>
-            <ComboBox Name="CmbBgDomain" Padding="8"/>
-            <TextBlock Name="TxtBgUpnHint" Text="" Style="{StaticResource Label}" Margin="0,4,0,0"/>
-
-            <CheckBox Name="ChkBgGlobalAdmin" Uid="BreakGlass.AssignGlobalAdmin" IsChecked="True" Margin="0,16,0,0"/>
-
-            <CheckBox Name="ChkBgFido2" Uid="BreakGlass.RegisterFido2" IsChecked="True" Margin="0,10,0,0"/>
-            <StackPanel Name="PnlBgSerial" Margin="22,0,0,0">
-                <TextBlock Uid="Config.Serial.Fido2" Style="{StaticResource Label}" Margin="0,8,0,4"/>
-                <TextBox Name="TxtBgSerial"/>
-            </StackPanel>
-
-            <Border Background="#F1F5F9" CornerRadius="4" Padding="12,10" Margin="0,18,0,0">
-                <StackPanel>
-                    <TextBlock FontSize="12" Uid="BreakGlass.Info1"/>
-                    <TextBlock FontSize="12" Margin="0,4,0,0" Uid="BreakGlass.Info2"/>
-                    <TextBlock FontSize="12" Margin="0,4,0,0" Uid="BreakGlass.Info3"/>
-                </StackPanel>
+    <Grid>
+        <StackPanel>
+            <Border Background="{StaticResource HeaderBackground}" Padding="24,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Uid="BreakGlass.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Uid="BreakGlass.Subtitle" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Name="BtnHelp" Uid="Header.Help" Tag="&#xE897;" Style="{StaticResource HeaderButton}"/>
+                </Grid>
             </Border>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                <Button Name="BtnBgCancel" Uid="Common.Cancel" Background="#64748B" IsCancel="True"/>
-                <Button Name="BtnBgCreate" Uid="BreakGlass.Create" IsDefault="True"/>
+            <StackPanel Margin="24,10,24,20">
+                <TextBlock Uid="BreakGlass.Domain" Style="{StaticResource FormLabel}"/>
+                <ComboBox Name="CmbBgDomain" Uid="BreakGlass.DomainBox" Padding="8"/>
+                <TextBlock Name="TxtBgUpnHint" Text="" Style="{StaticResource FormLabel}" Margin="0,4,0,0"/>
+
+                <CheckBox Name="ChkBgGlobalAdmin" Uid="BreakGlass.AssignGlobalAdmin" IsChecked="True" Margin="0,16,0,0"/>
+
+                <CheckBox Name="ChkBgFido2" Uid="BreakGlass.RegisterFido2" IsChecked="True" Margin="0,10,0,0"/>
+                <StackPanel Name="PnlBgSerial" Margin="22,0,0,0">
+                    <TextBlock Uid="Config.Serial.Fido2" Style="{StaticResource FormLabel}" Margin="0,8,0,4"/>
+                    <TextBox Name="TxtBgSerial"/>
+                </StackPanel>
+
+                <Border Style="{StaticResource InfoBox}" Background="#F1F5F9" Margin="0,18,0,0">
+                    <StackPanel>
+                        <TextBlock FontSize="12" Uid="BreakGlass.Info1"/>
+                        <TextBlock FontSize="12" Margin="0,4,0,0" Uid="BreakGlass.Info2"/>
+                        <TextBlock FontSize="12" Margin="0,4,0,0" Uid="BreakGlass.Info3"/>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Name="BtnBgCancel" Uid="Common.Cancel" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+                    <Button Name="BtnBgCreate" Uid="BreakGlass.Create" Tag="&#xE710;" IsDefault="True"/>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
-    </StackPanel>
+
+        <!-- Help flyout -->
+        <Border Name="PnlHelp" Style="{StaticResource HelpPanel}" Width="400">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE897;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                        <TextBlock Uid="Help.BreakGlass.Title" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Name="BtnHelpClose" Uid="Help.Close" Style="{StaticResource CloseButton}"/>
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Uid="Help.What" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.BreakGlass.What" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.When" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.BreakGlass.When" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Need" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.BreakGlass.Need" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Steps" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.BreakGlass.Steps" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Result" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.BreakGlass.Result" Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

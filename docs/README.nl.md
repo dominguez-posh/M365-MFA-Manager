@@ -21,6 +21,8 @@ Met deze tool richten beheerders en helpdeskmedewerkers **meervoudige verificati
 - [Bulkimport van TOTP-tokens](#bulkimport-van-totp-tokens)
 - [Tokenvoorraad](#tokenvoorraad)
 - [Bulk Temporary Access Pass](#bulk-temporary-access-pass)
+- [Bulk-offboarding](#bulk-offboarding)
+- [Help, instellingen en updates](#help-instellingen-en-updates)
 - [Veelgestelde vragen en probleemoplossing](#veelgestelde-vragen-en-probleemoplossing)
 - [Beveiliging](#beveiliging)
 - [Vereisten en machtigingen voor beheerders](#vereisten-en-machtigingen-voor-beheerders)
@@ -259,6 +261,32 @@ Na wijziging van bestand, algoritme, tijdsinterval of verdeling is een nieuwe co
 3. **"Controleren"** zoekt de gebruikers op zonder iets te wijzigen. **"Maken"** maakt daarna per gebruiker een pas; een bestaande pas van de gebruiker wordt vervangen.
 4. **"Excel-export …"** slaat de lijst met de passen op – die bevat ze in leesbare tekst, dus alleen op een beveiligde plek opslaan en na de overdracht verwijderen. De passen komen nooit in het logboek.
 
+## Bulk-offboarding
+
+**Hulpmiddelen ▾ → "Bulk-offboarding …"** verwijdert in één keer de MFA-methoden van veel gebruikers, bijv. bij vertrekkers of na gecompromitteerde accounts.
+
+1. Kies de gebruikers: een **CSV-bestand** (kolom `UPN` of één UPN per regel) of de **leden van een groep**.
+2. Kies de acties: **alle MFA-methoden verwijderen**, **sessies intrekken** (de gebruiker wordt overal afgemeld) en optioneel **account uitschakelen**.
+3. **"Controleren"** zoekt de gebruikers op en toont hoeveel methoden en beheerdersrollen elk heeft – er wordt niets gewijzigd. Uw eigen account wordt altijd overgeslagen.
+4. **"Offboarding uitvoeren"** – na bevestiging van de samenvatting.
+5. **"Excel-export …"** slaat de resultatenlijst op als bewijs.
+
+> [!WARNING]
+> Verwijderde methoden kunnen niet worden hersteld. Gebruikers moeten ze opnieuw registreren, bijv. met een Temporary Access Pass.
+
+---
+
+## Help, instellingen en updates
+
+- **"Help"** bovenaan elk venster opent een zijpaneel: *wat het doet, wanneer gebruiken, wat u nodig hebt, stap voor stap* en *resultaat*. Elke knop en elk veld heeft ook een tooltip.
+- Bij de eerste start legt een **welkomstscherm** de drie stappen uit (uit te schakelen).
+- **Hulpmiddelen ▾ → "Instellingen …"**: standaardalgoritme en -tijdsinterval voor TOTP-tokens, standaardgeldigheid en eenmalig gebruik voor TAP's, de afzendermailbox van de MFA-handleiding en optioneel een **tenant** (ID of domein) voor gastaccounts.
+- Het hoofdvenster toont de **laatste aanmelding**, de **geschiedenis** uit het auditlogboek, een **Excel-bewijs** van de gebruiker en voor beheerders **"CA-uitsluiting controleren"**.
+- Is de methode uitgeschakeld in het beleid voor verificatiemethoden van de tenant, dan verschijnt vooraf een gele waarschuwing.
+- Is er een nieuwere versie, dan verschijnt bovenaan de knop **"Update …"**: die downloadt en installeert de versie (logboeken en instellingen blijven); start de tool daarna opnieuw.
+
+---
+
 ## Veelgestelde vragen en probleemoplossing
 
 **Dubbelklikken op `Start.cmd` doet niets of geeft een foutmelding.**
@@ -333,6 +361,7 @@ Alle machtigingen worden eenmalig bij het aanmelden gevraagd, zodat tijdens het 
 | `RoleManagement.ReadWrite.Directory` | Noodaccount: Global Administrator toewijzen |
 | `GroupMember.Read.All` | MFA-rapport: een groep als bereik kiezen, via groepen toegewezen rollen oplossen |
 | `AuditLog.Read.All` | MFA-rapport: laatste aanmelding |
+| `Policy.Read.All` | Waarschuwing als een methode in de tenant is uitgeschakeld; controle voorwaardelijke toegang |
 | `Mail.Send` | MFA-handleiding vanuit de eigen mailbox |
 | `Mail.Send.Shared` | MFA-handleiding vanuit een gedeelde mailbox |
 | `Organization.Read.All` | De hrdnr-sleutel uit de tenant laden |
@@ -374,6 +403,7 @@ In het **beleid voor verificatiemethoden** (Entra-beheercentrum → Beveiliging 
 |---|---|
 | `Start.cmd` | Starter via dubbelklik |
 | `Start-M365MfaTool.ps1` | Interface, statusbeheer en gebeurtenissen |
+| `UI/Theme.xaml` | Gemeenschappelijk uiterlijk van alle vensters |
 | `UI/MainWindow.xaml` | Indeling van het hoofdvenster |
 | `UI/BreakGlassDialog.xaml` | Dialoogvenster voor nieuwe noodaccounts |
 | `UI/TenantReportWindow.xaml` | Venster van het MFA-rapport |
@@ -381,6 +411,9 @@ In het **beleid voor verificatiemethoden** (Entra-beheercentrum → Beveiliging 
 | `UI/TokenInventoryWindow.xaml` | Venster van de tokenvoorraad |
 | `UI/BulkTapWindow.xaml` | Venster van de bulk Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Voorbeeldvenster van de MFA-handleiding |
+| `UI/BulkOffboardWindow.xaml` | Venster van de bulk-offboarding |
+| `UI/SettingsDialog.xaml` | Instellingenvenster |
+| `UI/HistoryDialog.xaml` | Geschiedenis van een gebruiker (auditlogboek) |
 | `Modules/Graph.psm1` | Aanmelden, Graph-aanvragen, gebruikers, domeinen, rollen, MFA-stoplicht, methoden lezen/verwijderen |
 | `Modules/Provisioning.psm1` | Inrichten van FIDO2, TOTP-kaarten, nep-MFA, TAP en noodaccounts |
 | `Modules/TenantReport.psm1` | MFA-rapport: gebruikers, rollen, gebundelde methode-aanvragen, stoplichtbeoordeling, Excel-export |

@@ -1100,7 +1100,7 @@ function Undo-TotpImport {
 
 # Excel row color per result status (bulk import and bulk TAP)
 $script:BulkStatusStyles = @{
-    OK = 'Default'; Warning = 'Yellow'; Error = 'Red'; Imported = 'Green'; Created = 'Green'; Assigned = 'Green'
+    OK = 'Default'; Warning = 'Yellow'; Error = 'Red'; Imported = 'Green'; Created = 'Green'; Assigned = 'Green'; Done = 'Green'
     Failed = 'Red'; Reverted = 'Unknown'; UndoFailed = 'Red'
 }
 
@@ -1479,6 +1479,192 @@ function Export-TapBulkXlsx {
 
 #endregion
 
+#region Bulk offboarding
+
+function Test-OffboardBulk {
+    <#
+    .SYNOPSIS
+        Resolves the users of a list (objects with Line and Upn) and counts their MFA methods and roles – changes nothing.
+    .OUTPUTS
+        One result per line: Status OK, Warning (account disabled or administrator) or Error (not found, duplicate).
+    #>
+    param(
+        [Parameter(Mandatory)][object[]]$Rows,
+        [string]$OwnAccount = '',
+        [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
+    )
+
+    $users = Resolve-M365UsersByUpn -Upns @($Rows | ForEach-Object { $_.Upn }) -Wait $Wait
+    $seen = @{}
+    foreach ($row in $Rows) {
+        $errors = New-Object System.Collections.Generic.List[string]
+        $warnings = New-Object System.Collections.Generic.List[string]
+        $user = if ($row.Upn) { $users[$row.Upn] } else { $null }
+        $methods = @()
+        $roles = @()
+        if (-not $row.Upn) { $errors.Add((T 'Import.Error.NoUpn')) }
+        elseif ($null -eq $user) { $errors.Add((T 'Import.Error.UserNotFound')) }
+        elseif ($OwnAccount -and $user.UserPrincipalName -eq $OwnAccount) { $errors.Add((T 'Offboard.Error.OwnAccount')) }
+        elseif ($seen.ContainsKey($user.Id)) { $errors.Add((T 'BulkTap.Error.Duplicate')) }
+        else {
+            $seen[$user.Id] = $true
+            if (-not $user.AccountEnabled) { $warnings.Add((T 'Import.Warn.UserDisabled')) }
+            $methods = @(Get-M365UserAuthMethods -UserId $user.Id | Where-Object CanDelete)
+            try { $roles = @(Get-M365UserAdminRoles -UserId $user.Id) } catch { $roles = @() }
+            if ($roles.Count) { $warnings.Add((T 'Offboard.Warn.Admin' $roles.Count)) }
+        }
+        $status = if ($errors.Count) { 'Error' } elseif ($warnings.Count) { 'Warning' } else { 'OK' }
+        [pscustomobject]@{
+            Line        = $row.Line
+            Upn         = $row.Upn
+            DisplayName = if ($user) { $user.DisplayName } else { '' }
+            Status      = $status
+            StatusText  = T "Import.Status.$status"
+            Message     = (@($errors) + @($warnings)) -join ' · '
+            User        = $user
+            Methods     = $methods
+            MethodCount = $methods.Count
+            RoleCount   = $roles.Count
+            Removed     = 0
+        }
+    }
+}
+
+function Invoke-OffboardBulk {
+    <#
+    .SYNOPSIS
+        Removes the MFA methods, revokes the sessions and/or disables the account of every result with status OK or Warning.
+    #>
+    param(
+        [Parameter(Mandatory)][object[]]$Results,
+        [switch]$RemoveMethods,
+        [switch]$RevokeSessions,
+        [switch]$DisableAccount,
+        [scriptblock]$OnProgress = { param($Result, $Done, $Total) },
+        [scriptblock]$ShouldCancel = { $false },
+        [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
+    )
+
+    # Retries only on throttling; every other error is reported for the row
+    $throttled = {
+        param([scriptblock]$Action)
+        for ($attempt = 1; ; $attempt++) {
+            try { return & $Action }
+            catch {
+                if ($attempt -lt 4 -and $_.Exception.Message -match '429|TooManyRequests|activityLimitReached|throttl|503|ServiceUnavailable') {
+                    & $Wait (10000 * $attempt)
+                    continue
+                }
+                throw
+            }
+        }
+    }
+
+    $pending = @($Results | Where-Object { $_.Status -in 'OK', 'Warning' })
+    $done = 0
+    foreach ($result in $pending) {
+        if (& $ShouldCancel) { break }
+        $failures = New-Object System.Collections.Generic.List[string]
+        $result.Removed = 0
+        if ($RemoveMethods) {
+            foreach ($method in @($result.Methods)) {
+                try {
+                    & $throttled { Remove-M365UserAuthMethod -UserId $result.User.Id -Method $method -Confirm:$false }
+                    $result.Removed++
+                }
+                catch { $failures.Add(('{0}: {1}' -f $method.TypeName, $_.Exception.Message)) }
+            }
+        }
+        if ($RevokeSessions) {
+            try { & $throttled { Revoke-M365UserSessions -UserId $result.User.Id } }
+            catch { $failures.Add((T 'Offboard.Error.Sessions' $_.Exception.Message)) }
+        }
+        if ($DisableAccount) {
+            try { & $throttled { Set-M365UserAccountEnabled -UserId $result.User.Id -Enabled $false } }
+            catch { $failures.Add((T 'Offboard.Error.Disable' $_.Exception.Message)) }
+        }
+        $result.Status = if ($failures.Count) { 'Failed' } else { 'Done' }
+        $result.StatusText = T "Import.Status.$($result.Status)"
+        $result.Message = if ($failures.Count) { $failures -join ' · ' } else { T 'Offboard.Done.Row' $result.Removed }
+        $done++
+        & $OnProgress $result $done $pending.Count
+    }
+}
+
+function Export-OffboardXlsx {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][object[]]$Rows,
+        [string]$Tenant,
+        [string]$Source,
+        [string]$Settings
+    )
+    Export-BulkResultXlsx -Path $Path -Rows $Rows -Title (T 'Offboard.Title') -Columns @(
+        @{ Key = 'Import.Col.Upn';        Width = 38; Property = 'Upn' }
+        @{ Key = 'Import.Col.Name';       Width = 28; Property = 'DisplayName' }
+        @{ Key = 'Import.Col.Status';     Width = 14; Property = 'StatusText' }
+        @{ Key = 'Offboard.Col.Methods';  Width = 12; Property = 'MethodCount' }
+        @{ Key = 'Offboard.Col.Removed';  Width = 12; Property = 'Removed' }
+        @{ Key = 'Offboard.Col.Roles';    Width = 10; Property = 'RoleCount' }
+        @{ Key = 'Import.Col.Message';    Width = 70; Property = 'Message' }
+    ) -Summary @(
+        , @((T 'Report.Summary.Tenant'), $Tenant)
+        , @((T 'BulkTap.Summary.Source'), $Source)
+        , @((T 'Import.Summary.Settings'), $Settings)
+    )
+}
+
+#endregion
+
+#region User evidence (Excel)
+
+function Export-UserMethodsXlsx {
+    <#
+    .SYNOPSIS
+        Writes the MFA methods of one user as Excel (evidence for a ticket): user data, rating, roles and the method list.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)]$User,
+        [object[]]$Methods = @(),
+        $Assessment,
+        [object[]]$Roles = @(),
+        [string]$Tenant = '',
+        [string]$CreatedBy = ''
+    )
+    $levelStyle = @{ Red = 'Red'; Yellow = 'Yellow'; Green = 'Green' }
+    $summary = New-Object System.Collections.Generic.List[object]
+    $summary.Add(@{ Style = 'Bold'; Values = @((T 'User.Export.Title')) })
+    $summary.Add(@{ Values = @((T 'User.DisplayName'), $User.DisplayName) })
+    $summary.Add(@{ Values = @((T 'User.Upn'), $User.UserPrincipalName) })
+    $summary.Add(@{ Values = @((T 'User.ObjectId'), $User.Id) })
+    $summary.Add(@{ Values = @((T 'Report.Summary.Tenant'), $Tenant) })
+    $summary.Add(@{ Values = @((T 'Report.Summary.Created'), (Get-Date)) })
+    $summary.Add(@{ Values = @((T 'User.Export.CreatedBy'), $CreatedBy) })
+    $summary.Add(@{ Values = @() })
+    if ($Assessment) {
+        $style = if ($levelStyle.ContainsKey([string]$Assessment.Level)) { $levelStyle[[string]$Assessment.Level] } else { 'Default' }
+        $summary.Add(@{ Style = $style; Values = @((T 'User.MfaStatus'), $Assessment.Title) })
+        foreach ($hint in @($Assessment.Hints)) { $summary.Add(@{ Values = @('', $hint) }) }
+    }
+    $summary.Add(@{ Values = @((T 'User.MethodCount'), $Methods.Count) })
+    $roleNames = @($Roles | ForEach-Object { $_.RoleName } | Select-Object -Unique)
+    $summary.Add(@{ Values = @((T 'User.AdminRoles'), $(if ($roleNames.Count) { $roleNames -join ', ' } else { T 'User.NoRoles' })) })
+
+    $list = New-Object System.Collections.Generic.List[object]
+    $list.Add(@{ Style = 'Header'; Values = @((T 'Methods.Col.Type'), (T 'Methods.Col.Name'), (T 'Methods.Col.Created'), (T 'Methods.Col.Details'), 'ID') })
+    foreach ($method in $Methods) {
+        $list.Add(@{ Values = @($method.TypeName, $method.DisplayName, $method.Created, $method.Summary, $method.Id) })
+    }
+    Save-XlsxWorkbook -Path $Path -Sheets @(
+        @{ Name = T 'Report.Sheet.Summary'; Xml = New-XlsxSheetXml -Widths 32, 80 -Rows $summary.ToArray() }
+        @{ Name = T 'User.Export.Sheet'; FilterRef = ('A1:E{0}' -f $list.Count)
+           Xml = New-XlsxSheetXml -Widths 30, 34, 20, 70, 40 -Rows $list.ToArray() -HeaderRow }
+    )
+}
+
+#endregion
+
 function Invoke-MfaProvisioning {
     <#
     .SYNOPSIS
@@ -1513,4 +1699,6 @@ Export-ModuleMember -Function @(
     'Invoke-TokenBulkAssignment', 'Export-TokenAssignmentXlsx'
     # Bulk Temporary Access Pass
     'Read-UpnListFile', 'Resolve-M365UsersByUpn', 'Test-TapBulk', 'Invoke-TapBulk', 'Export-TapBulkXlsx'
+    # Bulk offboarding and user evidence
+    'Test-OffboardBulk', 'Invoke-OffboardBulk', 'Export-OffboardXlsx', 'Export-UserMethodsXlsx'
 )
