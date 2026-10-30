@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Tipo de cuenta",
     "Report.Col.AccountNote": "Nota",
     "Report.Col.GuideChannel": "Canal",
-    "Classify.Info1": "Marque como \"No es una persona\" cada cuenta sin una persona detrás (buzón compartido, cuenta de servicio, sala o prueba). Su MFA la configuran los administradores; la campaña las omite.",
+    "Classify.Info1": "Marque como \"No es una persona\" cada cuenta sin una persona detrás (buzón compartido, cuenta de servicio, sala o prueba): su MFA la configuran los administradores y la campaña las omite. ¿Dudas? Márquela \"Por aclarar\" con una nota y revise estas cuentas con el cliente.",
     "Classify.Info2": "Seleccione varias filas con Mayús/Ctrl. La clasificación se guarda en el objeto de usuario (extensión abierta com.m365mfatool.accountClass) y se muestra también en la ventana principal y en el informe MFA.",
     "Classify.FilterBox.ToolTip": "Mostrar todas las cuentas o solo un tipo",
     "Classify.Filter.All": "Todas las cuentas",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "En el despliegue de MFA: primero clasificar las cuentas con el cliente, luego enviar la guía a todos sin MFA adecuada y, una semana después, recordárselo a quienes aún no la configuraron.",
     "Help.Campaign.Need": "Correo: un buzón remitente (propio o compartido con \"Enviar como\"). Teams: Teams para usted y el usuario; el mensaje sale de su cuenta. Si en esta sesión se creó el informe MFA, se usan sus datos.",
     "Help.Campaign.Steps": "1. \"Cargar usuarios\" (o usar los datos del informe MFA).\n2. Pestaña \"Clasificar cuentas\": marcar buzones compartidos y cuentas de servicio como \"No es una persona\".\n3. Pestaña \"Campaña\": filtrar (p. ej. rojo y amarillo, nunca contactados), seleccionar usuarios o \"Seleccionar todo\".\n4. Elegir correo y/o Teams y hacer clic en \"Enviar guía\".\n5. Después: filtro \"Sin contacto desde hace 7 días\" y recordar.",
-    "Help.Campaign.Result": "Cada envío se guarda en el usuario (número, primera y última fecha, los últimos 20 envíos con canal y remitente). \"Resultado\" muestra qué ocurrió por usuario; \"Exportar a Excel …\" guarda la lista."
+    "Help.Campaign.Result": "Cada envío se guarda en el usuario (número, primera y última fecha, los últimos 20 envíos con canal y remitente). \"Resultado\" muestra qué ocurrió por usuario; \"Exportar a Excel …\" guarda la lista.",
+
+    "AccountType.Unclear": "Por aclarar",
+    "Classify.SetUnclear": "Por aclarar",
+    "Classify.SetUnclear.ToolTip": "Marcar las cuentas seleccionadas para aclarar con el cliente (p. ej. finalidad desconocida); anote la pregunta abierta en la nota",
+    "Classify.Filter.Unclear": "Por aclarar"
 }

@@ -266,7 +266,7 @@ Zmiana pliku, algorytmu, interwału lub rozdziału wymaga nowego sprawdzenia.
 
 **Narzędzia ▾ → „Kampania MFA …”** (lub **„Klasyfikuj konta …”**) otwiera okno z dwiema kartami, korzystające z tych samych danych co raport MFA (albo **„Wczytaj użytkowników”**).
 
-- **„Klasyfikuj konta”**: oznacz jako **„Nie osoba”** każde konto, za którym nie stoi człowiek (skrzynka współdzielona, konto usługowe, sali lub testowe). Zapisywane w obiekcie użytkownika (open extension `com.m365mfatool.accountClass`) i pokazywane także w oknie głównym (**„Typ konta”**) i raporcie MFA. Kampania pomija te konta.
+- **„Klasyfikuj konta”**: oznacz jako **„Nie osoba”** każde konto, za którym nie stoi człowiek (skrzynka współdzielona, konto usługowe, sali lub testowe). Zapisywane w obiekcie użytkownika (open extension `com.m365mfatool.accountClass`) i pokazywane także w oknie głównym (**„Typ konta”**) i raporcie MFA. Kampania pomija te konta. Wątpliwości? Oznacz jako **„Do wyjaśnienia”** z notatką i filtruj je podczas przeglądu z klientem.
 - **„Kampania”**: liczniki (grupa docelowa, nigdy nie kontaktowani, kontaktowani), filtry według sygnalizatora i ostatniego kontaktu; zaznacz użytkowników i wyślij instrukcję **e-mailem** i/lub przez **Teams** (wiadomość czatu 1:1 z Twojego konta).
 
 Każda wysyłka jest zapisywana u użytkownika: liczba, pierwsza i ostatnia data oraz ostatnie 20 wysyłek z datą, nadawcą, językiem i kanałem.

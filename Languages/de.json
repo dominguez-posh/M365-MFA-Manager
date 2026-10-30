@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Kontotyp",
     "Report.Col.AccountNote": "Notiz",
     "Report.Col.GuideChannel": "Kanal",
-    "Classify.Info1": "Jedes Konto, hinter dem kein Mensch steht (Sammelpostfach, Dienst-, Raum- oder Testkonto), als „Kein Mensch“ markieren. Deren MFA richten Admins ein; die Kampagne überspringt sie.",
+    "Classify.Info1": "Jedes Konto, hinter dem kein Mensch steht (Sammelpostfach, Dienst-, Raum- oder Testkonto), als „Kein Mensch“ markieren – deren MFA richten Admins ein, die Kampagne überspringt sie. Unsicher? Als „Zu klären“ mit Notiz markieren und diese Konten mit dem Kunden durchgehen.",
     "Classify.Info2": "Mehrere Zeilen mit Umschalt/Strg auswählen. Die Klassifizierung wird am Benutzerobjekt gespeichert (Open Extension com.m365mfatool.accountClass) und auch im Hauptfenster und im MFA-Report angezeigt.",
     "Classify.FilterBox.ToolTip": "Alle Konten oder nur einen Kontotyp anzeigen",
     "Classify.Filter.All": "Alle Konten",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "Beim MFA-Rollout: erst gemeinsam mit dem Kunden die Konten klassifizieren, dann allen ohne passendes MFA die Anleitung senden und eine Woche später die erinnern, die es noch nicht eingerichtet haben.",
     "Help.Campaign.Need": "E-Mail: ein Absenderpostfach (eigenes oder geteiltes mit „Senden als“). Teams: Teams für Sie und den Benutzer; die Nachricht kommt von Ihrem Konto. Wurde in dieser Sitzung der MFA-Report erstellt, werden dessen Daten genutzt.",
     "Help.Campaign.Steps": "1. „Benutzer laden“ (oder die Daten des MFA-Reports nutzen).\n2. Reiter „Konten klassifizieren“: Sammelpostfächer und Dienstkonten als „Kein Mensch“ markieren.\n3. Reiter „Kampagne“: filtern (z. B. rot und gelb, noch nie angeschrieben), Benutzer auswählen oder „Alle auswählen“.\n4. E-Mail und/oder Teams wählen und „Anleitung senden“ klicken.\n5. Später: Filter „Seit 7 Tagen nicht angeschrieben“ und erinnern.",
-    "Help.Campaign.Result": "Jeder Versand wird am Benutzer gespeichert (Anzahl, erstes und letztes Datum, die letzten 20 Versendungen mit Kanal und Absender). „Ergebnis“ zeigt pro Benutzer, was passiert ist; „Excel-Export“ speichert die Liste."
+    "Help.Campaign.Result": "Jeder Versand wird am Benutzer gespeichert (Anzahl, erstes und letztes Datum, die letzten 20 Versendungen mit Kanal und Absender). „Ergebnis“ zeigt pro Benutzer, was passiert ist; „Excel-Export“ speichert die Liste.",
+
+    "AccountType.Unclear": "Zu klären",
+    "Classify.SetUnclear": "Zu klären",
+    "Classify.SetUnclear.ToolTip": "Ausgewählte Konten zur Klärung mit dem Kunden markieren (z. B. Zweck unbekannt) – die offene Frage in die Notiz schreiben",
+    "Classify.Filter.Unclear": "Zu klären"
 }

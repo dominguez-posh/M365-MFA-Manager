@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Tipo de conta",
     "Report.Col.AccountNote": "Nota",
     "Report.Col.GuideChannel": "Canal",
-    "Classify.Info1": "Marque como \"Não é uma pessoa\" cada conta sem uma pessoa por trás (caixa partilhada, conta de serviço, sala ou teste). A MFA destas é configurada pelos administradores; a campanha ignora-as.",
+    "Classify.Info1": "Marque como \"Não é uma pessoa\" cada conta sem uma pessoa por trás (caixa partilhada, conta de serviço, sala ou teste) – a MFA destas é configurada pelos administradores, a campanha ignora-as. Dúvidas? Marque-a \"A esclarecer\" com uma nota e reveja estas contas com o cliente.",
     "Classify.Info2": "Selecione várias linhas com Shift/Ctrl. A classificação é guardada no objeto do utilizador (extensão aberta com.m365mfatool.accountClass) e também apresentada na janela principal e no relatório MFA.",
     "Classify.FilterBox.ToolTip": "Mostrar todas as contas ou só um tipo",
     "Classify.Filter.All": "Todas as contas",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "Na implementação da MFA: primeiro classificar as contas com o cliente, depois enviar o guia a todos sem MFA adequada e, uma semana depois, lembrar quem ainda não a configurou.",
     "Help.Campaign.Need": "E-mail: uma caixa de correio remetente (própria ou partilhada com \"Enviar como\"). Teams: Teams para si e para o utilizador; a mensagem sai da sua conta. Se o relatório MFA foi criado nesta sessão, são usados os seus dados.",
     "Help.Campaign.Steps": "1. \"Carregar utilizadores\" (ou usar os dados do relatório MFA).\n2. Separador \"Classificar contas\": marcar caixas partilhadas e contas de serviço como \"Não é uma pessoa\".\n3. Separador \"Campanha\": filtrar (p. ex. vermelho e amarelo, nunca contactados), selecionar utilizadores ou \"Selecionar tudo\".\n4. Escolher e-mail e/ou Teams e clicar em \"Enviar guia\".\n5. Mais tarde: filtro \"Sem contacto há 7 dias\" e lembrar.",
-    "Help.Campaign.Result": "Cada envio é guardado no utilizador (número, primeira e última data, os últimos 20 envios com canal e remetente). \"Resultado\" mostra o que aconteceu por utilizador; \"Exportar para Excel …\" guarda a lista."
+    "Help.Campaign.Result": "Cada envio é guardado no utilizador (número, primeira e última data, os últimos 20 envios com canal e remetente). \"Resultado\" mostra o que aconteceu por utilizador; \"Exportar para Excel …\" guarda a lista.",
+
+    "AccountType.Unclear": "A esclarecer",
+    "Classify.SetUnclear": "A esclarecer",
+    "Classify.SetUnclear.ToolTip": "Marcar as contas selecionadas para esclarecer com o cliente (p. ex. finalidade desconhecida) – escreva a questão em aberto na nota",
+    "Classify.Filter.Unclear": "A esclarecer"
 }

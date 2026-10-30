@@ -549,7 +549,7 @@ function ConvertTo-M365ChannelText {
 
 <#
     Open extension com.m365mfatool.accountClass on the user:
-      accountType         Human | NonHuman   (no extension = not classified yet)
+      accountType         Human | NonHuman | Unclear   (no extension = not classified yet; Unclear = still to be clarified with the customer)
       note                free text, e.g. "shared mailbox", "service account of the ERP"
       classifiedBy        UPN of the admin
       classifiedDateTime  UTC
@@ -563,13 +563,13 @@ function Get-M365AccountClassExtensionName {
 }
 
 function ConvertTo-M365AccountClass {
-    # Graph response of the extension -> AccountType (Human/NonHuman/Unclassified), Note, ClassifiedBy, ClassifiedAt
+    # Graph response of the extension -> AccountType (Human/NonHuman/Unclear/Unclassified), Note, ClassifiedBy, ClassifiedAt
     param($Extension)
     if ($Extension -isnot [System.Collections.IDictionary] -or -not $Extension['accountType']) {
         return [pscustomobject]@{ AccountType = 'Unclassified'; Note = ''; ClassifiedBy = ''; ClassifiedAt = $null }
     }
     [pscustomobject]@{
-        AccountType  = if ([string]$Extension['accountType'] -eq 'NonHuman') { 'NonHuman' } else { 'Human' }
+        AccountType  = if ([string]$Extension['accountType'] -in 'NonHuman', 'Unclear') { [string]$Extension['accountType'] } else { 'Human' }
         Note         = [string]$Extension['note']
         ClassifiedBy = [string]$Extension['classifiedBy']
         ClassifiedAt = ConvertTo-LocalDate $Extension['classifiedDateTime']
@@ -615,7 +615,7 @@ function Set-M365AccountClass {
     #>
     param(
         [Parameter(Mandatory)][string]$UserId,
-        [Parameter(Mandatory)][ValidateSet('Human', 'NonHuman', 'Unclassified')][string]$AccountType,
+        [Parameter(Mandatory)][ValidateSet('Human', 'NonHuman', 'Unclear', 'Unclassified')][string]$AccountType,
         [string]$Note = '',
         [string]$ClassifiedBy = ''
     )

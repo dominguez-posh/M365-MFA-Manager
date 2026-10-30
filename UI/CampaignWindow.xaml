@@ -6,7 +6,7 @@
         Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
 
     <Window.Resources>
-        <!-- Account type as colored pill: not classified (grey), human (blue), not a human (purple) -->
+        <!-- Account type as colored pill: not classified (grey), human (blue), not a human (purple), to be clarified (orange) -->
         <Style x:Key="AccountChipBorder" TargetType="Border">
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="9,2"/>
@@ -21,6 +21,10 @@
                 <DataTrigger Binding="{Binding AccountType}" Value="NonHuman">
                     <Setter Property="Background" Value="#EDE9FE"/>
                     <Setter Property="TextElement.Foreground" Value="#5B21B6"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding AccountType}" Value="Unclear">
+                    <Setter Property="Background" Value="#FFEDD5"/>
+                    <Setter Property="TextElement.Foreground" Value="#9A3412"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -220,6 +224,7 @@
                             <ComboBoxItem Uid="Classify.Filter.Unclassified" Tag="Unclassified"/>
                             <ComboBoxItem Uid="Classify.Filter.Human" Tag="Human"/>
                             <ComboBoxItem Uid="Classify.Filter.NonHuman" Tag="NonHuman"/>
+                            <ComboBoxItem Uid="Classify.Filter.Unclear" Tag="Unclear"/>
                         </ComboBox>
                         <TextBlock Grid.Column="2" Name="TxtClsVisible" Text="" Style="{StaticResource Label}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                     </Grid>
@@ -242,6 +247,7 @@
                             <TextBox Name="TxtClsNote" Uid="Classify.NoteBox" Width="280" Margin="0,4,12,4"/>
                             <Button Name="BtnClsNonHuman" Uid="Classify.SetNonHuman" Tag="&#xE7EF;" Background="#6D28D9"/>
                             <Button Name="BtnClsHuman" Uid="Classify.SetHuman" Tag="&#xE77B;"/>
+                            <Button Name="BtnClsUnclear" Uid="Classify.SetUnclear" Tag="&#xE9CE;" Background="#C2410C"/>
                             <Button Name="BtnClsReset" Uid="Classify.Reset" Tag="&#xE894;" Style="{StaticResource SecondaryButton}"/>
                         </WrapPanel>
                     </Border>

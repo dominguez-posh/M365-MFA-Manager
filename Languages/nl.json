@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Accounttype",
     "Report.Col.AccountNote": "Notitie",
     "Report.Col.GuideChannel": "Kanaal",
-    "Classify.Info1": "Markeer elk account zonder persoon erachter (gedeelde mailbox, service-, ruimte- of testaccount) als \"Geen persoon\". Beheerders stellen hun MFA in; de campagne slaat ze over.",
+    "Classify.Info1": "Markeer elk account zonder persoon erachter (gedeelde mailbox, service-, ruimte- of testaccount) als \"Geen persoon\" – beheerders stellen hun MFA in, de campagne slaat ze over. Twijfel? Markeer het als \"Te verduidelijken\" met een notitie en loop deze accounts met de klant door.",
     "Classify.Info2": "Selecteer meerdere regels met Shift/Ctrl. De classificatie wordt opgeslagen op het gebruikersobject (open extension com.m365mfatool.accountClass) en ook getoond in het hoofdvenster en het MFA-rapport.",
     "Classify.FilterBox.ToolTip": "Alle accounts of maar één accounttype tonen",
     "Classify.Filter.All": "Alle accounts",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "Bij de MFA-uitrol: eerst samen met de klant de accounts classificeren, dan iedereen zonder passende MFA de handleiding sturen en een week later wie het nog niet heeft ingesteld herinneren.",
     "Help.Campaign.Need": "E-mail: een afzendermailbox (eigen of gedeeld met \"Verzenden als\"). Teams: Teams voor u en de gebruiker; het bericht komt van uw account. Is het MFA-rapport in deze sessie gemaakt, dan worden de gegevens daarvan gebruikt.",
     "Help.Campaign.Steps": "1. \"Gebruikers laden\" (of de gegevens van het MFA-rapport gebruiken).\n2. Tabblad \"Accounts classificeren\": gedeelde mailboxen en serviceaccounts markeren als \"Geen persoon\".\n3. Tabblad \"Campagne\": filteren (bijv. rood en geel, nooit aangeschreven), gebruikers selecteren of \"Alles selecteren\".\n4. E-mail en/of Teams kiezen en op \"Handleiding verzenden\" klikken.\n5. Later: filter \"7 dagen niet aangeschreven\" en herinneren.",
-    "Help.Campaign.Result": "Elke verzending wordt op de gebruiker opgeslagen (aantal, eerste en laatste datum, de laatste 20 verzendingen met kanaal en afzender). \"Resultaat\" toont per gebruiker wat er gebeurde; \"Excel-export …\" slaat de lijst op."
+    "Help.Campaign.Result": "Elke verzending wordt op de gebruiker opgeslagen (aantal, eerste en laatste datum, de laatste 20 verzendingen met kanaal en afzender). \"Resultaat\" toont per gebruiker wat er gebeurde; \"Excel-export …\" slaat de lijst op.",
+
+    "AccountType.Unclear": "Te verduidelijken",
+    "Classify.SetUnclear": "Te verduidelijken",
+    "Classify.SetUnclear.ToolTip": "Geselecteerde accounts markeren om met de klant te verduidelijken (bijv. doel onbekend) – zet de open vraag in de notitie",
+    "Classify.Filter.Unclear": "Te verduidelijken"
 }

@@ -227,6 +227,7 @@
                                 <ComboBoxItem Tag="Unclassified" Uid="AccountType.Unclassified"/>
                                 <ComboBoxItem Tag="Human" Uid="AccountType.Human"/>
                                 <ComboBoxItem Tag="NonHuman" Uid="AccountType.NonHuman"/>
+                                <ComboBoxItem Tag="Unclear" Uid="AccountType.Unclear"/>
                             </ComboBox>
                             <TextBlock Name="TxtAccountClassInfo" Text="" FontSize="11" Foreground="#64748B" TextWrapping="Wrap" Margin="2,0,0,10"/>
 

@@ -266,7 +266,7 @@ Modifier le fichier, l'algorithme, l'intervalle ou la distribution nécessite un
 
 **Outils ▾ → « Campagne MFA … »** (ou **« Classer les comptes … »**) ouvre une fenêtre à deux onglets qui utilise les mêmes données que le rapport MFA (ou **« Charger les utilisateurs »**).
 
-- **« Classer les comptes »** : marquez **« Pas une personne »** chaque compte sans personne derrière (boîte partagée, compte de service, salle ou test). Enregistré sur l'objet utilisateur (extension ouverte `com.m365mfatool.accountClass`) et affiché aussi dans la fenêtre principale (**« Type de compte »**) et le rapport MFA. La campagne ignore ces comptes.
+- **« Classer les comptes »** : marquez **« Pas une personne »** chaque compte sans personne derrière (boîte partagée, compte de service, salle ou test). Enregistré sur l'objet utilisateur (extension ouverte `com.m365mfatool.accountClass`) et affiché aussi dans la fenêtre principale (**« Type de compte »**) et le rapport MFA. La campagne ignore ces comptes. Un doute ? Marquez-le **« À clarifier »** avec une note et filtrez dessus lors de la revue avec le client.
 - **« Campagne »** : compteurs (groupe cible, jamais contactés, contactés), filtres par couleur et dernier contact ; sélectionnez les utilisateurs et envoyez le guide par **e-mail** et/ou **Teams** (message de chat 1:1 depuis votre compte).
 
 Chaque envoi est enregistré sur l'utilisateur : nombre, première et dernière date et les 20 derniers envois avec date, expéditeur, langue et canal.

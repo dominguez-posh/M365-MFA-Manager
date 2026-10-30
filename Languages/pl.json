@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Typ konta",
     "Report.Col.AccountNote": "Notatka",
     "Report.Col.GuideChannel": "Kanał",
-    "Classify.Info1": "Oznacz jako „Nie osoba” każde konto, za którym nie stoi człowiek (skrzynka współdzielona, konto usługowe, sali lub testowe). Ich MFA konfigurują administratorzy; kampania je pomija.",
+    "Classify.Info1": "Oznacz jako „Nie osoba” każde konto, za którym nie stoi człowiek (skrzynka współdzielona, konto usługowe, sali lub testowe) – ich MFA konfigurują administratorzy, kampania je pomija. Masz wątpliwości? Oznacz jako „Do wyjaśnienia” z notatką i przejrzyj te konta z klientem.",
     "Classify.Info2": "Zaznacz wiele wierszy z Shift/Ctrl. Klasyfikacja jest zapisywana w obiekcie użytkownika (open extension com.m365mfatool.accountClass) i pokazywana także w oknie głównym i raporcie MFA.",
     "Classify.FilterBox.ToolTip": "Pokaż wszystkie konta lub tylko jeden typ",
     "Classify.Filter.All": "Wszystkie konta",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "Przy wdrażaniu MFA: najpierw wspólnie z klientem sklasyfikuj konta, potem wyślij instrukcję wszystkim bez właściwego MFA, a tydzień później przypomnij tym, którzy jej jeszcze nie skonfigurowali.",
     "Help.Campaign.Need": "E-mail: skrzynka nadawcy (własna lub współdzielona z „Wyślij jako”). Teams: Teams dla Ciebie i użytkownika; wiadomość wychodzi z Twojego konta. Jeśli w tej sesji utworzono raport MFA, używane są jego dane.",
     "Help.Campaign.Steps": "1. „Wczytaj użytkowników” (lub użyj danych raportu MFA).\n2. Karta „Klasyfikuj konta”: oznacz skrzynki współdzielone i konta usługowe jako „Nie osoba”.\n3. Karta „Kampania”: filtruj (np. czerwoni i żółci, nigdy nie kontaktowani), zaznacz użytkowników lub „Zaznacz wszystko”.\n4. Wybierz e-mail i/lub Teams i kliknij „Wyślij instrukcję”.\n5. Później: filtr „Brak kontaktu od 7 dni” i przypomnij.",
-    "Help.Campaign.Result": "Każda wysyłka jest zapisywana u użytkownika (liczba, pierwsza i ostatnia data, ostatnie 20 wysyłek z kanałem i nadawcą). „Wynik” pokazuje, co się stało u każdego użytkownika; „Eksport do Excela …” zapisuje listę."
+    "Help.Campaign.Result": "Każda wysyłka jest zapisywana u użytkownika (liczba, pierwsza i ostatnia data, ostatnie 20 wysyłek z kanałem i nadawcą). „Wynik” pokazuje, co się stało u każdego użytkownika; „Eksport do Excela …” zapisuje listę.",
+
+    "AccountType.Unclear": "Do wyjaśnienia",
+    "Classify.SetUnclear": "Do wyjaśnienia",
+    "Classify.SetUnclear.ToolTip": "Oznacz zaznaczone konta do wyjaśnienia z klientem (np. nieznany cel) – wpisz otwarte pytanie w notatce",
+    "Classify.Filter.Unclear": "Do wyjaśnienia"
 }

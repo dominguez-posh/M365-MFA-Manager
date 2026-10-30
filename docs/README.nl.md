@@ -266,7 +266,7 @@ Na wijziging van bestand, algoritme, tijdsinterval of verdeling is een nieuwe co
 
 **Hulpmiddelen ▾ → "MFA-campagne …"** (of **"Accounts classificeren …"**) opent een venster met twee tabbladen dat dezelfde gegevens gebruikt als het MFA-rapport (of **"Gebruikers laden"**).
 
-- **"Accounts classificeren"**: markeer elk account zonder persoon erachter (gedeelde mailbox, service-, ruimte- of testaccount) als **"Geen persoon"**. Opgeslagen op het gebruikersobject (open extension `com.m365mfatool.accountClass`) en ook getoond in het hoofdvenster (**"Accounttype"**) en het MFA-rapport. De campagne slaat deze accounts over.
+- **"Accounts classificeren"**: markeer elk account zonder persoon erachter (gedeelde mailbox, service-, ruimte- of testaccount) als **"Geen persoon"**. Opgeslagen op het gebruikersobject (open extension `com.m365mfatool.accountClass`) en ook getoond in het hoofdvenster (**"Accounttype"**) en het MFA-rapport. De campagne slaat deze accounts over. Twijfel? Markeer het als **"Te verduidelijken"** met een notitie en filter erop bij het doorlopen met de klant.
 - **"Campagne"**: tellers (doelgroep, nooit aangeschreven, aangeschreven), filters op stoplicht en laatste contact; selecteer gebruikers en verstuur de handleiding per **e-mail** en/of **Teams** (1:1-chatbericht vanaf uw account).
 
 Elke verzending wordt op de gebruiker opgeslagen: aantal, eerste en laatste datum en de laatste 20 verzendingen met datum, afzender, taal en kanaal.

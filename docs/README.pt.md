@@ -266,7 +266,7 @@ Alterar o ficheiro, o algoritmo, o intervalo ou a distribuição exige uma nova 
 
 **Ferramentas ▾ → "Campanha MFA …"** (ou **"Classificar contas …"**) abre uma janela com dois separadores que usa os mesmos dados do relatório MFA (ou **"Carregar utilizadores"**).
 
-- **"Classificar contas"**: marque como **"Não é uma pessoa"** cada conta sem uma pessoa por trás (caixa partilhada, conta de serviço, sala ou teste). Guardado no objeto do utilizador (extensão aberta `com.m365mfatool.accountClass`) e também apresentado na janela principal (**"Tipo de conta"**) e no relatório MFA. A campanha ignora estas contas.
+- **"Classificar contas"**: marque como **"Não é uma pessoa"** cada conta sem uma pessoa por trás (caixa partilhada, conta de serviço, sala ou teste). Guardado no objeto do utilizador (extensão aberta `com.m365mfatool.accountClass`) e também apresentado na janela principal (**"Tipo de conta"**) e no relatório MFA. A campanha ignora estas contas. Dúvidas? Marque-a **"A esclarecer"** com uma nota e filtre por ela ao rever a lista com o cliente.
 - **"Campanha"**: contadores (grupo-alvo, nunca contactados, contactados), filtros por semáforo e último contacto; selecione utilizadores e envie o guia por **e-mail** e/ou **Teams** (mensagem de chat 1:1 a partir da sua conta).
 
 Cada envio é guardado no utilizador: número, primeira e última data e os últimos 20 envios com data, remetente, idioma e canal.

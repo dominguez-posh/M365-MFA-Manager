@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Account type",
     "Report.Col.AccountNote": "Note",
     "Report.Col.GuideChannel": "Channel",
-    "Classify.Info1": "Mark every account without a person behind it (shared mailbox, service, room or test account) as \"Not a person\". Administrators set up their MFA; the campaign skips them.",
+    "Classify.Info1": "Mark every account without a person behind it (shared mailbox, service, room or test account) as \"Not a person\" – administrators set up their MFA, the campaign skips them. Unsure? Mark it \"To be clarified\" with a note and go through these accounts with the customer.",
     "Classify.Info2": "Select several rows with Shift/Ctrl. The classification is stored on the user object (open extension com.m365mfatool.accountClass) and also shown in the main window and the MFA report.",
     "Classify.FilterBox.ToolTip": "Show all accounts or only one account type",
     "Classify.Filter.All": "All accounts",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "When rolling out MFA: first classify the accounts together with the customer, then send the guide to everybody without proper MFA, and remind those who still have not set it up a week later.",
     "Help.Campaign.Need": "Email: a sender mailbox (own or shared with Send As). Teams: Teams for you and the user; the message comes from your account. If the MFA report was created in this session, its data is used.",
     "Help.Campaign.Steps": "1. \"Load users\" (or use the data of the MFA report).\n2. Tab \"Classify accounts\": mark shared mailboxes and service accounts as \"Not a person\".\n3. Tab \"Campaign\": filter (e.g. red and yellow, never contacted), select users or \"Select all\".\n4. Choose email and/or Teams and click \"Send guide\".\n5. Later: filter \"Not contacted for 7 days\" and send a reminder.",
-    "Help.Campaign.Result": "Every sending is stored on the user (count, first and last date, last 20 sendings with channel and sender). \"Result\" shows what happened per user; \"Excel export\" saves the list."
+    "Help.Campaign.Result": "Every sending is stored on the user (count, first and last date, last 20 sendings with channel and sender). \"Result\" shows what happened per user; \"Excel export\" saves the list.",
+
+    "AccountType.Unclear": "To be clarified",
+    "Classify.SetUnclear": "To be clarified",
+    "Classify.SetUnclear.ToolTip": "Mark the selected accounts for clarification with the customer (e.g. unknown purpose) – put the open question in the note",
+    "Classify.Filter.Unclear": "To be clarified"
 }

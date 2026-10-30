@@ -3528,7 +3528,7 @@ function Set-CpBusy {
     $cp = $script:Cp
     $cp.Running = $Busy
     foreach ($control in $cp.CmbCpScope, $cp.PnlCpGroup, $cp.BtnCpLoad, $cp.BtnCpSend, $cp.BtnCpSelectAll, $cp.BtnCpExport,
-                         $cp.ChkCpMail, $cp.ChkCpTeams, $cp.TxtCpSender, $cp.BtnClsNonHuman, $cp.BtnClsHuman, $cp.BtnClsReset, $cp.BtnCpClose) {
+                         $cp.ChkCpMail, $cp.ChkCpTeams, $cp.TxtCpSender, $cp.BtnClsNonHuman, $cp.BtnClsHuman, $cp.BtnClsUnclear, $cp.BtnClsReset, $cp.BtnCpClose) {
         $control.IsEnabled = -not $Busy
     }
     $cp.BtnCpCancel.IsEnabled = $Busy
@@ -3827,7 +3827,7 @@ function Start-CampaignSend {
 
 function Set-CpClassification {
     # Marks the selected accounts as human / not a human, or removes the classification
-    param([Parameter(Mandatory)][ValidateSet('Human', 'NonHuman', 'Unclassified')][string]$AccountType)
+    param([Parameter(Mandatory)][ValidateSet('Human', 'NonHuman', 'Unclear', 'Unclassified')][string]$AccountType)
     $cp = $script:Cp
     $rows = @($cp.DgCls.SelectedItems)
     if (-not $rows.Count) {
@@ -3905,7 +3905,7 @@ function Show-CampaignWindow {
         'TabCp', 'TabCpCampaign', 'TabCpClassify'
         'TxtCpTargets', 'TxtCpNever', 'TxtCpContacted', 'TxtCpNonHuman', 'TxtCpSearch', 'CmbCpTarget', 'CmbCpContact', 'ChkCpHideNonHuman', 'TxtCpVisible'
         'DgCp', 'TxtCpEmpty', 'ChkCpMail', 'ChkCpTeams', 'TxtCpSender', 'BtnCpSend', 'BtnCpSelectAll', 'BtnCpExport'
-        'TxtClsSearch', 'CmbClsFilter', 'TxtClsVisible', 'DgCls', 'TxtClsNote', 'BtnClsNonHuman', 'BtnClsHuman', 'BtnClsReset'
+        'TxtClsSearch', 'CmbClsFilter', 'TxtClsVisible', 'DgCls', 'TxtClsNote', 'BtnClsNonHuman', 'BtnClsHuman', 'BtnClsUnclear', 'BtnClsReset'
         'PrgCp', 'TxtCpStatus', 'BtnCpClose'
     )) {
         $script:Cp[$name] = $dialog.FindName($name)
@@ -3948,6 +3948,7 @@ function Show-CampaignWindow {
     $cp.BtnCpExport.Add_Click({ Export-CpResults })
     $cp.BtnClsNonHuman.Add_Click({ Set-CpClassification -AccountType NonHuman })
     $cp.BtnClsHuman.Add_Click({ Set-CpClassification -AccountType Human })
+    $cp.BtnClsUnclear.Add_Click({ Set-CpClassification -AccountType Unclear })
     $cp.BtnClsReset.Add_Click({ Set-CpClassification -AccountType Unclassified })
     # A single selected account shows its note, so it can be changed
     $cp.DgCls.Add_SelectionChanged({

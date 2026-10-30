@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Type de compte",
     "Report.Col.AccountNote": "Note",
     "Report.Col.GuideChannel": "Canal",
-    "Classify.Info1": "Marquez comme « Pas une personne » chaque compte sans personne derrière (boîte partagée, compte de service, salle ou test). Les admins configurent leur MFA ; la campagne les ignore.",
+    "Classify.Info1": "Marquez « Pas une personne » chaque compte sans personne derrière (boîte partagée, compte de service, salle ou test) – les admins configurent leur MFA, la campagne les ignore. Un doute ? Marquez-le « À clarifier » avec une note et passez ces comptes en revue avec le client.",
     "Classify.Info2": "Sélectionnez plusieurs lignes avec Maj/Ctrl. Le classement est enregistré sur l'objet utilisateur (extension ouverte com.m365mfatool.accountClass) et affiché aussi dans la fenêtre principale et le rapport MFA.",
     "Classify.FilterBox.ToolTip": "Afficher tous les comptes ou un seul type",
     "Classify.Filter.All": "Tous les comptes",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "Lors du déploiement de la MFA : classer d'abord les comptes avec le client, puis envoyer le guide à tous ceux sans MFA adaptée et relancer une semaine plus tard ceux qui ne l'ont pas encore configurée.",
     "Help.Campaign.Need": "E-mail : une boîte d'envoi (la vôtre ou partagée avec « Envoyer en tant que »). Teams : Teams pour vous et l'utilisateur ; le message part de votre compte. Si le rapport MFA a été créé dans cette session, ses données sont utilisées.",
     "Help.Campaign.Steps": "1. « Charger les utilisateurs » (ou utiliser les données du rapport MFA).\n2. Onglet « Classer les comptes » : marquer boîtes partagées et comptes de service « Pas une personne ».\n3. Onglet « Campagne » : filtrer (p. ex. rouge et jaune, jamais contactés), sélectionner ou « Tout sélectionner ».\n4. Choisir e-mail et/ou Teams et cliquer sur « Envoyer le guide ».\n5. Plus tard : filtre « Pas contactés depuis 7 jours » et relancer.",
-    "Help.Campaign.Result": "Chaque envoi est enregistré sur l'utilisateur (nombre, première et dernière date, les 20 derniers envois avec canal et expéditeur). « Résultat » indique ce qui s'est passé par utilisateur ; « Export Excel … » enregistre la liste."
+    "Help.Campaign.Result": "Chaque envoi est enregistré sur l'utilisateur (nombre, première et dernière date, les 20 derniers envois avec canal et expéditeur). « Résultat » indique ce qui s'est passé par utilisateur ; « Export Excel … » enregistre la liste.",
+
+    "AccountType.Unclear": "À clarifier",
+    "Classify.SetUnclear": "À clarifier",
+    "Classify.SetUnclear.ToolTip": "Marquer les comptes sélectionnés à clarifier avec le client (p. ex. usage inconnu) – notez la question ouverte dans la note",
+    "Classify.Filter.Unclear": "À clarifier"
 }

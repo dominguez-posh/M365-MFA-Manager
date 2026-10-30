@@ -946,7 +946,7 @@
     "Report.Col.AccountType": "Tipo di account",
     "Report.Col.AccountNote": "Nota",
     "Report.Col.GuideChannel": "Canale",
-    "Classify.Info1": "Segnare come \"Non è una persona\" ogni account senza una persona dietro (casella condivisa, account di servizio, sala o test). La loro MFA la configurano gli admin; la campagna li salta.",
+    "Classify.Info1": "Segnare come \"Non è una persona\" ogni account senza una persona dietro (casella condivisa, account di servizio, sala o test) – la loro MFA la configurano gli admin, la campagna li salta. Dubbi? Segnarlo \"Da chiarire\" con una nota e rivedere questi account con il cliente.",
     "Classify.Info2": "Selezionare più righe con Maiusc/Ctrl. La classificazione viene salvata sull'oggetto utente (open extension com.m365mfatool.accountClass) e mostrata anche nella finestra principale e nel report MFA.",
     "Classify.FilterBox.ToolTip": "Mostrare tutti gli account o un solo tipo",
     "Classify.Filter.All": "Tutti gli account",
@@ -975,5 +975,10 @@
     "Help.Campaign.When": "Nel rollout MFA: prima classificare gli account insieme al cliente, poi inviare la guida a tutti senza MFA adeguata e una settimana dopo ricordarlo a chi non l'ha ancora configurata.",
     "Help.Campaign.Need": "E-mail: una casella mittente (propria o condivisa con \"Invia come\"). Teams: Teams per voi e per l'utente; il messaggio parte dal vostro account. Se in questa sessione è stato creato il report MFA, vengono usati i suoi dati.",
     "Help.Campaign.Steps": "1. \"Carica utenti\" (o usare i dati del report MFA).\n2. Scheda \"Classifica account\": segnare caselle condivise e account di servizio come \"Non è una persona\".\n3. Scheda \"Campagna\": filtrare (ad es. rosso e giallo, mai contattati), selezionare gli utenti o \"Seleziona tutto\".\n4. Scegliere e-mail e/o Teams e fare clic su \"Invia guida\".\n5. In seguito: filtro \"Non contattati da 7 giorni\" e ricordare.",
-    "Help.Campaign.Result": "Ogni invio viene salvato sull'utente (numero, prima e ultima data, gli ultimi 20 invii con canale e mittente). \"Risultato\" mostra cosa è successo per utente; \"Esporta in Excel …\" salva l'elenco."
+    "Help.Campaign.Result": "Ogni invio viene salvato sull'utente (numero, prima e ultima data, gli ultimi 20 invii con canale e mittente). \"Risultato\" mostra cosa è successo per utente; \"Esporta in Excel …\" salva l'elenco.",
+
+    "AccountType.Unclear": "Da chiarire",
+    "Classify.SetUnclear": "Da chiarire",
+    "Classify.SetUnclear.ToolTip": "Segnare gli account selezionati da chiarire con il cliente (ad es. scopo sconosciuto) – scrivere la domanda aperta nella nota",
+    "Classify.Filter.Unclear": "Da chiarire"
 }
