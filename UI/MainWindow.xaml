@@ -42,6 +42,10 @@
                                 <MenuItem Name="BtnTotpImport" Uid="Header.TotpImport" Padding="10,6"/>
                                 <MenuItem Name="BtnTokenInventory" Uid="Header.TokenInventory" Padding="10,6"/>
                                 <MenuItem Name="BtnBulkTap" Uid="Header.BulkTap" Padding="10,6"/>
+                                <Separator/>
+                                <MenuItem Name="BtnCampaign" Uid="Header.Campaign" Padding="10,6"/>
+                                <MenuItem Name="BtnClassify" Uid="Header.Classify" Padding="10,6"/>
+                                <Separator/>
                                 <MenuItem Name="BtnOffboard" Uid="Header.Offboard" Padding="10,6"/>
                                 <Separator/>
                                 <MenuItem Name="BtnBreakGlass" Uid="Header.BreakGlass" Padding="10,6"/>
@@ -216,6 +220,15 @@
                                 <TextBox Name="TxtSelectedId" Text="-" Style="{StaticResource SelectableText}"/>
                                 <Button Grid.Column="1" Name="BtnCopyId" Uid="User.CopyId" Tag="&#xE8C8;" Style="{StaticResource CopyButton}"/>
                             </Grid>
+
+                            <!-- Account type: human or not a human (set up by administrators, skipped by the campaign) -->
+                            <TextBlock Uid="User.AccountType" Style="{StaticResource Label}"/>
+                            <ComboBox Name="CmbAccountType" Uid="User.AccountTypeBox" Margin="0,2,0,4" IsEnabled="False">
+                                <ComboBoxItem Tag="Unclassified" Uid="AccountType.Unclassified"/>
+                                <ComboBoxItem Tag="Human" Uid="AccountType.Human"/>
+                                <ComboBoxItem Tag="NonHuman" Uid="AccountType.NonHuman"/>
+                            </ComboBox>
+                            <TextBlock Name="TxtAccountClassInfo" Text="" FontSize="11" Foreground="#64748B" TextWrapping="Wrap" Margin="2,0,0,10"/>
 
                             <Separator Margin="0,2,0,10"/>
 

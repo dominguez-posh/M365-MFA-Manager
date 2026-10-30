@@ -27,6 +27,8 @@ $script:GraphScopes = @(
     'GroupMember.Read.All'                    # MFA report: group scope, roles assigned via groups
     'AuditLog.Read.All'                       # MFA report: last sign-in; user history (audit log)
     'Policy.Read.All'                         # Authentication methods policy (is the method enabled?), Conditional Access check
+    'Chat.Create'                             # MFA guide as Teams message: 1:1 chat with the user
+    'ChatMessage.Send'                        # MFA guide as Teams message: send the message
 )
 
 $script:RoleDefinitionNames = $null   # Cache: role ID -> display name

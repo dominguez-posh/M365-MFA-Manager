@@ -21,6 +21,7 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 - [Masowy import tokenów TOTP](#masowy-import-tokenów-totp)
 - [Inwentarz tokenów](#inwentarz-tokenów)
 - [Masowy Temporary Access Pass](#masowy-temporary-access-pass)
+- [Kampania MFA i klasyfikacja kont](#kampania-mfa-i-klasyfikacja-kont)
 - [Masowy offboarding](#masowy-offboarding)
 - [Pomoc, ustawienia i aktualizacje](#pomoc-ustawienia-i-aktualizacje)
 - [Często zadawane pytania i rozwiązywanie problemów](#często-zadawane-pytania-i-rozwiązywanie-problemów)
@@ -261,6 +262,17 @@ Zmiana pliku, algorytmu, interwału lub rozdziału wymaga nowego sprawdzenia.
 3. **„Sprawdź”** rozwiązuje użytkowników, niczego nie zmieniając. **„Utwórz”** tworzy następnie po jednym haśle na użytkownika; istniejące hasło użytkownika zostaje zastąpione.
 4. **„Eksport do Excela …”** zapisuje listę z hasłami – zawiera je w postaci jawnej, więc zapisuj ją tylko w chronionym miejscu i usuń po przekazaniu. Hasła nigdy nie trafiają do dziennika.
 
+## Kampania MFA i klasyfikacja kont
+
+**Narzędzia ▾ → „Kampania MFA …”** (lub **„Klasyfikuj konta …”**) otwiera okno z dwiema kartami, korzystające z tych samych danych co raport MFA (albo **„Wczytaj użytkowników”**).
+
+- **„Klasyfikuj konta”**: oznacz jako **„Nie osoba”** każde konto, za którym nie stoi człowiek (skrzynka współdzielona, konto usługowe, sali lub testowe). Zapisywane w obiekcie użytkownika (open extension `com.m365mfatool.accountClass`) i pokazywane także w oknie głównym (**„Typ konta”**) i raporcie MFA. Kampania pomija te konta.
+- **„Kampania”**: liczniki (grupa docelowa, nigdy nie kontaktowani, kontaktowani), filtry według sygnalizatora i ostatniego kontaktu; zaznacz użytkowników i wyślij instrukcję **e-mailem** i/lub przez **Teams** (wiadomość czatu 1:1 z Twojego konta).
+
+Każda wysyłka jest zapisywana u użytkownika: liczba, pierwsza i ostatnia data oraz ostatnie 20 wysyłek z datą, nadawcą, językiem i kanałem.
+
+---
+
 ## Masowy offboarding
 
 **Narzędzia ▾ → „Masowy offboarding …”** usuwa naraz metody MFA wielu użytkowników, np. przy odejściach lub po przejęciu kont.
@@ -362,6 +374,8 @@ Wszystkie uprawnienia są żądane jednorazowo przy logowaniu, dzięki czemu pod
 | `GroupMember.Read.All` | Raport MFA: wybór grupy jako zakresu, rozwiązywanie ról przypisanych przez grupy |
 | `AuditLog.Read.All` | Raport MFA: ostatnie logowanie |
 | `Policy.Read.All` | Ostrzeżenie, gdy metoda jest wyłączona w dzierżawie; sprawdzenie dostępu warunkowego |
+| `Chat.Create` | Instrukcja MFA jako wiadomość Teams: czat 1:1 z użytkownikiem |
+| `ChatMessage.Send` | Instrukcja MFA jako wiadomość Teams: wysłanie wiadomości |
 | `Mail.Send` | Instrukcja MFA z własnej skrzynki |
 | `Mail.Send.Shared` | Instrukcja MFA ze skrzynki współdzielonej |
 | `Organization.Read.All` | Wczytanie klucza hrdnr z dzierżawy |
@@ -412,6 +426,7 @@ W **zasadach metod uwierzytelniania** (Centrum administracyjne Entra → Ochrona
 | `UI/BulkTapWindow.xaml` | Okno masowego Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Okno podglądu instrukcji MFA |
 | `UI/BulkOffboardWindow.xaml` | Okno masowego offboardingu |
+| `UI/CampaignWindow.xaml` | Okno kampanii MFA i klasyfikacji kont |
 | `UI/SettingsDialog.xaml` | Okno ustawień |
 | `UI/HistoryDialog.xaml` | Historia użytkownika (dziennik inspekcji) |
 | `Modules/Graph.psm1` | Logowanie, żądania Graph, użytkownicy, domeny, role, sygnalizator MFA, odczyt/usuwanie metod |

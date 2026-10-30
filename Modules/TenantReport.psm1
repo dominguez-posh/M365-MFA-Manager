@@ -349,8 +349,10 @@ function New-M365ReportRow {
         [Parameter(Mandatory)]$User,
         [string[]]$Roles = @(),
         [System.Collections.IDictionary]$MethodResult,
-        $GuideInfo
+        $GuideInfo,
+        $AccountClass
     )
+    if ($null -eq $AccountClass) { $AccountClass = ConvertTo-M365AccountClass $null }
 
     $Roles = @($Roles | Where-Object { $_ } | Sort-Object)
     $isAdmin = $Roles.Count -gt 0
@@ -400,7 +402,14 @@ function New-M365ReportRow {
         GuideSentAt       = if ($GuideInfo) { $GuideInfo.SentAt } else { $null }
         GuideSentText     = if ($GuideInfo -and $GuideInfo.SentAt) { $GuideInfo.SentAt.ToString((T 'Format.DateTime')) } else { '' }
         GuideCount        = if ($GuideInfo -and $GuideInfo.Count) { [int]$GuideInfo.Count } else { 0 }
-        GuideHistoryText  = if ($GuideInfo -and @($GuideInfo.History).Count) { @($GuideInfo.History | ForEach-Object { if ($_.SentAt) { '{0} ({1})' -f $_.SentAt.ToString((T 'Format.DateTime')), $_.SentBy } }) -join [Environment]::NewLine } else { '' }
+        GuideChannel      = if ($GuideInfo) { $GuideInfo.Channel } else { '' }
+        GuideChannelText  = if ($GuideInfo) { ConvertTo-M365ChannelText $GuideInfo.Channel } else { '' }
+        GuideHistoryText  = if ($GuideInfo -and @($GuideInfo.History).Count) { @($GuideInfo.History | ForEach-Object { if ($_.SentAt) { '{0} · {1} ({2})' -f $_.SentAt.ToString((T 'Format.DateTime')), (ConvertTo-M365ChannelText $_.Channel), $_.SentBy } }) -join [Environment]::NewLine } else { '' }
+        AccountType       = $AccountClass.AccountType
+        AccountTypeText   = T "AccountType.$($AccountClass.AccountType)"
+        AccountNote       = $AccountClass.Note
+        ClassifiedBy      = $AccountClass.ClassifiedBy
+        ClassifiedAt      = $AccountClass.ClassifiedAt
         IsInactive        = $signInKnown -and ($null -eq $days -or $days -gt $script:InactiveDays)
         Id                = $User.Id
     }
@@ -481,9 +490,10 @@ function Invoke-M365TenantMfaReport {
         }
         $methods = Get-M365AuthMethodsBatch -UserIds $userIds -Wait $Wait
         $guides = Get-M365MfaGuideBatch -UserIds $userIds -Wait $Wait
+        $classes = Get-M365AccountClassBatch -UserIds $userIds -Wait $Wait
         $rows = foreach ($user in $chunk) {
             $roles = if ($adminRoles.ContainsKey($user.Id)) { @($adminRoles[$user.Id]) } else { @() }
-            New-M365ReportRow -User $user -Roles $roles -MethodResult $methods[$user.Id] -GuideInfo $guides[$user.Id]
+            New-M365ReportRow -User $user -Roles $roles -MethodResult $methods[$user.Id] -GuideInfo $guides[$user.Id] -AccountClass $classes[$user.Id]
         }
         $done += $chunk.Count
         & $OnRows @($rows) $done $users.Count
@@ -515,6 +525,8 @@ function Export-M365MfaReportXlsx {
         @{ Key = 'Report.Col.Reason';          Width = 55; Property = 'Reason' }
         @{ Key = 'Report.Col.Name';            Width = 28; Property = 'DisplayName' }
         @{ Key = 'Report.Col.Upn';             Width = 38; Property = 'UserPrincipalName' }
+        @{ Key = 'Report.Col.AccountType';     Width = 16; Property = 'AccountTypeText' }
+        @{ Key = 'Report.Col.AccountNote';     Width = 30; Property = 'AccountNote' }
         @{ Key = 'Report.Col.LastSignIn';      Width = 18; Property = 'LastSignInExport' }
         @{ Key = 'Report.Col.DaysSinceSignIn'; Width = 12; Property = 'DaysSinceSignIn' }
         @{ Key = 'Report.Col.Mail';            Width = 34; Property = 'Mail' }
@@ -524,6 +536,7 @@ function Export-M365MfaReportXlsx {
         @{ Key = 'Report.Col.Methods';         Width = 60; Property = 'Methods' }
         @{ Key = 'Report.Col.GuideSent';       Width = 18; Property = 'GuideSentAt' }
         @{ Key = 'Report.Col.GuideCount';      Width = 10; Property = 'GuideCount' }
+        @{ Key = 'Report.Col.GuideChannel';    Width = 14; Property = 'GuideChannelText' }
         @{ Key = 'Report.Col.Enabled';         Width = 9;  Property = 'AccountEnabled' }
         @{ Key = 'Report.Col.Licensed';        Width = 10; Property = 'IsLicensed' }
         @{ Key = 'Report.Col.UserType';        Width = 11; Property = 'UserType' }

@@ -18,6 +18,7 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 - [Massenimport von TOTP-Token](#massenimport-von-totp-token)
 - [Token-Inventar](#token-inventar)
 - [Massen-Temporary-Access-Pass](#massen-temporary-access-pass)
+- [MFA-Kampagne und Kontoklassifizierung](#mfa-kampagne-und-kontoklassifizierung)
 - [Massen-Offboarding](#massen-offboarding)
 - [Hilfe, Einstellungen und Updates](#hilfe-einstellungen-und-updates)
 - [Häufige Fragen und Fehlerbehebung](#häufige-fragen-und-fehlerbehebung)
@@ -273,6 +274,23 @@ Nach einer Änderung von Datei, Algorithmus, Zeitintervall oder Verteilung ist e
 
 ---
 
+## MFA-Kampagne und Kontoklassifizierung
+
+**Werkzeuge ▾ → „MFA-Kampagne …“** (oder **„Konten klassifizieren …“**) öffnet ein Fenster mit zwei Reitern. Es nutzt dieselben Daten wie der [MFA-Report](#mfa-report-für-den-tenant); wurde der Report in dieser Sitzung erstellt, werden dessen Daten sofort übernommen, sonst **„Benutzer laden“** klicken.
+
+**Reiter „Konten klassifizieren“** – die Liste einmal durchgehen, z. B. gemeinsam mit dem Kunden, und jedes Konto ohne Menschen dahinter (Sammelpostfach, Dienst-, Raum- oder Testkonto) als **„Kein Mensch“** markieren (mehrere Zeilen mit Umschalt/Strg, optional mit Notiz). Deren MFA richten Admins ein; die Kampagne überspringt sie. Die Klassifizierung wird am Benutzerobjekt gespeichert (Open Extension `com.m365mfatool.accountClass`: Typ, Notiz, wer, wann) und auch im Hauptfenster unter **„Kontotyp“** (dort auch änderbar) und im MFA-Report (Spalte und Excel) angezeigt.
+
+**Reiter „Kampagne“** – Zähler zeigen Zielgruppe, noch nie Angeschriebene und bereits Angeschriebene. Filtern nach Ampel (standardmäßig rot und gelb), nach letztem Kontakt (z. B. *seit 7 Tagen nicht angeschrieben*) und Suche; Konten „Kein Mensch“ sind ausgeblendet. Benutzer auswählen (oder **„Alle auswählen“**), Kanäle wählen und **„Anleitung senden“** klicken:
+
+- **E-Mail** – die bebilderte Anleitung in der Sprache des Benutzers, vom eigenen oder einem geteilten Postfach.
+- **Teams** – eine 1:1-Chatnachricht von Ihrem Konto mit denselben Schritten und Links (beide brauchen Teams).
+
+Die Spalte **„Ergebnis“** zeigt pro Benutzer, was passiert ist; **„Excel-Export …“** speichert die Liste.
+
+**Wird jeder Versand erfasst?** Ja. Jeder Versand wird am Benutzer gespeichert: Gesamtanzahl, erstes und letztes Datum sowie die letzten 20 Versendungen mit Datum, Absender, Sprache und – seit Version 1.5 – Kanal. Ältere Einzeleinträge fallen raus, Anzahl und erstes Datum bleiben erhalten. Report und Kampagne zeigen diese Historie als Tooltip auf „Zuletzt“.
+
+---
+
 ## Massen-Offboarding
 
 **Werkzeuge ▾ → „Massen-Offboarding …“** entfernt die MFA-Methoden vieler Benutzer auf einmal, z. B. bei Austritten oder nach kompromittierten Konten.
@@ -377,6 +395,8 @@ Alle Berechtigungen werden einmalig bei der Anmeldung angefordert – während d
 | `GroupMember.Read.All` | MFA-Report: Gruppe als Umfang wählen, über Gruppen zugewiesene Admin-Rollen auflösen |
 | `AuditLog.Read.All` | MFA-Report und Benutzer: letzte Anmeldung; Verlauf aus dem Überwachungsprotokoll |
 | `Policy.Read.All` | Warnung, wenn eine Methode im Tenant deaktiviert ist; Conditional-Access-Prüfung |
+| `Chat.Create` | MFA-Anleitung als Teams-Nachricht: 1:1-Chat mit dem Benutzer |
+| `ChatMessage.Send` | MFA-Anleitung als Teams-Nachricht: Nachricht senden |
 | `Mail.Send` | MFA-Anleitung aus dem eigenen Postfach |
 | `Mail.Send.Shared` | MFA-Anleitung aus einem freigegebenen Postfach |
 | `Organization.Read.All` | hrdnr-Schlüssel aus dem Mandanten laden |
@@ -428,6 +448,7 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 | `UI/AssignTokensDialog.xaml` | Dialog der Massenzuweisung von Token (Gruppe oder Benutzerliste) |
 | `UI/MfaGuideDialog.xaml` | Vorschau-Dialog der MFA-Anleitung |
 | `UI/BulkOffboardWindow.xaml` | Fenster des Massen-Offboardings |
+| `UI/CampaignWindow.xaml` | Fenster der MFA-Kampagne und der Kontoklassifizierung |
 | `UI/SettingsDialog.xaml` | Einstellungsdialog |
 | `UI/HistoryDialog.xaml` | Verlauf eines Benutzers aus dem Überwachungsprotokoll |
 | `Modules/Graph.psm1` | Anmeldung, Graph-Anfragen, Benutzer, Domains, Rollen, MFA-Ampel, Lesen/Löschen von Methoden |

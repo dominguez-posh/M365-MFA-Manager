@@ -21,6 +21,7 @@ Con esta herramienta, los administradores y el personal del servicio de asistenc
 - [Importación masiva de tokens TOTP](#importación-masiva-de-tokens-totp)
 - [Inventario de tokens](#inventario-de-tokens)
 - [Temporary Access Pass masivo](#temporary-access-pass-masivo)
+- [Campaña MFA y clasificación de cuentas](#campaña-mfa-y-clasificación-de-cuentas)
 - [Baja masiva](#baja-masiva)
 - [Ayuda, configuración y actualizaciones](#ayuda-configuración-y-actualizaciones)
 - [Preguntas frecuentes y solución de problemas](#preguntas-frecuentes-y-solución-de-problemas)
@@ -261,6 +262,17 @@ Cambiar el archivo, el algoritmo, el intervalo o el reparto requiere una nueva c
 3. **"Comprobar"** resuelve los usuarios sin cambiar nada. **"Crear"** crea después un pase por usuario; un pase existente del usuario se reemplaza.
 4. **"Exportar a Excel …"** guarda la lista con los pases; los contiene en texto claro, así que guárdela solo en un lugar protegido y elimínela tras la entrega. Los pases nunca se escriben en el registro.
 
+## Campaña MFA y clasificación de cuentas
+
+**Herramientas ▾ → "Campaña MFA …"** (o **"Clasificar cuentas …"**) abre una ventana con dos pestañas que usa los mismos datos que el informe MFA (o **"Cargar usuarios"**).
+
+- **"Clasificar cuentas"**: marque como **"No es una persona"** cada cuenta sin una persona detrás (buzón compartido, cuenta de servicio, sala o prueba). Se guarda en el objeto de usuario (extensión abierta `com.m365mfatool.accountClass`) y se muestra también en la ventana principal (**"Tipo de cuenta"**) y en el informe MFA. La campaña omite estas cuentas.
+- **"Campaña"**: contadores (grupo objetivo, nunca contactados, contactados), filtros por semáforo y último contacto; seleccione usuarios y envíe la guía por **correo** y/o **Teams** (mensaje de chat 1:1 desde su cuenta).
+
+Cada envío se guarda en el usuario: número, primera y última fecha y los últimos 20 envíos con fecha, remitente, idioma y canal.
+
+---
+
 ## Baja masiva
 
 **Herramientas ▾ → "Baja masiva …"** quita a la vez los métodos MFA de muchos usuarios, p. ej. por bajas de empleados o tras cuentas comprometidas.
@@ -362,6 +374,8 @@ Todos los permisos se solicitan una sola vez al iniciar sesión, por lo que no a
 | `GroupMember.Read.All` | Informe MFA: elegir un grupo como ámbito, resolver roles asignados mediante grupos |
 | `AuditLog.Read.All` | Informe MFA: último inicio de sesión |
 | `Policy.Read.All` | Aviso si un método está deshabilitado en el inquilino; comprobación de acceso condicional |
+| `Chat.Create` | Guía MFA como mensaje de Teams: chat 1:1 con el usuario |
+| `ChatMessage.Send` | Guía MFA como mensaje de Teams: enviar el mensaje |
 | `Mail.Send` | Guía MFA desde el propio buzón |
 | `Mail.Send.Shared` | Guía MFA desde un buzón compartido |
 | `Organization.Read.All` | Cargar la clave hrdnr desde el inquilino |
@@ -412,6 +426,7 @@ En la **directiva de métodos de autenticación** (Centro de administración de 
 | `UI/BulkTapWindow.xaml` | Ventana del Temporary Access Pass masivo |
 | `UI/MfaGuideDialog.xaml` | Diálogo de vista previa de la guía de MFA |
 | `UI/BulkOffboardWindow.xaml` | Ventana de la baja masiva |
+| `UI/CampaignWindow.xaml` | Ventana de la campaña MFA y la clasificación de cuentas |
 | `UI/SettingsDialog.xaml` | Diálogo de configuración |
 | `UI/HistoryDialog.xaml` | Historial de un usuario (registro de auditoría) |
 | `Modules/Graph.psm1` | Inicio de sesión, solicitudes a Graph, usuarios, dominios, roles, semáforo de MFA, lectura/eliminación de métodos |

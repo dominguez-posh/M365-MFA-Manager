@@ -18,6 +18,7 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 - [Bulk import of TOTP tokens](#bulk-import-of-totp-tokens)
 - [Token inventory](#token-inventory)
 - [Bulk Temporary Access Pass](#bulk-temporary-access-pass)
+- [MFA campaign and account classification](#mfa-campaign-and-account-classification)
 - [Bulk offboarding](#bulk-offboarding)
 - [Help, settings and updates](#help-settings-and-updates)
 - [FAQ and troubleshooting](#faq-and-troubleshooting)
@@ -273,6 +274,23 @@ Changing the file, algorithm, time step or hand-out requires a new check.
 
 ---
 
+## MFA campaign and account classification
+
+**Tools ▾ → "MFA campaign …"** (or **"Classify accounts …"**) opens one window with two tabs. It uses the same data as the [MFA report](#tenant-mfa-report); if the report was created in this session, its data is used right away, otherwise click **"Load users"**.
+
+**Tab "Classify accounts"** – go through the list once, e.g. together with the customer, and mark every account without a person behind it (shared mailbox, service, room or test account) as **"Not a person"** (select several rows with Shift/Ctrl, optionally with a note). Administrators set up MFA for these accounts; the campaign skips them. The classification is stored on the user object (open extension `com.m365mfatool.accountClass`: type, note, who, when) and is also shown – and can be changed – in the main window under **"Account type"** and in the MFA report (column and Excel).
+
+**Tab "Campaign"** – counters show the target group, who was never contacted and who was already contacted. Filter by traffic light (red and yellow by default), by last contact (e.g. *not contacted for 7 days*) and search; accounts marked as not a person are hidden. Select users (or **"Select all"**), choose the channels and click **"Send guide"**:
+
+- **Email** – the illustrated guide in the user's language, from your or a shared mailbox.
+- **Teams** – a 1:1 chat message from your account with the same steps and links (Teams required for both).
+
+The column **"Result"** shows what happened per user; **"Excel export …"** saves the list.
+
+**Is every sending recorded?** Yes. Every sending is stored on the user: the total count, the first and last date, and the last 20 sendings with date, sender, language and – since version 1.5 – the channel. Older single entries drop out, count and first date are kept. The report and the campaign show this history as a tooltip on "Last sent".
+
+---
+
 ## Bulk offboarding
 
 **Tools ▾ → "Bulk offboarding …"** removes the MFA methods of many users at once, e.g. for leavers or after compromised accounts.
@@ -377,6 +395,8 @@ All permissions are requested once at sign-in, so no further sign-in dialog appe
 | `GroupMember.Read.All` | MFA report: select a group as scope, resolve admin roles assigned via groups |
 | `AuditLog.Read.All` | MFA report and user: last sign-in; user history from the audit log |
 | `Policy.Read.All` | Warning when a method is disabled in the tenant; Conditional Access check |
+| `Chat.Create` | MFA guide as Teams message: 1:1 chat with the user |
+| `ChatMessage.Send` | MFA guide as Teams message: send the message |
 | `Mail.Send` | MFA guide from your own mailbox |
 | `Mail.Send.Shared` | MFA guide from a shared mailbox |
 | `Organization.Read.All` | Load the hrdnr key from the tenant |
@@ -428,6 +448,7 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 | `UI/AssignTokensDialog.xaml` | Dialog of the bulk token assignment (group or user list) |
 | `UI/MfaGuideDialog.xaml` | Preview dialog of the MFA setup guide |
 | `UI/BulkOffboardWindow.xaml` | Window of the bulk offboarding |
+| `UI/CampaignWindow.xaml` | Window of the MFA campaign and the account classification |
 | `UI/SettingsDialog.xaml` | Settings dialog |
 | `UI/HistoryDialog.xaml` | Audit log history of a user |
 | `Modules/Graph.psm1` | Sign-in, Graph requests, users, domains, roles, MFA traffic light, reading/deleting methods |

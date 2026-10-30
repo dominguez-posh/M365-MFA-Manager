@@ -1,0 +1,298 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Uid="Campaign.Title"
+        Height="820" Width="1320" MinHeight="560" MinWidth="1000"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource Text}" FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <!-- Account type as colored pill: not classified (grey), human (blue), not a human (purple) -->
+        <Style x:Key="AccountChipBorder" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="9,2"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="TextElement.Foreground" Value="#334155"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding AccountType}" Value="Human">
+                    <Setter Property="Background" Value="#DBEAFE"/>
+                    <Setter Property="TextElement.Foreground" Value="#1E40AF"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding AccountType}" Value="NonHuman">
+                    <Setter Property="Background" Value="#EDE9FE"/>
+                    <Setter Property="TextElement.Foreground" Value="#5B21B6"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <DataTemplate x:Key="AccountChip">
+            <Border Style="{StaticResource AccountChipBorder}">
+                <TextBlock Text="{Binding AccountTypeText}" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=Border}}"/>
+            </Border>
+        </DataTemplate>
+        <Style x:Key="Counter" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="MinWidth" Value="150"/>
+        </Style>
+        <Style x:Key="CounterValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Text" Value="0"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Uid="Campaign.Title" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Name="TxtCpTenant" Text="" Foreground="#CBD5E1" FontSize="12" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Name="BtnHelp" Uid="Header.Help" Tag="&#xE897;" Style="{StaticResource HeaderButton}"/>
+            </Grid>
+        </Border>
+
+        <!-- Which users: all or a group; data shared with the MFA report -->
+        <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,0,0,1" Padding="20,10">
+            <WrapPanel VerticalAlignment="Center">
+                <ComboBox Name="CmbCpScope" Uid="Report.ScopeBox" Width="240" Margin="0,4,4,4" SelectedIndex="0">
+                    <ComboBoxItem Tag="All" Uid="Report.Scope.All"/>
+                    <ComboBoxItem Tag="Group" Uid="Report.Scope.Members"/>
+                </ComboBox>
+                <StackPanel Name="PnlCpGroup" Orientation="Horizontal" Visibility="Collapsed">
+                    <TextBox Name="TxtCpGroupSearch" Uid="Report.GroupSearch" Width="200" Margin="4"/>
+                    <Button Name="BtnCpFindGroup" Uid="Report.FindGroup" Tag="&#xE721;" Style="{StaticResource SecondaryButton}"/>
+                    <ComboBox Name="CmbCpGroup" Width="240" Margin="4" DisplayMemberPath="DisplayName"/>
+                </StackPanel>
+                <Button Name="BtnCpLoad" Uid="Campaign.Load" Tag="&#xE72C;" Margin="12,4,4,4"/>
+                <Button Name="BtnCpCancel" Uid="Common.Cancel" Tag="&#xE711;" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                <TextBlock Name="TxtCpSource" Text="" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap" MaxWidth="520"/>
+            </WrapPanel>
+        </Border>
+
+        <TabControl Grid.Row="2" Name="TabCp" Margin="20,12,20,0" Background="Transparent" BorderThickness="0">
+
+            <!-- Tab 1: campaign -->
+            <TabItem Name="TabCpCampaign" Uid="Campaign.Tab.Campaign">
+                <Grid Margin="0,12,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <Border Style="{StaticResource Counter}" Uid="Campaign.Count.TargetsBox">
+                            <StackPanel>
+                                <TextBlock Uid="Campaign.Count.Targets" Style="{StaticResource Label}" FontWeight="SemiBold"/>
+                                <TextBlock Name="TxtCpTargets" Style="{StaticResource CounterValue}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Counter}" Uid="Campaign.Count.NeverBox">
+                            <StackPanel>
+                                <TextBlock Uid="Campaign.Count.Never" Style="{StaticResource Label}" FontWeight="SemiBold"/>
+                                <TextBlock Name="TxtCpNever" Style="{StaticResource CounterValue}" Foreground="#991B1B"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Counter}" Uid="Campaign.Count.ContactedBox">
+                            <StackPanel>
+                                <TextBlock Uid="Campaign.Count.Contacted" Style="{StaticResource Label}" FontWeight="SemiBold"/>
+                                <TextBlock Name="TxtCpContacted" Style="{StaticResource CounterValue}" Foreground="#92400E"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Counter}" Uid="Campaign.Count.NonHumanBox">
+                            <StackPanel>
+                                <TextBlock Uid="Campaign.Count.NonHuman" Style="{StaticResource Label}" FontWeight="SemiBold"/>
+                                <TextBlock Name="TxtCpNonHuman" Style="{StaticResource CounterValue}" Foreground="#5B21B6"/>
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MaxWidth="360"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Name="TxtCpSearch" Uid="Campaign.Search" Margin="0,4,4,4"/>
+                        <ComboBox Grid.Column="1" Name="CmbCpTarget" Uid="Campaign.TargetBox" Width="200" Margin="4" SelectedIndex="0">
+                            <ComboBoxItem Uid="Campaign.Target.NotGreen" Tag="NotGreen"/>
+                            <ComboBoxItem Uid="Campaign.Target.Red" Tag="Red"/>
+                            <ComboBoxItem Uid="Campaign.Target.All" Tag="All"/>
+                        </ComboBox>
+                        <ComboBox Grid.Column="2" Name="CmbCpContact" Uid="Campaign.ContactBox" Width="220" Margin="4" SelectedIndex="0">
+                            <ComboBoxItem Uid="Campaign.Contact.Any" Tag="-1"/>
+                            <ComboBoxItem Uid="Campaign.Contact.Never" Tag="0"/>
+                            <ComboBoxItem Uid="Campaign.Contact.Older7" Tag="7"/>
+                            <ComboBoxItem Uid="Campaign.Contact.Older14" Tag="14"/>
+                            <ComboBoxItem Uid="Campaign.Contact.Older30" Tag="30"/>
+                        </ComboBox>
+                        <CheckBox Grid.Column="3" Name="ChkCpHideNonHuman" Uid="Campaign.HideNonHuman" IsChecked="True" Margin="12,0,0,0"/>
+                        <TextBlock Grid.Column="4" Name="TxtCpVisible" Text="" Style="{StaticResource Label}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <DataGrid Name="DgCp">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Report.Col.Status" Width="110" SortMemberPath="LevelOrder" CellTemplate="{StaticResource LevelChip}"/>
+                                <DataGridTextColumn Header="Report.Col.Name" Binding="{Binding DisplayName}" Width="180" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Report.Col.Upn" Binding="{Binding UserPrincipalName}" Width="230" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTemplateColumn Header="Report.Col.AccountType" Width="120" SortMemberPath="AccountType" CellTemplate="{StaticResource AccountChip}"/>
+                                <DataGridTextColumn Header="Campaign.Col.Count" Binding="{Binding GuideCount}" Width="80"/>
+                                <DataGridTextColumn Header="Campaign.Col.Last" Binding="{Binding GuideSentText}" SortMemberPath="GuideSentAt" Width="130">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="ToolTip" Value="{Binding GuideHistoryText}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Report.Col.GuideChannel" Binding="{Binding GuideChannelText}" Width="110" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Campaign.Col.Result" Binding="{Binding CampaignResult}" Width="200" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Report.Col.Reason" Binding="{Binding Reason}" Width="*" ElementStyle="{StaticResource CellText}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Name="TxtCpEmpty" Uid="Campaign.Empty" Style="{StaticResource Label}" FontSize="13"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="560" TextAlignment="Center"/>
+                    </Grid>
+
+                    <Border Grid.Row="3" Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,10,0,0">
+                        <WrapPanel VerticalAlignment="Center">
+                            <TextBlock Uid="Campaign.Channels" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <CheckBox Name="ChkCpMail" Uid="Campaign.Channel.Mail" IsChecked="True" Margin="0,0,14,0"/>
+                            <CheckBox Name="ChkCpTeams" Uid="Campaign.Channel.Teams" Margin="0,0,20,0"/>
+                            <TextBlock Uid="Guide.From" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBox Name="TxtCpSender" Uid="Guide.FromBox" Width="260" Margin="0,4,12,4"/>
+                            <Button Name="BtnCpSend" Uid="Campaign.Send" Tag="&#xE715;" Style="{StaticResource SuccessButton}"/>
+                            <Button Name="BtnCpSelectAll" Uid="Campaign.SelectAll" Tag="&#xE8B3;" Style="{StaticResource SecondaryButton}"/>
+                            <Button Name="BtnCpExport" Uid="Report.Export" Tag="&#xE74E;" Style="{StaticResource SecondaryButton}"/>
+                        </WrapPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 2: classify accounts -->
+            <TabItem Name="TabCpClassify" Uid="Campaign.Tab.Classify">
+                <Grid Margin="0,12,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Style="{StaticResource InfoBox}" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Uid="Classify.Info1" FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Uid="Classify.Info2" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MaxWidth="360"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Name="TxtClsSearch" Uid="Campaign.Search" Margin="0,4,4,4"/>
+                        <ComboBox Grid.Column="1" Name="CmbClsFilter" Uid="Classify.FilterBox" Width="220" Margin="4" SelectedIndex="0">
+                            <ComboBoxItem Uid="Classify.Filter.All" Tag="All"/>
+                            <ComboBoxItem Uid="Classify.Filter.Unclassified" Tag="Unclassified"/>
+                            <ComboBoxItem Uid="Classify.Filter.Human" Tag="Human"/>
+                            <ComboBoxItem Uid="Classify.Filter.NonHuman" Tag="NonHuman"/>
+                        </ComboBox>
+                        <TextBlock Grid.Column="2" Name="TxtClsVisible" Text="" Style="{StaticResource Label}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                    <DataGrid Grid.Row="2" Name="DgCls">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Report.Col.AccountType" Width="130" SortMemberPath="AccountType" CellTemplate="{StaticResource AccountChip}"/>
+                            <DataGridTextColumn Header="Report.Col.Name" Binding="{Binding DisplayName}" Width="190" ElementStyle="{StaticResource CellText}"/>
+                            <DataGridTextColumn Header="Report.Col.Upn" Binding="{Binding UserPrincipalName}" Width="240" ElementStyle="{StaticResource CellText}"/>
+                            <DataGridTextColumn Header="Report.Col.AccountNote" Binding="{Binding AccountNote}" Width="200" ElementStyle="{StaticResource CellText}"/>
+                            <DataGridTemplateColumn Header="Report.Col.Status" Width="110" SortMemberPath="LevelOrder" CellTemplate="{StaticResource LevelChip}"/>
+                            <DataGridCheckBoxColumn Header="Report.Col.Licensed" Binding="{Binding IsLicensed, Mode=OneWay}" Width="70"/>
+                            <DataGridTextColumn Header="Report.Col.LastSignIn" Binding="{Binding LastSignInText}" SortMemberPath="LastSignIn" Width="130" ElementStyle="{StaticResource CellText}"/>
+                            <DataGridTextColumn Header="Report.Col.Roles" Binding="{Binding AdminRoles}" Width="180" ElementStyle="{StaticResource CellText}"/>
+                            <DataGridTextColumn Header="Report.Col.Department" Binding="{Binding Department}" Width="*" ElementStyle="{StaticResource CellText}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <Border Grid.Row="3" Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,10,0,0">
+                        <WrapPanel VerticalAlignment="Center">
+                            <TextBlock Uid="Classify.Note" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBox Name="TxtClsNote" Uid="Classify.NoteBox" Width="280" Margin="0,4,12,4"/>
+                            <Button Name="BtnClsNonHuman" Uid="Classify.SetNonHuman" Tag="&#xE7EF;" Background="#6D28D9"/>
+                            <Button Name="BtnClsHuman" Uid="Classify.SetHuman" Tag="&#xE77B;"/>
+                            <Button Name="BtnClsReset" Uid="Classify.Reset" Tag="&#xE894;" Style="{StaticResource SecondaryButton}"/>
+                        </WrapPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="3" Margin="20,10,20,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ProgressBar Name="PrgCp" Height="6" VerticalAlignment="Center" Minimum="0" Maximum="100" Visibility="Hidden"/>
+            <TextBlock Grid.Column="1" Name="TxtCpStatus" Text="" Style="{StaticResource Label}" FontSize="12" VerticalAlignment="Center" Margin="12,0" TextWrapping="Wrap"/>
+            <Button Grid.Column="2" Name="BtnCpClose" Uid="Common.Close" Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+        </Grid>
+
+        <!-- Help flyout -->
+        <Border Name="PnlHelp" Grid.Row="1" Grid.RowSpan="3" Style="{StaticResource HelpPanel}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE897;" Style="{StaticResource Glyph}" FontSize="18" Foreground="{StaticResource Primary}"/>
+                        <TextBlock Uid="Help.Campaign.Title" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Name="BtnHelpClose" Uid="Help.Close" Style="{StaticResource CloseButton}"/>
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Uid="Help.What" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Campaign.What" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.When" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Campaign.When" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Need" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Campaign.Need" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Steps" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Campaign.Steps" Style="{StaticResource HelpText}"/>
+                        <TextBlock Uid="Help.Result" Style="{StaticResource HelpLabel}"/>
+                        <TextBlock Uid="Help.Campaign.Result" Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

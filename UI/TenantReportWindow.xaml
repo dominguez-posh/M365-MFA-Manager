@@ -184,6 +184,7 @@
                     <DataGridTextColumn Header="Report.Col.Reason" Binding="{Binding Reason}" Width="300" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Report.Col.Name" Binding="{Binding DisplayName}" Width="190" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Report.Col.Upn" Binding="{Binding UserPrincipalName}" Width="240" ElementStyle="{StaticResource CellText}"/>
+                    <DataGridTextColumn Header="Report.Col.AccountType" Binding="{Binding AccountTypeText}" SortMemberPath="AccountType" Width="120" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Report.Col.LastSignIn" Binding="{Binding LastSignInText}" SortMemberPath="LastSignIn" Width="130" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Report.Col.DaysSinceSignIn" Binding="{Binding DaysText}" SortMemberPath="DaysSort" Width="80">
                         <DataGridTextColumn.ElementStyle>
@@ -208,6 +209,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="Report.Col.GuideCount" Binding="{Binding GuideCount}" Width="70" ElementStyle="{StaticResource CellText}"/>
+                    <DataGridTextColumn Header="Report.Col.GuideChannel" Binding="{Binding GuideChannelText}" Width="110" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Report.Col.MethodCount" Binding="{Binding MethodCount}" Width="70"/>
                     <DataGridCheckBoxColumn Header="Report.Col.Enabled" Binding="{Binding AccountEnabled, Mode=OneWay}" Width="60"/>
                     <DataGridCheckBoxColumn Header="Report.Col.Licensed" Binding="{Binding IsLicensed, Mode=OneWay}" Width="70"/>

@@ -21,6 +21,7 @@ Con questo strumento, amministratori e help desk configurano l'**autenticazione 
 - [Importazione massiva di token TOTP](#importazione-massiva-di-token-totp)
 - [Inventario dei token](#inventario-dei-token)
 - [Temporary Access Pass di massa](#temporary-access-pass-di-massa)
+- [Campagna MFA e classificazione degli account](#campagna-mfa-e-classificazione-degli-account)
 - [Offboarding di massa](#offboarding-di-massa)
 - [Guida, impostazioni e aggiornamenti](#guida-impostazioni-e-aggiornamenti)
 - [Domande frequenti e risoluzione dei problemi](#domande-frequenti-e-risoluzione-dei-problemi)
@@ -261,6 +262,17 @@ Cambiare file, algoritmo, intervallo o distribuzione richiede una nuova verifica
 3. **"Verifica"** risolve gli utenti senza modificare nulla. **"Crea"** crea poi un pass per utente; un pass esistente dell'utente viene sostituito.
 4. **"Esporta in Excel …"** salva l'elenco con i pass: li contiene in chiaro, quindi salvarlo solo in un luogo protetto ed eliminarlo dopo la consegna. I pass non vengono mai scritti nel log.
 
+## Campagna MFA e classificazione degli account
+
+**Strumenti ▾ → "Campagna MFA …"** (o **"Classifica account …"**) apre una finestra con due schede che usa gli stessi dati del report MFA (oppure **"Carica utenti"**).
+
+- **"Classifica account"**: segnare come **"Non è una persona"** ogni account senza una persona dietro (casella condivisa, account di servizio, sala o test). Viene salvato sull'oggetto utente (open extension `com.m365mfatool.accountClass`) e mostrato anche nella finestra principale (**"Tipo di account"**) e nel report MFA. La campagna salta questi account.
+- **"Campagna"**: contatori (gruppo target, mai contattati, contattati), filtri per semaforo e ultimo contatto; selezionare gli utenti e inviare la guida per **e-mail** e/o **Teams** (messaggio chat 1:1 dal vostro account).
+
+Ogni invio viene salvato sull'utente: numero, prima e ultima data e gli ultimi 20 invii con data, mittente, lingua e canale.
+
+---
+
 ## Offboarding di massa
 
 **Strumenti ▾ → "Offboarding di massa …"** rimuove in una volta i metodi MFA di molti utenti, ad es. per uscite di personale o dopo account compromessi.
@@ -362,6 +374,8 @@ Tutte le autorizzazioni vengono richieste una sola volta all'accesso, quindi dur
 | `GroupMember.Read.All` | Report MFA: scegliere un gruppo come ambito, risolvere i ruoli assegnati tramite gruppi |
 | `AuditLog.Read.All` | Report MFA: ultimo accesso |
 | `Policy.Read.All` | Avviso se un metodo è disattivato nel tenant; verifica dell'accesso condizionale |
+| `Chat.Create` | Guida MFA come messaggio Teams: chat 1:1 con l'utente |
+| `ChatMessage.Send` | Guida MFA come messaggio Teams: invio del messaggio |
 | `Mail.Send` | Guida MFA dalla propria casella di posta |
 | `Mail.Send.Shared` | Guida MFA da una casella condivisa |
 | `Organization.Read.All` | Caricare la chiave hrdnr dal tenant |
@@ -412,6 +426,7 @@ Nei **criteri dei metodi di autenticazione** (Interfaccia di amministrazione di 
 | `UI/BulkTapWindow.xaml` | Finestra del Temporary Access Pass di massa |
 | `UI/MfaGuideDialog.xaml` | Finestra di anteprima della guida MFA |
 | `UI/BulkOffboardWindow.xaml` | Finestra dell'offboarding di massa |
+| `UI/CampaignWindow.xaml` | Finestra della campagna MFA e della classificazione degli account |
 | `UI/SettingsDialog.xaml` | Finestra delle impostazioni |
 | `UI/HistoryDialog.xaml` | Cronologia di un utente (registro di controllo) |
 | `Modules/Graph.psm1` | Accesso, richieste Graph, utenti, domini, ruoli, semaforo MFA, lettura/eliminazione dei metodi |

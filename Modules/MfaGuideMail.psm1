@@ -41,6 +41,7 @@ function ConvertTo-M365MfaGuideInfo {
         SentAt   = ConvertTo-LocalDate $Extension['sentDateTime']
         SentBy   = [string]$Extension['sentBy']
         Language = [string]$Extension['language']
+        Channel  = if ($Extension['channel']) { [string]$Extension['channel'] } else { 'Mail' }
         Count    = [int]$Extension['sentCount']
     }
 }
@@ -71,7 +72,9 @@ function Set-M365MfaGuideInfo {
     param(
         [Parameter(Mandatory)][string]$UserId,
         [Parameter(Mandatory)][string]$SentBy,
-        [Parameter(Mandatory)][string]$Language
+        [Parameter(Mandatory)][string]$Language,
+        # Channels used for this sending, e.g. 'Mail' or 'Mail,Teams'
+        [string]$Channel = 'Mail'
     )
 
     $previous = Get-M365MfaGuideInfo -UserId $UserId
@@ -79,6 +82,7 @@ function Set-M365MfaGuideInfo {
         sentDateTime = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         sentBy       = $SentBy
         language     = $Language
+        channel      = $Channel
         sentCount    = if ($previous) { $previous.Count + 1 } else { 1 }
     }
     $userPart = [uri]::EscapeDataString($UserId)
@@ -90,7 +94,7 @@ function Set-M365MfaGuideInfo {
         $body['extensionName'] = $script:ExtensionName
         Invoke-M365GraphRequest -Method POST -Uri "v1.0/users/$userPart/extensions" -Body $body | Out-Null
     }
-    Add-M365MfaGuideHistory -UserId $UserId -SentBy $SentBy -Language $Language -SentAt $body['sentDateTime'] -PreviousCount $(if ($previous) { $previous.Count } else { 0 })
+    Add-M365MfaGuideHistory -UserId $UserId -SentBy $SentBy -Language $Language -Channel $Channel -SentAt $body['sentDateTime'] -PreviousCount $(if ($previous) { $previous.Count } else { 0 })
 }
 
 #endregion
@@ -102,7 +106,8 @@ function Set-M365MfaGuideInfo {
       sentCount          number of guides sent in total
       firstSentDateTime  first sending (UTC)
       lastSentDateTime   last sending (UTC)
-      entries            JSON array of the last sendings, oldest first: [{"at":"<UTC>","by":"<sender>","lang":"de"}]
+      entries            JSON array of the last sendings, oldest first: [{"at":"<UTC>","by":"<sender>","lang":"de","ch":"Mail,Teams"}]
+                         ("ch" = channels, missing in entries written before version 1.5: e-mail)
     Open extensions hold about 2 KB, so only the last $script:HistoryMax entries are kept; sentCount keeps counting.
     The history is stored as JSON text because open extensions store simple values reliably.
 #>
@@ -126,7 +131,8 @@ function ConvertTo-M365MfaGuideHistory {
         if ($raw) {
             # -InputObject + foreach: Windows PowerShell 5.1 passes a JSON array through the pipeline as one object
             $entries = @(foreach ($e in (ConvertFrom-Json -InputObject $raw)) {
-                    [pscustomobject]@{ SentAt = ConvertTo-LocalDate $e.at; SentBy = [string]$e.by; Language = [string]$e.lang }
+                    $channel = if ($e.PSObject.Properties['ch'] -and $e.ch) { [string]$e.ch } else { 'Mail' }
+                    [pscustomobject]@{ SentAt = ConvertTo-LocalDate $e.at; SentBy = [string]$e.by; Language = [string]$e.lang; Channel = $channel }
                 })
         }
     }
@@ -171,6 +177,7 @@ function Add-M365MfaGuideHistory {
         [Parameter(Mandatory)][string]$SentBy,
         [Parameter(Mandatory)][string]$Language,
         [Parameter(Mandatory)][string]$SentAt,
+        [string]$Channel = 'Mail',
         [int]$PreviousCount = 0
     )
     $raw = Get-M365MfaGuideHistoryRaw -UserId $UserId
@@ -179,10 +186,12 @@ function Add-M365MfaGuideHistory {
         try { foreach ($e in (ConvertFrom-Json -InputObject ([string]$raw['entries']))) {
                 # PowerShell 7 turns ISO timestamps into DateTime: write them back as UTC ISO text
                 $at = if ($e.at -is [datetime]) { $e.at.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { [string]$e.at }
-                $entries.Add([ordered]@{ at = $at; by = [string]$e.by; lang = [string]$e.lang })
+                $entry = [ordered]@{ at = $at; by = [string]$e.by; lang = [string]$e.lang }
+                if ($e.PSObject.Properties['ch'] -and $e.ch) { $entry.ch = [string]$e.ch }
+                $entries.Add($entry)
             } } catch { }
     }
-    $entries.Add([ordered]@{ at = $SentAt; by = $SentBy; lang = $Language })
+    $entries.Add([ordered]@{ at = $SentAt; by = $SentBy; lang = $Language; ch = $Channel })
     while ($entries.Count -gt $script:HistoryMax) { $entries.RemoveAt(0) }
     $count = if ($raw) { [int]$raw['sentCount'] + 1 } else { $PreviousCount + 1 }
     $body = @{
@@ -216,6 +225,7 @@ function Merge-M365MfaGuideInfo {
         SentAt   = if ($Info -and $Info.SentAt) { $Info.SentAt } elseif ($last) { $last.SentAt } else { $History.Last }
         SentBy   = if ($Info -and $Info.SentBy) { $Info.SentBy } elseif ($last) { $last.SentBy } else { '' }
         Language = if ($Info -and $Info.Language) { $Info.Language } elseif ($last) { $last.Language } else { '' }
+        Channel  = if ($last) { $last.Channel } elseif ($Info -and $Info.PSObject.Properties['Channel'] -and $Info.Channel) { $Info.Channel } else { 'Mail' }
         Count    = if ($History -and $History.Count) { $History.Count } elseif ($Info) { $Info.Count } else { 0 }
         History  = if ($History) { @($History.Entries) } else { @() }
     }
@@ -445,6 +455,198 @@ function Send-M365MfaGuideMail {
 
 #endregion
 
+#region Teams message
+
+$script:MyUserId = $null   # Object ID of the signed-in admin (sender of the Teams chats)
+
+function Get-M365MyUserId {
+    if (-not $script:MyUserId) { $script:MyUserId = [string](Invoke-M365GraphRequest -Uri 'v1.0/me?$select=id')['id'] }
+    $script:MyUserId
+}
+
+function Reset-M365MyUserId {
+    # After a sign-out the next session may belong to another admin
+    $script:MyUserId = $null
+}
+
+function New-M365MfaGuideTeamsHtml {
+    <#
+    .SYNOPSIS
+        Short version of the guide for a Teams chat: greeting, the six steps as a list, links, contact hint.
+        Uses the email texts in the recipient's language; images are left out (Teams chat).
+    #>
+    param(
+        [Parameter(Mandatory)]$Recipient,
+        [Parameter(Mandatory)][string]$Language
+    )
+    $t = { param([string]$Key, [object[]]$Arguments) ConvertTo-HtmlText (Get-LanguageText -Language $Language -Key $Key -Arguments $Arguments) }
+    $link = { param([string]$Url, [string]$Text) '<a href="{0}">{1}</a>' -f $Url, (ConvertTo-HtmlText $Text) }
+    $name = if ($Recipient.GivenName) { $Recipient.GivenName } else { $Recipient.DisplayName }
+    $account = if ($Recipient.UserPrincipalName) { $Recipient.UserPrincipalName } else { $Recipient.Mail }
+    $step1 = (& $t 'Mail.Step1.Text') -f (& $link $script:AppStoreUrl 'App Store'), (& $link $script:GooglePlayUrl 'Google Play')
+    $step2 = (& $t 'Mail.Step2.Text') -f (& $link $script:SetupUrl 'aka.ms/mfasetup'), "<b>$(ConvertTo-HtmlText $account)</b>"
+    $items = @(
+        "<li><b>$(& $t 'Mail.Step1.Title')</b><br>$step1</li>"
+        "<li><b>$(& $t 'Mail.Step2.Title')</b><br>$step2</li>"
+        "<li><b>$(& $t 'Mail.Step3.Title')</b><br>$(& $t 'Mail.Step3.Text')</li>"
+        "<li><b>$(& $t 'Mail.Step4.Title')</b><br>$(& $t 'Mail.Step4.Text')</li>"
+        "<li><b>$(& $t 'Mail.Step5.Title')</b><br>$(& $t 'Mail.Step5.Text')</li>"
+        "<li><b>$(& $t 'Mail.Step6.Title')</b><br>$(& $t 'Mail.Step6.Text')</li>"
+    ) -join ''
+    @(
+        "<p><b>$(& $t 'Mail.Header')</b></p>"
+        "<p>$(& $t 'Mail.Greeting' $name)</p>"
+        "<p>$(& $t 'Mail.Intro')</p>"
+        "<p>$(& $t 'Mail.Need')</p>"
+        "<ol>$items</ol>"
+        "<p>$(& $t 'Mail.Done')</p>"
+        "<p><i>$(& $t 'Teams.Fallback')</i></p>"
+        "<p>$(& $t 'Mail.Closing')<br>$(& $t 'Mail.Signature')</p>"
+    ) -join ''
+}
+
+function Send-M365MfaGuideTeams {
+    <#
+    .SYNOPSIS
+        Sends the guide as a Teams chat message from the signed-in admin to the user (1:1 chat).
+    .DESCRIPTION
+        POST /chats returns the existing 1:1 chat if there already is one. Requires Chat.Create and
+        ChatMessage.Send, a Teams license for both accounts, and the user must be reachable in Teams.
+    #>
+    param(
+        [Parameter(Mandatory)]$Recipient,
+        [Parameter(Mandatory)][string]$Language
+    )
+    $me = Get-M365MyUserId
+    if ($me -eq $Recipient.Id) { throw (Get-LanguageText -Language (Get-UiLanguage) -Key 'Teams.Self') }
+    $chat = Invoke-M365GraphRequest -Method POST -Uri 'v1.0/chats' -Body @{
+        chatType = 'oneOnOne'
+        members  = @(
+            @{ '@odata.type' = '#microsoft.graph.aadUserConversationMember'; roles = @('owner'); 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$me')" }
+            @{ '@odata.type' = '#microsoft.graph.aadUserConversationMember'; roles = @('owner'); 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$($Recipient.Id)')" }
+        )
+    }
+    $html = New-M365MfaGuideTeamsHtml -Recipient $Recipient -Language $Language
+    Invoke-M365GraphRequest -Method POST -Uri "v1.0/chats/$([uri]::EscapeDataString([string]$chat['id']))/messages" -Body @{
+        body = @{ contentType = 'html'; content = $html }
+    } | Out-Null
+}
+
+function Get-M365MfaGuideTeamsScopes {
+    @('Chat.Create', 'ChatMessage.Send')
+}
+
+function ConvertTo-M365ChannelText {
+    # 'Mail,Teams' -> 'E-Mail, Teams' in the UI language
+    param([string]$Channel)
+    if (-not $Channel) { return '' }
+    (@($Channel -split ',' | Where-Object { $_ } | ForEach-Object { T "Channel.$($_.Trim())" })) -join ', '
+}
+
+#endregion
+
+#region Account classification (human / not a human)
+
+<#
+    Open extension com.m365mfatool.accountClass on the user:
+      accountType         Human | NonHuman   (no extension = not classified yet)
+      note                free text, e.g. "shared mailbox", "service account of the ERP"
+      classifiedBy        UPN of the admin
+      classifiedDateTime  UTC
+    Non-human accounts (shared mailboxes, service, room or test accounts) are set up by administrators;
+    the MFA campaign skips them.
+#>
+$script:AccountClassExtensionName = 'com.m365mfatool.accountClass'
+
+function Get-M365AccountClassExtensionName {
+    $script:AccountClassExtensionName
+}
+
+function ConvertTo-M365AccountClass {
+    # Graph response of the extension -> AccountType (Human/NonHuman/Unclassified), Note, ClassifiedBy, ClassifiedAt
+    param($Extension)
+    if ($Extension -isnot [System.Collections.IDictionary] -or -not $Extension['accountType']) {
+        return [pscustomobject]@{ AccountType = 'Unclassified'; Note = ''; ClassifiedBy = ''; ClassifiedAt = $null }
+    }
+    [pscustomobject]@{
+        AccountType  = if ([string]$Extension['accountType'] -eq 'NonHuman') { 'NonHuman' } else { 'Human' }
+        Note         = [string]$Extension['note']
+        ClassifiedBy = [string]$Extension['classifiedBy']
+        ClassifiedAt = ConvertTo-LocalDate $Extension['classifiedDateTime']
+    }
+}
+
+function Get-M365AccountClass {
+    param([Parameter(Mandatory)][string]$UserId)
+    try {
+        $extension = Invoke-M365GraphRequest -Uri "v1.0/users/$([uri]::EscapeDataString($UserId))/extensions/$script:AccountClassExtensionName"
+    }
+    catch {
+        if ("$($_.Exception.Message)" -match 'ResourceNotFound|NotFound|404') { $extension = $null } else { throw }
+    }
+    ConvertTo-M365AccountClass $extension
+}
+
+function Get-M365AccountClassBatch {
+    <#
+    .SYNOPSIS
+        Classification of up to 20 users per Graph batch. Hashtable user ID -> object (see ConvertTo-M365AccountClass).
+    #>
+    param(
+        [Parameter(Mandatory)][string[]]$UserIds,
+        [scriptblock]$Wait = { param($Milliseconds) Start-Sleep -Milliseconds $Milliseconds }
+    )
+    $result = @{}
+    for ($offset = 0; $offset -lt $UserIds.Count; $offset += 20) {
+        $chunk = @($UserIds[$offset..([Math]::Min($offset + 20, $UserIds.Count) - 1)])
+        $responses = Invoke-M365UserBatch -UserIds $chunk -Path ('/users/{0}/extensions/' + $script:AccountClassExtensionName) -Wait $Wait
+        foreach ($userId in $responses.Keys) {
+            # 404 = not classified; other errors also count as not classified
+            $result[$userId] = ConvertTo-M365AccountClass $(if ($responses[$userId].Error) { $null } else { $responses[$userId].Body })
+        }
+    }
+    $result
+}
+
+function Set-M365AccountClass {
+    <#
+    .SYNOPSIS
+        Stores the classification on the user; AccountType Unclassified removes it.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$UserId,
+        [Parameter(Mandatory)][ValidateSet('Human', 'NonHuman', 'Unclassified')][string]$AccountType,
+        [string]$Note = '',
+        [string]$ClassifiedBy = ''
+    )
+    $userPart = [uri]::EscapeDataString($UserId)
+    $uri = "v1.0/users/$userPart/extensions/$script:AccountClassExtensionName"
+    $exists = $true
+    try { Invoke-M365GraphRequest -Uri $uri | Out-Null }
+    catch { if ("$($_.Exception.Message)" -match 'ResourceNotFound|NotFound|404') { $exists = $false } else { throw } }
+
+    if ($AccountType -eq 'Unclassified') {
+        if ($exists) { Invoke-M365GraphRequest -Method DELETE -Uri $uri | Out-Null }
+        return
+    }
+    $body = @{
+        accountType        = $AccountType
+        note               = $Note
+        classifiedBy       = $ClassifiedBy
+        classifiedDateTime = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    }
+    if ($exists) {
+        Invoke-M365GraphRequest -Method PATCH -Uri $uri -Body $body | Out-Null
+    }
+    else {
+        $body['@odata.type'] = '#microsoft.graph.openTypeExtension'
+        $body['extensionName'] = $script:AccountClassExtensionName
+        Invoke-M365GraphRequest -Method POST -Uri "v1.0/users/$userPart/extensions" -Body $body | Out-Null
+    }
+}
+
+#endregion
+
 Export-ModuleMember -Function @(
     'Get-M365MfaGuideExtensionName'
     'Get-M365MfaGuideHistoryExtensionName'
@@ -460,4 +662,15 @@ Export-ModuleMember -Function @(
     'Get-M365MfaGuidePreviewHtml'
     'Get-M365MfaGuideScopes'
     'Send-M365MfaGuideMail'
+    'Get-M365MyUserId'
+    'Reset-M365MyUserId'
+    'New-M365MfaGuideTeamsHtml'
+    'Send-M365MfaGuideTeams'
+    'Get-M365MfaGuideTeamsScopes'
+    'ConvertTo-M365ChannelText'
+    'Get-M365AccountClassExtensionName'
+    'ConvertTo-M365AccountClass'
+    'Get-M365AccountClass'
+    'Get-M365AccountClassBatch'
+    'Set-M365AccountClass'
 )

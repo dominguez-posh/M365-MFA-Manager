@@ -21,6 +21,7 @@ Met deze tool richten beheerders en helpdeskmedewerkers **meervoudige verificati
 - [Bulkimport van TOTP-tokens](#bulkimport-van-totp-tokens)
 - [Tokenvoorraad](#tokenvoorraad)
 - [Bulk Temporary Access Pass](#bulk-temporary-access-pass)
+- [MFA-campagne en accountclassificatie](#mfa-campagne-en-accountclassificatie)
 - [Bulk-offboarding](#bulk-offboarding)
 - [Help, instellingen en updates](#help-instellingen-en-updates)
 - [Veelgestelde vragen en probleemoplossing](#veelgestelde-vragen-en-probleemoplossing)
@@ -261,6 +262,17 @@ Na wijziging van bestand, algoritme, tijdsinterval of verdeling is een nieuwe co
 3. **"Controleren"** zoekt de gebruikers op zonder iets te wijzigen. **"Maken"** maakt daarna per gebruiker een pas; een bestaande pas van de gebruiker wordt vervangen.
 4. **"Excel-export …"** slaat de lijst met de passen op – die bevat ze in leesbare tekst, dus alleen op een beveiligde plek opslaan en na de overdracht verwijderen. De passen komen nooit in het logboek.
 
+## MFA-campagne en accountclassificatie
+
+**Hulpmiddelen ▾ → "MFA-campagne …"** (of **"Accounts classificeren …"**) opent een venster met twee tabbladen dat dezelfde gegevens gebruikt als het MFA-rapport (of **"Gebruikers laden"**).
+
+- **"Accounts classificeren"**: markeer elk account zonder persoon erachter (gedeelde mailbox, service-, ruimte- of testaccount) als **"Geen persoon"**. Opgeslagen op het gebruikersobject (open extension `com.m365mfatool.accountClass`) en ook getoond in het hoofdvenster (**"Accounttype"**) en het MFA-rapport. De campagne slaat deze accounts over.
+- **"Campagne"**: tellers (doelgroep, nooit aangeschreven, aangeschreven), filters op stoplicht en laatste contact; selecteer gebruikers en verstuur de handleiding per **e-mail** en/of **Teams** (1:1-chatbericht vanaf uw account).
+
+Elke verzending wordt op de gebruiker opgeslagen: aantal, eerste en laatste datum en de laatste 20 verzendingen met datum, afzender, taal en kanaal.
+
+---
+
 ## Bulk-offboarding
 
 **Hulpmiddelen ▾ → "Bulk-offboarding …"** verwijdert in één keer de MFA-methoden van veel gebruikers, bijv. bij vertrekkers of na gecompromitteerde accounts.
@@ -362,6 +374,8 @@ Alle machtigingen worden eenmalig bij het aanmelden gevraagd, zodat tijdens het 
 | `GroupMember.Read.All` | MFA-rapport: een groep als bereik kiezen, via groepen toegewezen rollen oplossen |
 | `AuditLog.Read.All` | MFA-rapport: laatste aanmelding |
 | `Policy.Read.All` | Waarschuwing als een methode in de tenant is uitgeschakeld; controle voorwaardelijke toegang |
+| `Chat.Create` | MFA-handleiding als Teams-bericht: 1:1-chat met de gebruiker |
+| `ChatMessage.Send` | MFA-handleiding als Teams-bericht: bericht verzenden |
 | `Mail.Send` | MFA-handleiding vanuit de eigen mailbox |
 | `Mail.Send.Shared` | MFA-handleiding vanuit een gedeelde mailbox |
 | `Organization.Read.All` | De hrdnr-sleutel uit de tenant laden |
@@ -412,6 +426,7 @@ In het **beleid voor verificatiemethoden** (Entra-beheercentrum → Beveiliging 
 | `UI/BulkTapWindow.xaml` | Venster van de bulk Temporary Access Pass |
 | `UI/MfaGuideDialog.xaml` | Voorbeeldvenster van de MFA-handleiding |
 | `UI/BulkOffboardWindow.xaml` | Venster van de bulk-offboarding |
+| `UI/CampaignWindow.xaml` | Venster van de MFA-campagne en de accountclassificatie |
 | `UI/SettingsDialog.xaml` | Instellingenvenster |
 | `UI/HistoryDialog.xaml` | Geschiedenis van een gebruiker (auditlogboek) |
 | `Modules/Graph.psm1` | Aanmelden, Graph-aanvragen, gebruikers, domeinen, rollen, MFA-stoplicht, methoden lezen/verwijderen |

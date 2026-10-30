@@ -40,7 +40,7 @@ if ($PSVersionTable.PSEdition -ne 'Desktop') {
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
 
 $script:AppRoot = Split-Path -Parent $PSCommandPath
-$script:AppVersion = '1.4.0'
+$script:AppVersion = '1.5.0'
 $script:RepoUrl = 'https://github.com/dominguez-posh/M365-MFA-Manager'
 # -Global so that all modules can use each other's functions (T, Invoke-M365GraphRequest, etc.).
 Import-Module (Join-Path $script:AppRoot 'Modules\Localization.psm1') -Force -Global
@@ -203,7 +203,7 @@ $window.Title = "M365 MFA Administration $($script:AppVersion)"
 $controlNames = @(
     # Header and connection
     'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnUpdate', 'BtnHelp', 'BtnTools'
-    'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnOffboard', 'BtnBreakGlass', 'BtnSettings', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
+    'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnCampaign', 'BtnClassify', 'BtnOffboard', 'BtnBreakGlass', 'BtnSettings', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
     # User search (results in popup)
     'TxtSearch', 'BtnSearch', 'PopUsers', 'TxtUserHits', 'DgUsers'
     # MFA methods and guided steps
@@ -211,7 +211,7 @@ $controlNames = @(
     'DgMethods', 'TxtMethodDetails', 'BtnExportUser', 'BtnRefreshMethods', 'BtnDeleteMethod'
     # Selected user
     'TxtSelectedName', 'TxtSelectedUpn', 'TxtSelectedId', 'BtnCopyUpn', 'BtnCopyId'
-    'TxtMethodCount', 'TxtPreferredMethod', 'TxtSystemPreferred', 'TxtLastSignIn', 'BtnHistory', 'BtnCheckCa'
+    'TxtMethodCount', 'TxtPreferredMethod', 'TxtSystemPreferred', 'TxtLastSignIn', 'BtnHistory', 'BtnCheckCa', 'CmbAccountType', 'TxtAccountClassInfo'
     'BdgMfa', 'DotMfa', 'TxtMfaLevel', 'TxtMfaHints', 'BtnSendGuide', 'TxtGuideStatus', 'TxtRoleSummary', 'BtnShowRoles', 'LstRoles'
     # Configure method
     'LstMethod', 'PnlPolicyWarning', 'TxtPolicyWarning', 'PnlSerial', 'LblSerial', 'TxtSerial', 'PnlSecret', 'PwdSecret', 'TxtSecretStatus'
@@ -237,6 +237,8 @@ $script:SelectedUser = $null
 $script:SelectedMethod = $null
 $script:SelectedAssessment = $null   # MFA traffic light of the selected user
 $script:GuideInfo = $null            # When the MFA guide was last sent to the selected user
+$script:AccountClass = $null         # Classification of the selected user (human / not a human)
+$script:AccountClassLoading = $false
 $script:TapResult = $null
 $script:TotpSetup = $null
 $script:ColumnKeys = @{}
@@ -328,6 +330,7 @@ function Update-DynamicTexts {
     Update-GuideSteps
     Update-SecretStatus
     Set-MfaIndicator $script:SelectedAssessment
+    Set-AccountClassView $script:AccountClass
     if ($null -ne $script:UpdateRelease) { $script:BtnUpdate.Content = T 'Update.Badge' $script:UpdateRelease.Tag }
     if ($null -ne $script:TapResult) { Show-TapResult -Tap $script:TapResult }
     if ($null -ne $script:TotpSetup) { Show-TotpResult -Setup $script:TotpSetup }
@@ -532,6 +535,7 @@ function Set-Busy {
     $script:BtnHistory.IsEnabled         = -not $Busy -and $connected -and $hasUser
     $script:BtnCheckCa.IsEnabled         = -not $Busy -and $connected -and $hasUser
     $script:BtnUpdate.IsEnabled          = -not $Busy
+    $script:CmbAccountType.IsEnabled     = -not $Busy -and $connected -and $hasUser
     $script:BtnLogin.IsEnabled           = -not $Busy -and -not $connected
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
     # Only the button that fits the state is shown (no greyed-out button in the header)
@@ -830,7 +834,7 @@ function Update-GuideView {
         else { T 'Guide.Status.Sent' (Format-UiDate $info.SentAt) $info.SentBy }
     # Only of interest if the user still needs MFA or the guide was already sent
     $script:TxtGuideStatus.ToolTip = if ($info -and @($info.History).Count) {
-        (T 'Guide.History.Title') + [Environment]::NewLine + (@($info.History | Where-Object SentAt | ForEach-Object { '{0} – {1}' -f (Format-UiDate $_.SentAt), $_.SentBy }) -join [Environment]::NewLine)
+        (T 'Guide.History.Title') + [Environment]::NewLine + (@($info.History | Where-Object SentAt | ForEach-Object { '{0} – {1} ({2})' -f (Format-UiDate $_.SentAt), (ConvertTo-M365ChannelText $_.Channel), $_.SentBy }) -join [Environment]::NewLine)
     } else { $null }
     $script:TxtGuideStatus.Visibility = if ($level -in 'Red', 'Yellow' -or $null -ne $info) { 'Visible' } else { 'Collapsed' }
 }
@@ -875,11 +879,29 @@ function Clear-MfaView {
     $script:TxtSystemPreferred.Text = '-'
     $script:TxtLastSignIn.Text = '-'
     $script:BtnCheckCa.Visibility = 'Collapsed'
+    Set-AccountClassView $null
     Set-MfaIndicator $null
     Set-AdminRoles -Roles @() -Status '-'
     $script:SelectedAssessment = $null
     $script:GuideInfo = $null
     Update-GuideView
+}
+
+function Set-AccountClassView {
+    # Shows the classification of the selected user (without triggering the change handler)
+    param($Class)
+    $script:AccountClass = $Class
+    $script:AccountClassLoading = $true
+    try {
+        if ($null -eq $Class) { $script:CmbAccountType.SelectedIndex = -1 }
+        else { Select-ComboItemByTag -ComboBox $script:CmbAccountType -Tag $Class.AccountType }
+    }
+    finally { $script:AccountClassLoading = $false }
+    $script:TxtAccountClassInfo.Text = if ($null -eq $Class -or $Class.AccountType -eq 'Unclassified') { '' }
+        else {
+            $info = T 'User.AccountClassInfo' $Class.ClassifiedBy (Format-UiDate $Class.ClassifiedAt)
+            if ($Class.Note) { $Class.Note + ' · ' + $info } else { $info }
+        }
 }
 
 function Update-MethodsHeader {
@@ -993,6 +1015,8 @@ function Update-MfaView {
         }
         # Administrators: offer the Conditional Access exclusion check (break-glass accounts)
         $script:BtnCheckCa.Visibility = if ($roles.Count) { 'Visible' } else { 'Collapsed' }
+        try { Set-AccountClassView (Get-M365AccountClass -UserId $user.Id) }
+        catch { Write-UiLog (T 'Classify.ReadFailed' $_.Exception.Message) 'Warning' }
 
         $assessment = Get-M365MfaAssessment -Methods $methods -HasAdminRoles ($roles.Count -gt 0)
         Set-MfaIndicator $assessment
@@ -1105,6 +1129,7 @@ $BtnLogout.Add_Click({
         Disconnect-M365Graph
         $script:ReportData = $null
         $script:Policy = $null
+        Reset-M365MyUserId
         $PopUsers.IsOpen = $false
         $DgUsers.ItemsSource = $null
         Clear-SelectedUser
@@ -1503,9 +1528,39 @@ function Show-MfaGuideDialog {
     }
 }
 
+$CmbAccountType.Add_SelectionChanged({
+    # Store the classification of the selected user (human / not a human)
+    if ($script:AccountClassLoading -or $null -eq $script:SelectedUser -or $null -eq $CmbAccountType.SelectedItem) { return }
+    $type = [string]$CmbAccountType.SelectedItem.Tag
+    $current = if ($script:AccountClass) { $script:AccountClass.AccountType } else { 'Unclassified' }
+    if ($type -eq $current) { return }
+    $user = $script:SelectedUser
+    $note = ''
+    if ($type -ne 'Unclassified') {
+        Add-Type -AssemblyName Microsoft.VisualBasic
+        $note = [Microsoft.VisualBasic.Interaction]::InputBox((T 'Classify.NotePrompt' $user.UserPrincipalName (T "AccountType.$type")), (T 'User.AccountType'), $(if ($script:AccountClass) { $script:AccountClass.Note } else { '' }))
+    }
+    try {
+        Set-Busy $true (T 'Busy.Default')
+        Set-M365AccountClass -UserId $user.Id -AccountType $type -Note $note.Trim() -ClassifiedBy $script:Context.Account
+        Set-AccountClassView (Get-M365AccountClass -UserId $user.Id)
+        Write-UiLog (T 'Classify.Log' $user.UserPrincipalName (T "AccountType.$type")) 'Success'
+        Show-Toast (T 'Classify.Log' $user.UserPrincipalName (T "AccountType.$type"))
+    }
+    catch {
+        Set-AccountClassView $script:AccountClass
+        Write-UiError -Message (T 'Classify.Failed' $user.UserPrincipalName $_.Exception.Message) -Title (T 'User.AccountType')
+    }
+    finally {
+        Set-Busy $false
+    }
+})
+
 $BtnSendGuide.Add_Click({
     $user = $script:SelectedUser
     if ($null -eq $user) { return }
+    if ($script:AccountClass -and $script:AccountClass.AccountType -eq 'NonHuman' -and
+        -not (Confirm-Action -Text (T 'Guide.NonHumanWarning' $user.UserPrincipalName) -Title (T 'Guide.Title'))) { return }
 
     try {
         Set-Busy $true
@@ -1749,20 +1804,33 @@ function Get-ReportFilterText {
     $parts -join '; '
 }
 
-function Add-ReportRows {
-    param([object[]]$Rows, [int]$Done, [int]$Total)
+function Update-RowSearchText {
+    # One search string per row keeps the search filters (report, campaign) fast
+    param([Parameter(Mandatory)]$Row)
+    $text = @($Row.DisplayName, $Row.UserPrincipalName, $Row.Mail, $Row.AdminRoles, $Row.Methods, $Row.Reason,
+        $Row.LevelText, $Row.Department, $Row.JobTitle, $Row.UserType, $Row.AccountTypeText, $Row.AccountNote, $Row.Id) -join ' '
+    if ($Row.PSObject.Properties['SearchText']) { $Row.SearchText = $text }
+    else { $Row | Add-Member -NotePropertyName SearchText -NotePropertyValue $text }
+}
+
+function Add-ReportDataRows {
+    # Adds report rows to the shared report data (used by the report and the campaign window)
+    param([object[]]$Rows)
     $data = $script:ReportData
     foreach ($row in $Rows) {
-        # One search string per row keeps the search filter fast
-        $searchText = @($row.DisplayName, $row.UserPrincipalName, $row.Mail, $row.AdminRoles, $row.Methods, $row.Reason,
-            $row.LevelText, $row.Department, $row.JobTitle, $row.UserType, $row.Id) -join ' '
-        $row | Add-Member -NotePropertyName SearchText -NotePropertyValue $searchText
+        Update-RowSearchText -Row $row
+        $row | Add-Member -NotePropertyName CampaignResult -NotePropertyValue '' -Force
         $data.Rows.Add($row)
         $data.Counts[$row.Level]++
         if ($row.IsAdmin -and $row.Level -eq 'Red') { $data.Counts.AdminsRed++ }
         if ($row.IsInactive) { $data.Counts.Inactive++ }
         if ($row.SignInKnown) { $data.SignInAvailable = $true }
     }
+}
+
+function Add-ReportRows {
+    param([object[]]$Rows, [int]$Done, [int]$Total)
+    Add-ReportDataRows -Rows $Rows
     $script:Rpt.PrgRpt.IsIndeterminate = $false
     $script:Rpt.PrgRpt.Value = if ($Total) { 100 * $Done / $Total } else { 100 }
     Update-ReportCounts
@@ -3442,6 +3510,474 @@ function Show-BulkOffboardWindow {
 $BtnOffboard.Add_Click({
     Show-BulkOffboardWindow
     $script:Ob = $null
+    if ($null -ne $script:SelectedUser) { Update-MfaView }
+})
+
+#endregion
+
+#region MFA campaign and account classification
+
+function Set-CpStatus {
+    param([string]$Message)
+    $script:Cp.TxtCpStatus.Text = $Message
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Set-CpBusy {
+    param([bool]$Busy)
+    $cp = $script:Cp
+    $cp.Running = $Busy
+    foreach ($control in $cp.CmbCpScope, $cp.PnlCpGroup, $cp.BtnCpLoad, $cp.BtnCpSend, $cp.BtnCpSelectAll, $cp.BtnCpExport,
+                         $cp.ChkCpMail, $cp.ChkCpTeams, $cp.TxtCpSender, $cp.BtnClsNonHuman, $cp.BtnClsHuman, $cp.BtnClsReset, $cp.BtnCpClose) {
+        $control.IsEnabled = -not $Busy
+    }
+    $cp.BtnCpCancel.IsEnabled = $Busy
+    $cp.PrgCp.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Test-CpCampaignRow {
+    # Campaign filter: traffic light target, hide non-human accounts, last contact, search
+    param($Row)
+    $cp = $script:Cp
+    switch ($cp.Target) {
+        'NotGreen' { if ($Row.Level -notin 'Red', 'Yellow') { return $false } }
+        'Red'      { if ($Row.Level -ne 'Red') { return $false } }
+    }
+    if ($cp.HideNonHuman -and $Row.AccountType -eq 'NonHuman') { return $false }
+    if ($cp.ContactDays -eq 0 -and $Row.GuideCount -gt 0) { return $false }
+    if ($cp.ContactDays -gt 0 -and $Row.GuideSentAt -and $Row.GuideSentAt -gt (Get-Date).AddDays(-$cp.ContactDays)) { return $false }
+    if ($cp.SearchText -and $Row.SearchText.IndexOf($cp.SearchText, [StringComparison]::OrdinalIgnoreCase) -lt 0) { return $false }
+    $true
+}
+
+function Update-CpCounts {
+    $cp = $script:Cp
+    $rows = @($script:ReportData.Rows)
+    # Target group = traffic light filter and without non-human accounts, independent of search and contact filter
+    $levels = switch ($cp.Target) { 'NotGreen' { @('Red', 'Yellow') } 'Red' { @('Red') } default { $null } }
+    $targets = @(foreach ($row in $rows) {
+        if ($row.AccountType -ne 'NonHuman' -and ($null -eq $levels -or $levels -contains $row.Level)) { $row }
+    })
+    $cp.TxtCpTargets.Text = "$($targets.Count)"
+    $cp.TxtCpNever.Text = "$(@($targets | Where-Object { -not $_.GuideCount }).Count)"
+    $cp.TxtCpContacted.Text = "$(@($targets | Where-Object { $_.GuideCount }).Count)"
+    $cp.TxtCpNonHuman.Text = "$(@($rows | Where-Object AccountType -eq 'NonHuman').Count)"
+    $cp.TxtCpVisible.Text = if ($cp.CampaignView) { T 'Report.Status.Visible' $cp.CampaignView.Count $rows.Count } else { '' }
+    $cp.TxtClsVisible.Text = if ($cp.ClassifyView) {
+        T 'Classify.Visible' $cp.ClassifyView.Count $rows.Count @($rows | Where-Object AccountType -eq 'Unclassified').Count
+    } else { '' }
+    $cp.TxtCpEmpty.Visibility = if ($rows.Count) { 'Collapsed' } else { 'Visible' }
+}
+
+function Update-CpViews {
+    $cp = $script:Cp
+    $cp.SearchText = $cp.TxtCpSearch.Text.Trim()
+    $cp.ClsSearchText = $cp.TxtClsSearch.Text.Trim()
+    if ($cp.CampaignView) { $cp.CampaignView.Refresh() }
+    if ($cp.ClassifyView) { $cp.ClassifyView.Refresh() }
+    Update-CpCounts
+}
+
+function Connect-CpViews {
+    # Two views on the shared report rows: one per tab, each with its own filter
+    $cp = $script:Cp
+    $cp.CampaignView = [System.Windows.Data.ListCollectionView]::new($script:ReportData.Rows)
+    $cp.CampaignView.Filter = [Predicate[object]]{ param($row) Test-CpCampaignRow $row }
+    $cp.DgCp.ItemsSource = $cp.CampaignView
+    $cp.CampaignView.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription 'LevelOrder', 'Ascending'))
+    $cp.CampaignView.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription 'DisplayName', 'Ascending'))
+
+    $cp.ClassifyView = [System.Windows.Data.ListCollectionView]::new($script:ReportData.Rows)
+    $cp.ClassifyView.Filter = [Predicate[object]]{
+        param($row)
+        $state = $script:Cp
+        if ($state.ClassFilter -ne 'All' -and $row.AccountType -ne $state.ClassFilter) { return $false }
+        if ($state.ClsSearchText -and $row.SearchText.IndexOf($state.ClsSearchText, [StringComparison]::OrdinalIgnoreCase) -lt 0) { return $false }
+        $true
+    }
+    $cp.DgCls.ItemsSource = $cp.ClassifyView
+    $cp.ClassifyView.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription 'DisplayName', 'Ascending'))
+    Update-CpCounts
+}
+
+function Update-CpSourceText {
+    $data = $script:ReportData
+    $script:Cp.TxtCpSource.Text = if ($data.Rows.Count) { T 'Campaign.Source' $data.Rows.Count $data.ScopeText $(if ($data.PSObject.Properties['LoadedAt'] -and $data.LoadedAt) { Format-UiDate $data.LoadedAt } else { '-' }) } else { T 'Campaign.NotLoaded' }
+}
+
+function Start-CampaignLoad {
+    # Loads users, MFA status, sending history and classification (same data as the MFA report)
+    $cp = $script:Cp
+    $groupId = $null
+    $scopeText = T 'Report.Scope.All'
+    if ([string]$cp.CmbCpScope.SelectedItem.Tag -eq 'Group') {
+        $group = $cp.CmbCpGroup.SelectedItem
+        if ($null -eq $group) {
+            Show-Message -Text (T 'Report.SelectGroup') -Title (T 'Campaign.Title')
+            return
+        }
+        $groupId = $group.Id
+        $scopeText = T 'Report.Scope.GroupName' $group.DisplayName
+    }
+    $scopeText += ', ' + (T 'Report.EnabledOnly')
+
+    $script:ReportData = New-ReportData
+    $script:ReportData.ScopeText = $scopeText
+    $script:ReportData | Add-Member -NotePropertyName LoadedAt -NotePropertyValue (Get-Date) -Force
+    Connect-CpViews
+    $cp.Cancel = $false
+    try {
+        Set-CpBusy $true
+        $cp.PrgCp.IsIndeterminate = $true
+        $includeSignIn = Request-ReportScopes -GroupRequired ([bool]$groupId)
+        $script:ReportData.TenantName = Get-M365OrganizationName
+        $cp.TxtCpTenant.Text = T 'Header.Tenant' (Get-ReportTenantLabel)
+        Write-UiLog (T 'Log.ReportStarted' $scopeText)
+        $result = Invoke-M365TenantMfaReport -GroupId $groupId -IncludeSignIn:$includeSignIn `
+            -OnProgress { param($Message) Set-CpStatus $Message } `
+            -OnWarning { param($Message) Write-UiLog $Message 'Warning' } `
+            -OnInfo { param($Message) Write-UiLog $Message } `
+            -OnRows {
+                param($Rows, $Done, $Total)
+                Add-ReportDataRows -Rows $Rows
+                $script:Cp.PrgCp.IsIndeterminate = $false
+                $script:Cp.PrgCp.Value = if ($Total) { 100 * $Done / $Total } else { 100 }
+                Update-CpCounts
+                Set-CpStatus (T 'Report.Progress.Methods' $Done $Total)
+            } `
+            -ShouldCancel { $script:Cp.Cancel } `
+            -Wait { param($Milliseconds) Wait-Ui $Milliseconds }
+        $message = if ($result.Cancelled) { T 'Report.Status.Cancelled' $result.Done $result.Total } else { T 'Campaign.Loaded' $result.Total }
+        Set-CpStatus $message
+        Write-UiLog $message $(if ($result.Cancelled) { 'Warning' } else { 'Success' })
+    }
+    catch {
+        Set-CpStatus ''
+        Write-UiError -Message (T 'Report.Failed' $_.Exception.Message) -Title (T 'Campaign.Title')
+    }
+    finally {
+        $cp.PrgCp.IsIndeterminate = $false
+        Set-CpBusy $false
+        Update-CpSourceText
+        Update-CpViews
+        if ($cp.CloseRequested) { $cp.Window.Close() }
+    }
+}
+
+function Find-CpGroup {
+    $cp = $script:Cp
+    $term = $cp.TxtCpGroupSearch.Text.Trim()
+    if (-not $term) {
+        Show-Message -Text (T 'Report.GroupSearchEmpty') -Title (T 'Campaign.Title')
+        return
+    }
+    try {
+        Set-CpBusy $true
+        $groups = @(Find-M365Group -SearchTerm $term)
+    }
+    catch {
+        Write-UiError -Message $_.Exception.Message -Title (T 'Campaign.Title')
+        return
+    }
+    finally {
+        Set-CpBusy $false
+    }
+    $cp.CmbCpGroup.ItemsSource = $groups
+    if (-not $groups.Count) {
+        Show-Message -Text (T 'Report.NoGroups' $term) -Title (T 'Campaign.Title')
+        return
+    }
+    $cp.CmbCpGroup.SelectedIndex = 0
+    if ($groups.Count -gt 1) { $cp.CmbCpGroup.IsDropDownOpen = $true }
+    Set-CpStatus (T 'Report.GroupsFound' $groups.Count)
+}
+
+function Invoke-CpThrottled {
+    # Runs a Graph action and waits and retries when Graph throttles (HTTP 429/503)
+    param([Parameter(Mandatory)][scriptblock]$Action)
+    for ($attempt = 1; ; $attempt++) {
+        try { return & $Action }
+        catch {
+            if ($attempt -lt 4 -and $_.Exception.Message -match '429|TooManyRequests|throttl|503|ServiceUnavailable') {
+                Wait-Ui (10000 * $attempt)
+                continue
+            }
+            throw
+        }
+    }
+}
+
+function Start-CampaignSend {
+    $cp = $script:Cp
+    $selected = @($cp.DgCp.SelectedItems)
+    if (-not $selected.Count) {
+        Show-Message -Text (T 'Campaign.NoSelection') -Title (T 'Campaign.Title')
+        return
+    }
+    $useMail = [bool]$cp.ChkCpMail.IsChecked
+    $useTeams = [bool]$cp.ChkCpTeams.IsChecked
+    if (-not ($useMail -or $useTeams)) {
+        Show-Message -Text (T 'Campaign.NoChannel') -Title (T 'Campaign.Title')
+        return
+    }
+    $senderMail = $cp.TxtCpSender.Text.Trim()
+    if ($useMail -and $senderMail -notmatch '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+        Show-Message -Text (T 'Guide.InvalidSender') -Title (T 'Campaign.Title')
+        $cp.TxtCpSender.Focus() | Out-Null
+        return
+    }
+    # Permissions of the chosen channels (all requested at sign-in; fails only if consent was declined)
+    try {
+        $scopes = @()
+        if ($useMail) { $scopes += Get-M365MfaGuideScopes -SharedMailbox ($senderMail -ne $script:Context.Account) }
+        if ($useTeams) { $scopes += Get-M365MfaGuideTeamsScopes }
+        Set-ConnectionStatus (Request-M365GraphScopes -Scopes ($scopes | Select-Object -Unique))
+    }
+    catch {
+        Write-UiError -Message $_.Exception.Message -Title (T 'Campaign.Title')
+        return
+    }
+
+    $targets = @($selected | Where-Object { $_.AccountType -ne 'NonHuman' })
+    $skipped = $selected.Count - $targets.Count
+    $channels = @($(if ($useMail) { 'Mail' }; if ($useTeams) { 'Teams' }))
+    $channelText = ConvertTo-M365ChannelText ($channels -join ',')
+    $question = T 'Campaign.Confirm' $targets.Count $channelText $(if ($useMail) { $senderMail } else { '-' }) @($targets | Where-Object GuideCount).Count
+    if ($skipped) { $question += "`n`n" + (T 'Campaign.SkipNonHuman' $skipped) }
+    if (-not $targets.Count) {
+        Show-Message -Text (T 'Campaign.SkipNonHuman' $skipped) -Title (T 'Campaign.Title')
+        return
+    }
+    if (-not (Confirm-Action -Text $question -Title (T 'Campaign.Title') -Icon Question)) { return }
+
+    if ($useMail -and $senderMail -ne $script:GuideSender) { $script:GuideSender = $senderMail; Save-Settings }
+    $cp.Cancel = $false
+    $sent = 0; $failed = 0; $done = 0
+    Write-UiLog (T 'Campaign.Log.Started' $targets.Count $channelText) 'Warning'
+    try {
+        Set-CpBusy $true
+        foreach ($row in $targets) {
+            if ($cp.Cancel) { break }
+            $done++
+            $cp.PrgCp.Value = 100 * $done / $targets.Count
+            Set-CpStatus (T 'Campaign.Status.Sending' $done $targets.Count $row.UserPrincipalName)
+            $ok = New-Object System.Collections.Generic.List[string]
+            $errors = New-Object System.Collections.Generic.List[string]
+            try {
+                $recipient = Invoke-CpThrottled { Get-M365MfaGuideRecipient -UserId $row.Id }
+                if ($useMail) {
+                    if (-not $recipient.Mail) { $errors.Add((T 'Campaign.Error.NoMail')) }
+                    else {
+                        try {
+                            $mail = New-M365MfaGuideMail -Recipient $recipient -Language $recipient.Language
+                            Invoke-CpThrottled { Send-M365MfaGuideMail -Sender $senderMail -Recipient $recipient -Mail $mail }
+                            $ok.Add('Mail')
+                        }
+                        catch { $errors.Add(('{0}: {1}' -f (T 'Channel.Mail'), $_.Exception.Message)) }
+                    }
+                }
+                if ($useTeams) {
+                    try {
+                        Invoke-CpThrottled { Send-M365MfaGuideTeams -Recipient $recipient -Language $recipient.Language }
+                        $ok.Add('Teams')
+                    }
+                    catch { $errors.Add(('{0}: {1}' -f (T 'Channel.Teams'), $_.Exception.Message)) }
+                }
+                if ($ok.Count) {
+                    $channel = $ok -join ','
+                    try {
+                        Set-M365MfaGuideInfo -UserId $row.Id -SentBy $script:Context.Account -Language $recipient.Language -Channel $channel
+                    }
+                    catch { $errors.Add((T 'Guide.AttributeFailed' $_.Exception.Message)) }
+                    $now = Get-Date
+                    $row.GuideCount = [int]$row.GuideCount + 1
+                    $row.GuideSentAt = $now
+                    $row.GuideSentText = Format-UiDate $now
+                    $row.GuideChannel = $channel
+                    $row.GuideChannelText = ConvertTo-M365ChannelText $channel
+                    $line = '{0} · {1} ({2})' -f (Format-UiDate $now), $row.GuideChannelText, $script:Context.Account
+                    $row.GuideHistoryText = if ($row.GuideHistoryText) { $row.GuideHistoryText + [Environment]::NewLine + $line } else { $line }
+                }
+            }
+            catch {
+                $errors.Add($_.Exception.Message)
+            }
+            if ($ok.Count) { $sent++ }
+            if ($errors.Count) { $failed++ }
+            $row.CampaignResult = @(
+                if ($ok.Count) { T 'Campaign.Result.Sent' (ConvertTo-M365ChannelText ($ok -join ',')) }
+                $errors
+            ) -join ' · '
+            if ($ok.Count) { Write-UiLog (T 'Campaign.Log.Sent' $row.UserPrincipalName (ConvertTo-M365ChannelText ($ok -join ','))) 'Success' }
+            if ($errors.Count) { Write-UiLog (T 'Campaign.Log.Failed' $row.UserPrincipalName ($errors -join ' · ')) 'Error' }
+            $cp.DgCp.Items.Refresh()
+        }
+    }
+    finally {
+        Set-CpBusy $false
+        Update-CpViews
+    }
+    $summary = T 'Campaign.Done' $sent $failed ($targets.Count - $done)
+    Set-CpStatus $summary
+    Write-UiLog $summary $(if ($failed) { 'Warning' } else { 'Success' })
+    Show-Toast $summary $(if ($failed) { 'Warning' } else { 'Success' })
+    if ($cp.CloseRequested) { $cp.Window.Close() }
+}
+
+function Set-CpClassification {
+    # Marks the selected accounts as human / not a human, or removes the classification
+    param([Parameter(Mandatory)][ValidateSet('Human', 'NonHuman', 'Unclassified')][string]$AccountType)
+    $cp = $script:Cp
+    $rows = @($cp.DgCls.SelectedItems)
+    if (-not $rows.Count) {
+        Show-Message -Text (T 'Classify.NoSelection') -Title (T 'Campaign.Tab.Classify')
+        return
+    }
+    $note = if ($AccountType -eq 'Unclassified') { '' } else { $cp.TxtClsNote.Text.Trim() }
+    $typeText = T "AccountType.$AccountType"
+    if ($rows.Count -gt 1 -and -not (Confirm-Action -Text (T 'Classify.Confirm' $rows.Count $typeText) -Title (T 'Campaign.Tab.Classify') -Icon Question -DefaultYes)) { return }
+    $failed = 0
+    try {
+        Set-CpBusy $true
+        $index = 0
+        foreach ($row in $rows) {
+            $index++
+            Set-CpStatus (T 'Classify.Status' $index $rows.Count $row.UserPrincipalName)
+            try {
+                Invoke-CpThrottled { Set-M365AccountClass -UserId $row.Id -AccountType $AccountType -Note $note -ClassifiedBy $script:Context.Account }
+                $row.AccountType = $AccountType
+                $row.AccountTypeText = $typeText
+                $row.AccountNote = $note
+                $row.ClassifiedBy = if ($AccountType -eq 'Unclassified') { '' } else { $script:Context.Account }
+                Update-RowSearchText -Row $row
+                Write-UiLog (T 'Classify.Log' $row.UserPrincipalName $typeText)
+            }
+            catch {
+                $failed++
+                Write-UiLog (T 'Classify.Failed' $row.UserPrincipalName $_.Exception.Message) 'Error'
+            }
+        }
+    }
+    finally {
+        Set-CpBusy $false
+        $cp.DgCls.Items.Refresh()
+        Update-CpViews
+    }
+    $summary = T 'Classify.Done' ($rows.Count - $failed) $typeText $failed
+    Set-CpStatus $summary
+    Show-Toast $summary $(if ($failed) { 'Warning' } else { 'Success' })
+}
+
+function Export-CpResults {
+    $rows = @($script:Cp.CampaignView)
+    if (-not $rows.Count) {
+        Show-Message -Text (T 'Report.NothingToExport') -Title (T 'Campaign.Title')
+        return
+    }
+    $dialog = New-Object Microsoft.Win32.SaveFileDialog
+    $dialog.Title = T 'Report.Export'
+    $dialog.Filter = (T 'Report.ExcelFilter') + ' (*.xlsx)|*.xlsx'
+    $dialog.FileName = 'MFA-Kampagne_{0:yyyy-MM-dd_HHmm}.xlsx' -f (Get-Date)
+    if (-not $dialog.ShowDialog($script:Cp.Window)) { return }
+    try {
+        Export-M365MfaReportXlsx -Path $dialog.FileName -Rows $rows -Tenant (Get-ReportTenantLabel) -ScopeText $script:ReportData.ScopeText -FilterText (T 'Campaign.Title')
+        Write-UiLog (T 'Report.Exported' $dialog.FileName) 'Success'
+    }
+    catch {
+        Write-UiError -Message (T 'Report.ExportFailed' $_.Exception.Message) -Title (T 'Campaign.Title')
+        return
+    }
+    if (Confirm-Action -Text (T 'Report.OpenFile' $dialog.FileName) -Title (T 'Campaign.Title') -Icon Question -DefaultYes) {
+        Start-Process -FilePath $dialog.FileName
+    }
+}
+
+function Show-CampaignWindow {
+    param([ValidateSet('Campaign', 'Classify')][string]$Tab = 'Campaign')
+    $dialog = New-UiWindow -Name 'CampaignWindow' -Owner $window
+
+    $script:Cp = @{ Window = $dialog; Running = $false; Cancel = $false; CloseRequested = $false
+                    Target = 'NotGreen'; HideNonHuman = $true; ContactDays = -1; SearchText = ''; ClassFilter = 'All'; ClsSearchText = ''
+                    CampaignView = $null; ClassifyView = $null }
+    foreach ($name in @(
+        'TxtCpTenant', 'CmbCpScope', 'PnlCpGroup', 'TxtCpGroupSearch', 'BtnCpFindGroup', 'CmbCpGroup', 'BtnCpLoad', 'BtnCpCancel', 'TxtCpSource'
+        'TabCp', 'TabCpCampaign', 'TabCpClassify'
+        'TxtCpTargets', 'TxtCpNever', 'TxtCpContacted', 'TxtCpNonHuman', 'TxtCpSearch', 'CmbCpTarget', 'CmbCpContact', 'ChkCpHideNonHuman', 'TxtCpVisible'
+        'DgCp', 'TxtCpEmpty', 'ChkCpMail', 'ChkCpTeams', 'TxtCpSender', 'BtnCpSend', 'BtnCpSelectAll', 'BtnCpExport'
+        'TxtClsSearch', 'CmbClsFilter', 'TxtClsVisible', 'DgCls', 'TxtClsNote', 'BtnClsNonHuman', 'BtnClsHuman', 'BtnClsReset'
+        'PrgCp', 'TxtCpStatus', 'BtnCpClose'
+    )) {
+        $script:Cp[$name] = $dialog.FindName($name)
+    }
+    $cp = $script:Cp
+    foreach ($grid in $cp.DgCp, $cp.DgCls) { foreach ($column in $grid.Columns) { $column.Header = T ([string]$column.Header) } }
+    $cp.TxtCpSender.Text = if ($script:GuideSender) { $script:GuideSender } else { $script:Context.Account }
+    $cp.TabCp.SelectedItem = if ($Tab -eq 'Classify') { $cp.TabCpClassify } else { $cp.TabCpCampaign }
+
+    # Reuse the last report of this tenant (same data), otherwise start empty
+    if ($null -eq $script:ReportData -or $script:ReportData.TenantId -ne $script:Context.TenantId) { $script:ReportData = New-ReportData }
+    foreach ($row in $script:ReportData.Rows) {
+        if (-not $row.PSObject.Properties['CampaignResult']) { $row | Add-Member -NotePropertyName CampaignResult -NotePropertyValue '' }
+    }
+    $cp.TxtCpTenant.Text = T 'Header.Tenant' (Get-ReportTenantLabel)
+    Connect-CpViews
+    Update-CpSourceText
+    Set-CpBusy $false
+
+    $cp.CmbCpScope.Add_SelectionChanged({ $script:Cp.PnlCpGroup.Visibility = if ([string]$script:Cp.CmbCpScope.SelectedItem.Tag -eq 'Group') { 'Visible' } else { 'Collapsed' } })
+    $cp.BtnCpFindGroup.Add_Click({ Find-CpGroup })
+    $cp.TxtCpGroupSearch.Add_KeyDown({ param($src, $keyArgs) if ($keyArgs.Key -eq 'Enter') { Find-CpGroup } })
+    $cp.BtnCpLoad.Add_Click({ Start-CampaignLoad })
+    $cp.BtnCpCancel.Add_Click({
+        $script:Cp.Cancel = $true
+        $script:Cp.BtnCpCancel.IsEnabled = $false
+        Set-CpStatus (T 'Import.Status.Cancelling')
+    })
+    $cp.CmbCpTarget.Add_SelectionChanged({ $script:Cp.Target = [string]$script:Cp.CmbCpTarget.SelectedItem.Tag; Update-CpViews })
+    $cp.CmbCpContact.Add_SelectionChanged({ $script:Cp.ContactDays = [int]$script:Cp.CmbCpContact.SelectedItem.Tag; Update-CpViews })
+    $cp.ChkCpHideNonHuman.Add_Click({ $script:Cp.HideNonHuman = [bool]$script:Cp.ChkCpHideNonHuman.IsChecked; Update-CpViews })
+    $cp.CmbClsFilter.Add_SelectionChanged({ $script:Cp.ClassFilter = [string]$script:Cp.CmbClsFilter.SelectedItem.Tag; Update-CpViews })
+    # Search: filter shortly after the last keystroke
+    $cp.SearchTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $cp.SearchTimer.Interval = [TimeSpan]::FromMilliseconds(300)
+    $cp.SearchTimer.Add_Tick({ $script:Cp.SearchTimer.Stop(); Update-CpViews })
+    foreach ($box in $cp.TxtCpSearch, $cp.TxtClsSearch) { $box.Add_TextChanged({ $script:Cp.SearchTimer.Stop(); $script:Cp.SearchTimer.Start() }) }
+    $cp.BtnCpSelectAll.Add_Click({ $script:Cp.DgCp.SelectAll(); $script:Cp.DgCp.Focus() | Out-Null })
+    $cp.BtnCpSend.Add_Click({ Start-CampaignSend })
+    $cp.BtnCpExport.Add_Click({ Export-CpResults })
+    $cp.BtnClsNonHuman.Add_Click({ Set-CpClassification -AccountType NonHuman })
+    $cp.BtnClsHuman.Add_Click({ Set-CpClassification -AccountType Human })
+    $cp.BtnClsReset.Add_Click({ Set-CpClassification -AccountType Unclassified })
+    # A single selected account shows its note, so it can be changed
+    $cp.DgCls.Add_SelectionChanged({
+        $items = @($script:Cp.DgCls.SelectedItems)
+        if ($items.Count -eq 1) { $script:Cp.TxtClsNote.Text = [string]$items[0].AccountNote }
+    })
+    $cp.BtnCpClose.Add_Click({ $script:Cp.Window.Close() })
+    $dialog.Add_Closing({
+        param($src, $closingArgs)
+        if ($script:Cp.Running) {
+            $script:Cp.Cancel = $true
+            $script:Cp.CloseRequested = $true
+            $closingArgs.Cancel = $true
+            Set-CpStatus (T 'Import.Status.Cancelling')
+        }
+    })
+
+    $dialog.ShowDialog() | Out-Null
+    $cp.SearchTimer.Stop()
+}
+
+$BtnCampaign.Add_Click({
+    Show-CampaignWindow -Tab Campaign
+    $script:Cp = $null
+    if ($null -ne $script:SelectedUser) { Update-MfaView }
+})
+
+$BtnClassify.Add_Click({
+    Show-CampaignWindow -Tab Classify
+    $script:Cp = $null
     if ($null -ne $script:SelectedUser) { Update-MfaView }
 })
 

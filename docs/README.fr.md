@@ -21,6 +21,7 @@ Avec cet outil, les administrateurs et le support informatique configurent **l'a
 - [Import en masse de jetons TOTP](#import-en-masse-de-jetons-totp)
 - [Inventaire des jetons](#inventaire-des-jetons)
 - [Temporary Access Pass en masse](#temporary-access-pass-en-masse)
+- [Campagne MFA et classement des comptes](#campagne-mfa-et-classement-des-comptes)
 - [Offboarding en masse](#offboarding-en-masse)
 - [Aide, paramètres et mises à jour](#aide-paramètres-et-mises-à-jour)
 - [Questions fréquentes et dépannage](#questions-fréquentes-et-dépannage)
@@ -261,6 +262,17 @@ Modifier le fichier, l'algorithme, l'intervalle ou la distribution nécessite un
 3. **« Vérifier »** résout les utilisateurs sans rien modifier. **« Créer »** crée ensuite un code par utilisateur ; un code existant de l'utilisateur est remplacé.
 4. **« Export Excel … »** enregistre la liste avec les codes – elle les contient en clair : enregistrez-la uniquement dans un emplacement protégé et supprimez-la après la remise. Les codes ne sont jamais écrits dans le journal.
 
+## Campagne MFA et classement des comptes
+
+**Outils ▾ → « Campagne MFA … »** (ou **« Classer les comptes … »**) ouvre une fenêtre à deux onglets qui utilise les mêmes données que le rapport MFA (ou **« Charger les utilisateurs »**).
+
+- **« Classer les comptes »** : marquez **« Pas une personne »** chaque compte sans personne derrière (boîte partagée, compte de service, salle ou test). Enregistré sur l'objet utilisateur (extension ouverte `com.m365mfatool.accountClass`) et affiché aussi dans la fenêtre principale (**« Type de compte »**) et le rapport MFA. La campagne ignore ces comptes.
+- **« Campagne »** : compteurs (groupe cible, jamais contactés, contactés), filtres par couleur et dernier contact ; sélectionnez les utilisateurs et envoyez le guide par **e-mail** et/ou **Teams** (message de chat 1:1 depuis votre compte).
+
+Chaque envoi est enregistré sur l'utilisateur : nombre, première et dernière date et les 20 derniers envois avec date, expéditeur, langue et canal.
+
+---
+
 ## Offboarding en masse
 
 **Outils ▾ → « Offboarding en masse … »** supprime d'un coup les méthodes MFA de nombreux utilisateurs, p. ex. pour les départs ou après des comptes compromis.
@@ -362,6 +374,8 @@ Toutes les autorisations sont demandées une seule fois à la connexion ; aucun 
 | `GroupMember.Read.All` | Rapport MFA : choisir un groupe comme périmètre, résoudre les rôles attribués via des groupes |
 | `AuditLog.Read.All` | Rapport MFA : dernière connexion |
 | `Policy.Read.All` | Avertissement si une méthode est désactivée dans le locataire ; vérification de l'accès conditionnel |
+| `Chat.Create` | Guide MFA par message Teams : chat 1:1 avec l'utilisateur |
+| `ChatMessage.Send` | Guide MFA par message Teams : envoyer le message |
 | `Mail.Send` | Guide MFA depuis votre propre boîte aux lettres |
 | `Mail.Send.Shared` | Guide MFA depuis une boîte aux lettres partagée |
 | `Organization.Read.All` | Charger la clé hrdnr depuis le locataire |
@@ -412,6 +426,7 @@ Dans la **stratégie des méthodes d'authentification** (Centre d'administration
 | `UI/BulkTapWindow.xaml` | Fenêtre du Temporary Access Pass en masse |
 | `UI/MfaGuideDialog.xaml` | Boîte de dialogue d'aperçu du guide MFA |
 | `UI/BulkOffboardWindow.xaml` | Fenêtre de l'offboarding en masse |
+| `UI/CampaignWindow.xaml` | Fenêtre de la campagne MFA et du classement des comptes |
 | `UI/SettingsDialog.xaml` | Boîte de dialogue des paramètres |
 | `UI/HistoryDialog.xaml` | Historique d'un utilisateur (journal d'audit) |
 | `Modules/Graph.psm1` | Connexion, requêtes Graph, utilisateurs, domaines, rôles, feu tricolore MFA, lecture/suppression des méthodes |

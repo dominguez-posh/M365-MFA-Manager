@@ -21,6 +21,7 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 - [Importação em massa de tokens TOTP](#importação-em-massa-de-tokens-totp)
 - [Inventário de tokens](#inventário-de-tokens)
 - [Temporary Access Pass em massa](#temporary-access-pass-em-massa)
+- [Campanha MFA e classificação de contas](#campanha-mfa-e-classificação-de-contas)
 - [Offboarding em massa](#offboarding-em-massa)
 - [Ajuda, definições e atualizações](#ajuda-definições-e-atualizações)
 - [Perguntas frequentes e resolução de problemas](#perguntas-frequentes-e-resolução-de-problemas)
@@ -261,6 +262,17 @@ Alterar o ficheiro, o algoritmo, o intervalo ou a distribuição exige uma nova 
 3. **"Verificar"** resolve os utilizadores sem alterar nada. **"Criar"** cria depois um passe por utilizador; um passe existente do utilizador é substituído.
 4. **"Exportar para Excel …"** guarda a lista com os passes – contém-nos em texto simples, por isso guarde-a apenas num local protegido e elimine-a após a entrega. Os passes nunca são escritos no registo.
 
+## Campanha MFA e classificação de contas
+
+**Ferramentas ▾ → "Campanha MFA …"** (ou **"Classificar contas …"**) abre uma janela com dois separadores que usa os mesmos dados do relatório MFA (ou **"Carregar utilizadores"**).
+
+- **"Classificar contas"**: marque como **"Não é uma pessoa"** cada conta sem uma pessoa por trás (caixa partilhada, conta de serviço, sala ou teste). Guardado no objeto do utilizador (extensão aberta `com.m365mfatool.accountClass`) e também apresentado na janela principal (**"Tipo de conta"**) e no relatório MFA. A campanha ignora estas contas.
+- **"Campanha"**: contadores (grupo-alvo, nunca contactados, contactados), filtros por semáforo e último contacto; selecione utilizadores e envie o guia por **e-mail** e/ou **Teams** (mensagem de chat 1:1 a partir da sua conta).
+
+Cada envio é guardado no utilizador: número, primeira e última data e os últimos 20 envios com data, remetente, idioma e canal.
+
+---
+
 ## Offboarding em massa
 
 **Ferramentas ▾ → "Offboarding em massa …"** remove de uma vez os métodos MFA de muitos utilizadores, p. ex. em saídas de colaboradores ou após contas comprometidas.
@@ -362,6 +374,8 @@ Todas as permissões são pedidas uma única vez no início de sessão, pelo que
 | `GroupMember.Read.All` | Relatório MFA: escolher um grupo como âmbito, resolver funções atribuídas através de grupos |
 | `AuditLog.Read.All` | Relatório MFA: último início de sessão |
 | `Policy.Read.All` | Aviso se um método estiver desativado no locatário; verificação de acesso condicional |
+| `Chat.Create` | Guia MFA como mensagem do Teams: chat 1:1 com o utilizador |
+| `ChatMessage.Send` | Guia MFA como mensagem do Teams: enviar a mensagem |
 | `Mail.Send` | Guia de MFA a partir da própria caixa de correio |
 | `Mail.Send.Shared` | Guia de MFA a partir de uma caixa de correio partilhada |
 | `Organization.Read.All` | Carregar a chave hrdnr do locatário |
@@ -412,6 +426,7 @@ Na **política de métodos de autenticação** (Centro de administração do Ent
 | `UI/BulkTapWindow.xaml` | Janela do Temporary Access Pass em massa |
 | `UI/MfaGuideDialog.xaml` | Caixa de diálogo de pré-visualização do guia de MFA |
 | `UI/BulkOffboardWindow.xaml` | Janela do offboarding em massa |
+| `UI/CampaignWindow.xaml` | Janela da campanha MFA e da classificação de contas |
 | `UI/SettingsDialog.xaml` | Caixa de diálogo das definições |
 | `UI/HistoryDialog.xaml` | Histórico de um utilizador (registo de auditoria) |
 | `Modules/Graph.psm1` | Início de sessão, pedidos ao Graph, utilizadores, domínios, funções, semáforo de MFA, leitura/eliminação de métodos |
