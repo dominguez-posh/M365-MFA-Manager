@@ -32,6 +32,7 @@ $script:GraphScopes = @(
 )
 
 $script:RoleDefinitionNames = $null   # Cache: role ID -> display name
+$script:TokenSession = $null          # Keevault sign-in: refresh token, app, tenant and expiry (in memory only)
 
 #region Module management
 
@@ -298,6 +299,75 @@ function Connect-M365Graph {
     }
 }
 
+function Connect-M365GraphWithKeevault {
+    <#
+    .SYNOPSIS
+        Signs in to Microsoft Graph with an account from Keevault (Modules\KeevaultSignIn.psm1) and returns the account and tenant.
+    .DESCRIPTION
+        Same app and permissions as Connect-M365Graph. The Graph module gets the access token; the refresh token stays
+        in memory only, so that long runs (report, campaign) continue after the access token has expired.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$AppName,
+        [Parameter(Mandatory)][string]$AppVersion,
+        [Parameter(Mandatory)][string]$CacheFolder,
+        [string]$TenantId,
+        [System.Windows.Window]$Owner,
+        [scriptblock]$OnWait
+    )
+    Assert-GraphModules
+
+    $tenant = if ($TenantId) { $TenantId } else { 'organizations' }
+    $token = Connect-M365WithKeevault -AppName $AppName -AppVersion $AppVersion -Scopes $script:GraphScopes -CacheFolder $CacheFolder -TenantID $tenant -Owner $Owner -OnWait $OnWait
+    try {
+        Set-M365GraphAccessToken -Token $token
+    }
+    catch {
+        throw (T 'Graph.ConnectFailed' $_.Exception.Message)
+    }
+
+    $context = Get-MgContext
+    if ($null -eq $context) {
+        throw (T 'Graph.ConnectFailed' (T 'Graph.NoContext'))
+    }
+    $script:TokenSession = @{
+        RefreshToken = [string]$token.refresh_token
+        ClientId     = [string]$token.SignInClientID
+        TenantId     = [string]$context.TenantId
+        ExpiresOn    = (Get-Date).AddSeconds([int]$token.expires_in)
+    }
+
+    [pscustomobject]@{
+        Account  = $context.Account
+        TenantId = $context.TenantId
+        Scopes   = $context.Scopes
+    }
+}
+
+function Set-M365GraphAccessToken {
+    param([Parameter(Mandatory)]$Token)
+    Connect-MgGraph -AccessToken (ConvertTo-SecureString ([string]$Token.access_token) -AsPlainText -Force) -NoWelcome -ErrorAction Stop | Out-Null
+}
+
+function Update-M365GraphToken {
+    # Keevault sign-in: renews the access token shortly before it expires (the Graph module cannot do this for a given token).
+    if ($null -eq $script:TokenSession -or (Get-Date) -lt $script:TokenSession.ExpiresOn.AddMinutes(-5)) { return }
+    $session = $script:TokenSession
+    if (-not $session.RefreshToken) { throw (T 'Graph.TokenExpired' '-') }
+    try {
+        $token = Request-KeevaultMicrosoftToken -TenantID $session.TenantId -ClientID $session.ClientId -Scopes $script:GraphScopes -Body @{
+            grant_type    = 'refresh_token'
+            refresh_token = $session.RefreshToken
+        }
+        Set-M365GraphAccessToken -Token $token
+    }
+    catch {
+        throw (T 'Graph.TokenExpired' $_.Exception.Message)
+    }
+    if ($token.refresh_token) { $session.RefreshToken = [string]$token.refresh_token }
+    $session.ExpiresOn = (Get-Date).AddSeconds([int]$token.expires_in)
+}
+
 function Request-M365GraphScopes {
     <#
     .SYNOPSIS
@@ -335,6 +405,7 @@ function Disconnect-M365Graph {
         Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
     }
     $script:RoleDefinitionNames = $null
+    $script:TokenSession = $null
 }
 
 #endregion
@@ -375,6 +446,8 @@ function Invoke-M365GraphRequest {
         [hashtable]$Headers = @{},
         $Body
     )
+
+    Update-M365GraphToken
 
     $params = @{ Method = $Method; Uri = $Uri; Headers = $Headers; ErrorAction = 'Stop' }
     if ($null -ne $Body) {
@@ -1015,6 +1088,7 @@ Export-ModuleMember -Function @(
     'Test-M365GraphConnection'
     'Hide-M365ConsoleWindow'
     'Connect-M365Graph'
+    'Connect-M365GraphWithKeevault'
     'Disconnect-M365Graph'
     'Request-M365GraphScopes'
     'Invoke-M365GraphRequest'

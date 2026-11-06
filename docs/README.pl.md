@@ -72,6 +72,8 @@ Interfejs uruchamia się w języku **angielskim**. Za pomocą pola wyboru w praw
 
 Kliknij **„Zaloguj”** w prawym górnym rogu. Po udanym logowaniu na zielono pojawi się *„Połączono jako …”* oraz dzierżawa. **„Wyloguj”** kończy sesję – dzieje się to również automatycznie po zamknięciu okna.
 
+**Logowanie przez Keevault (opcjonalnie):** strzałka obok **„Zaloguj”** oferuje **„Zaloguj się przez Keevault”**. Konto Microsoft wybierasz w [Keevault](https://keevault.de); nazwa użytkownika, hasło i kod jednorazowy są wpisywane w osadzonym oknie (WebView2), a wpis z kluczem dostępu podpisuje Keevault po Twoim potwierdzeniu. Keevault musi być uruchomiony i odblokowany, z włączonymi *agentami AI (MCP)*. Tokeny pozostają tylko w pamięci.
+
 ### 2. Wyszukiwanie użytkownika
 
 W polu **„1. Wyszukaj użytkownika”** wpisz początek nazwy, adresu e-mail lub UPN i naciśnij **Enter** (lub kliknij **„Szukaj”**).
@@ -430,6 +432,7 @@ W **zasadach metod uwierzytelniania** (Centrum administracyjne Entra → Ochrona
 | `UI/SettingsDialog.xaml` | Okno ustawień |
 | `UI/HistoryDialog.xaml` | Historia użytkownika (dziennik inspekcji) |
 | `Modules/Graph.psm1` | Logowanie, żądania Graph, użytkownicy, domeny, role, sygnalizator MFA, odczyt/usuwanie metod |
+| `Modules/KeevaultSignIn.psm1` | Opcjonalne logowanie kontem z Keevault |
 | `Modules/Provisioning.psm1` | Konfiguracja FIDO2, kart TOTP, pozornego MFA, TAP i kont awaryjnych |
 | `Modules/TenantReport.psm1` | Raport MFA: użytkownicy, role, zbiorcze zapytania o metody, ocena w formie sygnalizacji, eksport do Excela |
 | `Modules/Xlsx.psm1` | Lekki generator plików Excel (.xlsx bez Excela i dodatkowych modułów) |

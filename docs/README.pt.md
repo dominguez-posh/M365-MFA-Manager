@@ -72,6 +72,8 @@ A interface arranca em **inglês**. Com a caixa de seleção no canto superior d
 
 Clique em **"Entrar"** no canto superior direito. Após iniciar sessão, é apresentado a verde *"Conectado como …"* juntamente com o locatário. **"Sair"** termina a sessão – isto também acontece automaticamente ao fechar a janela.
 
+**Iniciar sessão com o Keevault (opcional):** a seta junto a **"Entrar"** oferece **"Iniciar sessão com o Keevault"**. Escolhe a conta Microsoft no [Keevault](https://keevault.de); o nome de utilizador, a palavra-passe e o código único são preenchidos numa janela integrada (WebView2), e uma entrada com passkey é assinada pelo Keevault após a sua confirmação. O Keevault tem de estar em execução e desbloqueado, com os *agentes de IA (MCP)* ativados. Os tokens ficam apenas em memória.
+
 ### 2. Pesquisar um utilizador
 
 Na caixa **"1. Pesquisar utilizador"**, escreva o início de um nome, de um endereço de e-mail ou do UPN e prima **Enter** (ou clique em **"Pesquisar"**).
@@ -430,6 +432,7 @@ Na **política de métodos de autenticação** (Centro de administração do Ent
 | `UI/SettingsDialog.xaml` | Caixa de diálogo das definições |
 | `UI/HistoryDialog.xaml` | Histórico de um utilizador (registo de auditoria) |
 | `Modules/Graph.psm1` | Início de sessão, pedidos ao Graph, utilizadores, domínios, funções, semáforo de MFA, leitura/eliminação de métodos |
+| `Modules/KeevaultSignIn.psm1` | Início de sessão opcional com uma conta do Keevault |
 | `Modules/Provisioning.psm1` | Configuração de FIDO2, cartões TOTP, MFA fictícia, TAP e contas de emergência |
 | `Modules/TenantReport.psm1` | Relatório MFA: utilizadores, funções, pedidos de métodos agrupados, avaliação em semáforo, exportação para Excel |
 | `Modules/Xlsx.psm1` | Gerador de Excel simples (.xlsx sem Excel nem módulos adicionais) |

@@ -72,6 +72,8 @@ La interfaz se inicia en **inglés**. Con el cuadro de selección en la parte su
 
 Haga clic en **"Iniciar sesión"** en la parte superior derecha. Tras iniciar sesión correctamente, aparece en verde *"Conectado como …"* junto con el inquilino. **"Cerrar sesión"** finaliza la sesión; esto también ocurre automáticamente al cerrar la ventana.
 
+**Iniciar sesión con Keevault (opcional):** la flecha junto a **"Iniciar sesión"** ofrece **"Iniciar sesión con Keevault"**. Elige la cuenta Microsoft en [Keevault](https://keevault.de); el nombre de usuario, la contraseña y el código de un solo uso se rellenan en una ventana integrada (WebView2), y una entrada con passkey la firma Keevault tras su confirmación. Keevault debe estar en ejecución y desbloqueado, con los *agentes de IA (MCP)* activados. Los tokens permanecen solo en memoria.
+
 ### 2. Buscar un usuario
 
 En el cuadro **"1. Buscar usuario"**, escriba el comienzo de un nombre, una dirección de correo electrónico o el UPN y pulse **Intro** (o haga clic en **"Buscar"**).
@@ -430,6 +432,7 @@ En la **directiva de métodos de autenticación** (Centro de administración de 
 | `UI/SettingsDialog.xaml` | Diálogo de configuración |
 | `UI/HistoryDialog.xaml` | Historial de un usuario (registro de auditoría) |
 | `Modules/Graph.psm1` | Inicio de sesión, solicitudes a Graph, usuarios, dominios, roles, semáforo de MFA, lectura/eliminación de métodos |
+| `Modules/KeevaultSignIn.psm1` | Inicio de sesión opcional con una cuenta de Keevault |
 | `Modules/Provisioning.psm1` | Configuración de FIDO2, tarjetas TOTP, MFA ficticia, TAP y cuentas de emergencia |
 | `Modules/TenantReport.psm1` | Informe MFA: usuarios, roles, consultas de métodos agrupadas, valoración en semáforo, exportación a Excel |
 | `Modules/Xlsx.psm1` | Escritor ligero de Excel (.xlsx sin Excel ni módulos adicionales) |

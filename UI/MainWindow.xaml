@@ -55,7 +55,8 @@
                         </Button.ContextMenu>
                     </Button>
                     <ComboBox Name="CmbLanguage" Uid="Header.Language" Width="120" Margin="4" DisplayMemberPath="Name"/>
-                    <Button Name="BtnLogin" Uid="Header.Login" Tag="&#xE77B;"/>
+                    <Button Name="BtnLogin" Uid="Header.Login" Tag="&#xE77B;" Style="{StaticResource SplitMainButton}"/>
+                    <Button Name="BtnLoginMenu" Uid="Header.LoginMenu" Style="{StaticResource SplitDropButton}"/>
                     <Button Name="BtnLogout" Uid="Header.Logout" Tag="&#xE7E8;" IsEnabled="False" Style="{StaticResource HeaderButton}"/>
                 </StackPanel>
             </Grid>

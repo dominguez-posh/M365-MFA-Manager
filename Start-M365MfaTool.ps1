@@ -45,6 +45,7 @@ $script:RepoUrl = 'https://github.com/dominguez-posh/M365-MFA-Manager'
 # -Global so that all modules can use each other's functions (T, Invoke-M365GraphRequest, etc.).
 Import-Module (Join-Path $script:AppRoot 'Modules\Localization.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\Graph.psm1') -Force -Global
+Import-Module (Join-Path $script:AppRoot 'Modules\KeevaultSignIn.psm1') -Force -Global
 Import-Module (Join-Path $script:AppRoot 'Modules\Provisioning.psm1') -Force
 
 if ($HideConsole) { Hide-M365ConsoleWindow }
@@ -203,7 +204,7 @@ $window.Title = "M365 MFA Administration $($script:AppVersion)"
 $controlNames = @(
     # Header and connection
     'BtnTenantReport', 'TxtConnectionStatus', 'TxtTenant', 'BtnUpdate', 'BtnHelp', 'BtnTools'
-    'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnCampaign', 'BtnClassify', 'BtnOffboard', 'BtnBreakGlass', 'BtnSettings', 'CmbLanguage', 'BtnLogin', 'BtnLogout'
+    'BtnTotpImport', 'BtnTokenInventory', 'BtnBulkTap', 'BtnCampaign', 'BtnClassify', 'BtnOffboard', 'BtnBreakGlass', 'BtnSettings', 'CmbLanguage', 'BtnLogin', 'BtnLoginMenu', 'BtnLogout'
     # User search (results in popup)
     'TxtSearch', 'BtnSearch', 'PopUsers', 'TxtUserHits', 'DgUsers'
     # MFA methods and guided steps
@@ -537,9 +538,11 @@ function Set-Busy {
     $script:BtnUpdate.IsEnabled          = -not $Busy
     $script:CmbAccountType.IsEnabled     = -not $Busy -and $connected -and $hasUser
     $script:BtnLogin.IsEnabled           = -not $Busy -and -not $connected
+    $script:BtnLoginMenu.IsEnabled       = -not $Busy -and -not $connected
     $script:BtnLogout.IsEnabled          = -not $Busy -and $connected
     # Only the button that fits the state is shown (no greyed-out button in the header)
     $script:BtnLogin.Visibility          = if ($connected) { 'Collapsed' } else { 'Visible' }
+    $script:BtnLoginMenu.Visibility      = if ($connected) { 'Collapsed' } else { 'Visible' }
     $script:BtnLogout.Visibility         = if ($connected) { 'Visible' } else { 'Collapsed' }
     $script:BtnTools.IsEnabled           = -not $Busy -and $connected
     $script:BtnTenantReport.IsEnabled    = -not $Busy -and $connected
@@ -1086,18 +1089,39 @@ $BtnTools.Add_Click({
     $menu.IsOpen = $true
 })
 
-$BtnLogin.Add_Click({
+function Start-SignIn {
+    # Sign-in in the Microsoft dialog (default) or with an account from Keevault (arrow next to "Sign in")
+    param([ValidateSet('Browser', 'Keevault')][string]$Method = 'Browser')
     try {
-        Set-Busy $true (T 'Busy.SigningIn')
+        Set-Busy $true (T $(if ($Method -eq 'Keevault') { 'Busy.SigningInKeevault' } else { 'Busy.SigningIn' }))
         # Install missing modules first, visibly in the GUI (instead of console prompts in the background)
         if (-not (Install-MissingModules)) { return }
-        $TxtConnectionStatus.Text = T 'Header.SigningIn'
+        $TxtConnectionStatus.Text = T $(if ($Method -eq 'Keevault') { 'Header.SigningInKeevault' } else { 'Header.SigningIn' })
         $TxtConnectionStatus.Foreground = '#FCD34D'
         Write-UiLog (T 'Log.SigningIn')
         Update-UiNow
-        $context = Connect-M365Graph -TenantId $script:Prefs.TenantId
-        # The console was shown for the sign-in dialog; Windows Terminal may have taken it over meanwhile
-        if ($HideConsole) { Hide-M365ConsoleWindow }
+        if ($Method -eq 'Keevault') {
+            $texts = @{}
+            foreach ($key in Get-KeevaultSignInTextKeys) { $texts[$key] = T "Keevault.$key" }
+            Set-KeevaultSignInTexts -Texts $texts
+            Set-KeevaultSignInLog -Sink { param($Text, $Level) Write-UiLog $Text $Level }
+            # Keevault and the embedded sign-in window take the foreground; the tool keeps painting but takes no clicks
+            $window.IsEnabled = $false
+            try {
+                $context = Connect-M365GraphWithKeevault -AppName 'M365 MFA Administration' -AppVersion $script:AppVersion -TenantId $script:Prefs.TenantId `
+                    -CacheFolder ([System.IO.Path]::Combine([string]$env:LOCALAPPDATA, 'M365MfaTool', 'WebView2')) -Owner $window `
+                    -OnWait { $window.Dispatcher.Invoke([action] {}, [System.Windows.Threading.DispatcherPriority]::Background) }
+            }
+            finally {
+                $window.IsEnabled = $true
+                [void]$window.Activate()
+            }
+        }
+        else {
+            $context = Connect-M365Graph -TenantId $script:Prefs.TenantId
+            # The console was shown for the sign-in dialog; Windows Terminal may have taken it over meanwhile
+            if ($HideConsole) { Hide-M365ConsoleWindow }
+        }
         Set-ConnectionStatus $context
         Write-UiLog (T 'Log.SignedIn' $context.Account) 'Success'
         Show-Toast (T 'Log.SignedIn' $context.Account)
@@ -1122,7 +1146,48 @@ $BtnLogin.Add_Click({
     finally {
         Set-Busy $false
     }
-})
+}
+
+$script:LoginMenuMethods = @{}
+
+function Show-LoginMenu {
+    # Options of the split button next to "Sign in"
+    $kv = Find-KeevaultMcp
+    $menu = New-Object System.Windows.Controls.ContextMenu
+    $menu.Style = $window.FindResource('CardContextMenu')
+    $items = @(
+        @{ Glyph = [char]0xE774; Header = T 'Login.Browser'; Text = T 'Login.Browser.Text'; Method = 'Browser'; Enabled = $true }
+        @{ Glyph = [char]0xE72E; Header = T 'Login.Keevault'; Method = 'Keevault'; Enabled = ($kv.Installed -and $kv.McpEnabled)
+           Text = $(if (-not $kv.Installed) { T 'Login.Keevault.NotInstalled' }
+                    elseif (-not $kv.McpEnabled) { T 'Login.Keevault.McpOff' }
+                    elseif (-not $kv.Running) { T 'Login.Keevault.NotRunning' }
+                    else { T 'Login.Keevault.Text' }) }
+    )
+    foreach ($item in $items) {
+        $entry = New-Object System.Windows.Controls.MenuItem
+        $entry.Style = $window.FindResource('CardMenuItem')
+        $entry.Header = $item.Header
+        $entry.Tag = [string]$item.Glyph
+        $entry.ToolTip = $item.Text
+        $entry.IsEnabled = $item.Enabled
+        # The menu shows the text below the title; no extra tooltip popup
+        [System.Windows.Controls.ToolTipService]::SetIsEnabled($entry, $false)
+        $script:LoginMenuMethods[$entry] = $item.Method
+        $entry.Add_Click({
+            param($src)
+            Start-SignIn -Method $script:LoginMenuMethods[$src]
+        })
+        [void]$menu.Items.Add($entry)
+    }
+    $menu.PlacementTarget = $script:BtnLoginMenu
+    $menu.Placement = 'Bottom'
+    # Right edge of the menu below the right edge of the arrow (its shadow margin is 8 px)
+    $menu.Add_Opened({ param($m) $m.HorizontalOffset = $m.PlacementTarget.ActualWidth - $m.ActualWidth + 8 })
+    $menu.IsOpen = $true
+}
+
+$BtnLogin.Add_Click({ Start-SignIn })
+$BtnLoginMenu.Add_Click({ Show-LoginMenu })
 
 $BtnLogout.Add_Click({
     try {
