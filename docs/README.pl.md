@@ -59,6 +59,12 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
 ```
 
+Z `cmd`, Win+R lub skrótu (uruchamia Windows PowerShell, bez profilu, zasady wykonywania pominięte tylko dla tego procesu):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Albo skopiuj folder samodzielnie:
 
 1. Skopiuj cały folder na swój komputer (pliki muszą pozostać razem).

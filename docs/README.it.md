@@ -59,6 +59,12 @@ Con questo strumento, amministratori e help desk configurano l'**autenticazione 
 irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
 ```
 
+Da `cmd`, Win+R o un collegamento (avvia Windows PowerShell, senza profilo, criterio di esecuzione ignorato solo per questo processo):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Oppure copia tu stesso la cartella:
 
 1. Copiare l'intera cartella sul proprio computer (i file devono restare insieme).

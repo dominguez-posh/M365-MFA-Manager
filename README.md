@@ -56,6 +56,12 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
 ```
 
+From `cmd`, Win+R or a shortcut (starts Windows PowerShell itself, no profile, execution policy skipped for this process only):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Or copy the folder yourself:
 
 1. Copy the entire folder to your computer (the files must stay together).

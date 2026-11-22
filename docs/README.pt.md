@@ -59,6 +59,12 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
 ```
 
+A partir do `cmd`, Win+R ou de um atalho (inicia o Windows PowerShell, sem perfil, política de execução ignorada só para este processo):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Ou copie a pasta você mesmo:
 
 1. Copie a pasta completa para o seu computador (os ficheiros têm de ficar juntos).

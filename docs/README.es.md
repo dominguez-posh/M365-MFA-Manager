@@ -59,6 +59,12 @@ Con esta herramienta, los administradores y el personal del servicio de asistenc
 irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
 ```
 
+Desde `cmd`, Win+R o un acceso directo (inicia Windows PowerShell, sin perfil, directiva de ejecución omitida solo para este proceso):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 O copie la carpeta usted mismo:
 
 1. Copie la carpeta completa en su equipo (los archivos deben permanecer juntos).

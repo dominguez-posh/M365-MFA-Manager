@@ -59,6 +59,12 @@ Met deze tool richten beheerders en helpdeskmedewerkers **meervoudige verificati
 irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
 ```
 
+Vanuit `cmd`, Win+R of een snelkoppeling (start Windows PowerShell zelf, zonder profiel, uitvoeringsbeleid alleen voor dit proces overgeslagen):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Of kopieer de map zelf:
 
 1. Kopieer de volledige map naar uw computer (de bestanden moeten bij elkaar blijven).
