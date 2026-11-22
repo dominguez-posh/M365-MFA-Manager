@@ -50,6 +50,14 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 
 ## Schnellstart
 
+**Am schnellsten, ohne Download:** diese Zeile in Windows PowerShell einfügen. Sie lädt das neueste Release nach `%LOCALAPPDATA%\M365MfaTool` und startet das Tool.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Oder den Ordner selbst kopieren:
+
 1. Den kompletten Ordner auf den eigenen Rechner kopieren (die Dateien müssen zusammenbleiben).
 2. **`Start.cmd` doppelklicken.**
 3. Oben rechts die Sprache auf **Deutsch** stellen und auf **„Anmelden“** klicken. Mit dem eigenen Admin-Konto anmelden.

@@ -53,6 +53,14 @@ Met deze tool richten beheerders en helpdeskmedewerkers **meervoudige verificati
 
 ## Snel aan de slag
 
+**Het snelst, zonder downloaden:** plak deze regel in Windows PowerShell. Hij laadt de nieuwste release naar `%LOCALAPPDATA%\M365MfaTool` en start de tool.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Of kopieer de map zelf:
+
 1. Kopieer de volledige map naar uw computer (de bestanden moeten bij elkaar blijven).
 2. **Dubbelklik op `Start.cmd`.**
 3. Zet rechtsboven de taal op **Nederlands** en klik op **"Aanmelden"**. Meld u aan met uw eigen beheerdersaccount.

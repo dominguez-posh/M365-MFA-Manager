@@ -12,3 +12,6 @@ desktop.ini
 
 # Daily log files of the tool
 Logs/
+
+# Team setup (dev-team-framework) stays local
+.claude/

@@ -53,6 +53,14 @@ Con esta herramienta, los administradores y el personal del servicio de asistenc
 
 ## Inicio rápido
 
+**La forma más rápida, sin descargar nada:** pegue esta línea en Windows PowerShell. Carga la última versión en `%LOCALAPPDATA%\M365MfaTool` e inicia la herramienta.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+O copie la carpeta usted mismo:
+
 1. Copie la carpeta completa en su equipo (los archivos deben permanecer juntos).
 2. **Haga doble clic en `Start.cmd`.**
 3. En la parte superior derecha, cambie el idioma a **Español** y haga clic en **"Iniciar sesión"**. Inicie sesión con su propia cuenta de administrador.

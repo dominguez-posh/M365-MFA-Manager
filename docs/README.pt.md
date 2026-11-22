@@ -53,6 +53,14 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 
 ## Início rápido
 
+**O mais rápido, sem descarregar nada:** cole esta linha no Windows PowerShell. Carrega a versão mais recente para `%LOCALAPPDATA%\M365MfaTool` e inicia a ferramenta.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Ou copie a pasta você mesmo:
+
 1. Copie a pasta completa para o seu computador (os ficheiros têm de ficar juntos).
 2. **Faça duplo clique em `Start.cmd`.**
 3. No canto superior direito, mude o idioma para **Português** e clique em **"Entrar"**. Inicie sessão com a sua própria conta de administrador.

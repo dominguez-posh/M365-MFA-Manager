@@ -53,6 +53,14 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 
 ## Szybki start
 
+**Najszybciej, bez pobierania:** wklej ten wiersz do Windows PowerShell. Pobiera najnowsze wydanie do `%LOCALAPPDATA%\M365MfaTool` i uruchamia narzędzie.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Albo skopiuj folder samodzielnie:
+
 1. Skopiuj cały folder na swój komputer (pliki muszą pozostać razem).
 2. **Kliknij dwukrotnie `Start.cmd`.**
 3. W prawym górnym rogu ustaw język na **Polski** i kliknij **„Zaloguj”**. Zaloguj się własnym kontem administratora.

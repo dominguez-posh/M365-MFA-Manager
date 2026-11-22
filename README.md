@@ -50,6 +50,14 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 
 ## Quick start
 
+**Fastest way, nothing to download:** paste this line into Windows PowerShell. It loads the latest release to `%LOCALAPPDATA%\M365MfaTool` and starts the tool.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Or copy the folder yourself:
+
 1. Copy the entire folder to your computer (the files must stay together).
 2. **Double-click `Start.cmd`.**
 3. Click **"Sign in"** in the top right and sign in with your own admin account.

@@ -53,6 +53,14 @@ Con questo strumento, amministratori e help desk configurano l'**autenticazione 
 
 ## Avvio rapido
 
+**Il modo più rapido, senza scaricare nulla:** incolla questa riga in Windows PowerShell. Carica l'ultima versione in `%LOCALAPPDATA%\M365MfaTool` e avvia lo strumento.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Oppure copia tu stesso la cartella:
+
 1. Copiare l'intera cartella sul proprio computer (i file devono restare insieme).
 2. **Fare doppio clic su `Start.cmd`.**
 3. In alto a destra impostare la lingua su **Italiano** e fare clic su **"Accedi"**. Accedere con il proprio account amministratore.

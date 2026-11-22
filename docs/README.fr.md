@@ -53,6 +53,14 @@ Avec cet outil, les administrateurs et le support informatique configurent **l'a
 
 ## Démarrage rapide
 
+**Le plus rapide, sans téléchargement :** collez cette ligne dans Windows PowerShell. Elle charge la dernière version dans `%LOCALAPPDATA%\M365MfaTool` et démarre l'outil.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Ou copiez le dossier vous-même :
+
 1. Copiez le dossier complet sur votre ordinateur (les fichiers doivent rester ensemble).
 2. **Double-cliquez sur `Start.cmd`.**
 3. En haut à droite, choisissez **Français** comme langue et cliquez sur **« Se connecter »**. Connectez-vous avec votre propre compte administrateur.
