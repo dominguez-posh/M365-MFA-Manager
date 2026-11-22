@@ -2,6 +2,20 @@
 
 # M365 MFA Administration Tool
 
+## Uruchomienie bez pobierania
+
+**Najszybciej, bez pobierania:** wklej ten wiersz do Windows PowerShell. Pobiera najnowsze wydanie do `%LOCALAPPDATA%\M365MfaTool` i uruchamia narzędzie.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Z `cmd`, Win+R lub skrótu (uruchamia Windows PowerShell, bez profilu, zasady wykonywania pominięte tylko dla tego procesu):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uwierzytelnianie wieloskładnikowe (MFA) w imieniu innych użytkowników** – na przykład klucz FIDO2, kartę TOTP lub tymczasowy kod dostępu. Dodatkowo pokazuje na pierwszy rzut oka, jak dobrze chronione jest konto użytkownika.
 
 > [!NOTE]
@@ -52,20 +66,6 @@ To narzędzie pozwala administratorom i pracownikom helpdesku konfigurować **uw
 ---
 
 ## Szybki start
-
-**Najszybciej, bez pobierania:** wklej ten wiersz do Windows PowerShell. Pobiera najnowsze wydanie do `%LOCALAPPDATA%\M365MfaTool` i uruchamia narzędzie.
-
-```powershell
-irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
-```
-
-Z `cmd`, Win+R lub skrótu (uruchamia Windows PowerShell, bez profilu, zasady wykonywania pominięte tylko dla tego procesu):
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
-```
-
-Albo skopiuj folder samodzielnie:
 
 1. Skopiuj cały folder na swój komputer (pliki muszą pozostać razem).
 2. **Kliknij dwukrotnie `Start.cmd`.**

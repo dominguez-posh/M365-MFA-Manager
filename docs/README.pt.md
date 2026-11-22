@@ -2,6 +2,20 @@
 
 # M365 MFA Administration Tool
 
+## Iniciar sem descarregar
+
+**O mais rápido, sem descarregar nada:** cole esta linha no Windows PowerShell. Carrega a versão mais recente para `%LOCALAPPDATA%\M365MfaTool` e inicia a ferramenta.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+A partir do `cmd`, Win+R ou de um atalho (inicia o Windows PowerShell, sem perfil, política de execução ignorada só para este processo):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Com esta ferramenta, administradores e equipas de suporte configuram a **autenticação multifator (MFA) em nome de outros utilizadores** – por exemplo uma chave FIDO2, um cartão TOTP ou um código de acesso temporário. Além disso, mostra num relance o nível de proteção de uma conta de utilizador.
 
 > [!NOTE]
@@ -52,20 +66,6 @@ Com esta ferramenta, administradores e equipas de suporte configuram a **autenti
 ---
 
 ## Início rápido
-
-**O mais rápido, sem descarregar nada:** cole esta linha no Windows PowerShell. Carrega a versão mais recente para `%LOCALAPPDATA%\M365MfaTool` e inicia a ferramenta.
-
-```powershell
-irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
-```
-
-A partir do `cmd`, Win+R ou de um atalho (inicia o Windows PowerShell, sem perfil, política de execução ignorada só para este processo):
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
-```
-
-Ou copie a pasta você mesmo:
 
 1. Copie a pasta completa para o seu computador (os ficheiros têm de ficar juntos).
 2. **Faça duplo clique em `Start.cmd`.**

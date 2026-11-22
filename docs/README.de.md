@@ -2,6 +2,20 @@
 
 # M365 MFA Administration Tool
 
+## Starten ohne Download
+
+**Am schnellsten, ohne Download:** diese Zeile in Windows PowerShell einfügen. Sie lädt das neueste Release nach `%LOCALAPPDATA%\M365MfaTool` und startet das Tool.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+Aus `cmd`, über Win+R oder als Verknüpfung (startet die Windows PowerShell selbst, ohne Profil, Scriptfreigabe nur für diesen Prozess):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Faktor-Authentifizierung (MFA) im Namen anderer Benutzer** ein – zum Beispiel einen FIDO2-Stick, eine TOTP-Karte oder einen befristeten Zugangscode. Außerdem zeigt es auf einen Blick, wie gut ein Benutzerkonto abgesichert ist.
 
 ![Hauptfenster des M365 MFA Administration Tools](images/de/main-window.png)
@@ -49,20 +63,6 @@ Mit diesem Tool richten Administratoren und Helpdesk-Mitarbeitende **Multi-Fakto
 ---
 
 ## Schnellstart
-
-**Am schnellsten, ohne Download:** diese Zeile in Windows PowerShell einfügen. Sie lädt das neueste Release nach `%LOCALAPPDATA%\M365MfaTool` und startet das Tool.
-
-```powershell
-irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
-```
-
-Aus `cmd`, über Win+R oder als Verknüpfung (startet die Windows PowerShell selbst, ohne Profil, Scriptfreigabe nur für diesen Prozess):
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
-```
-
-Oder den Ordner selbst kopieren:
 
 1. Den kompletten Ordner auf den eigenen Rechner kopieren (die Dateien müssen zusammenbleiben).
 2. **`Start.cmd` doppelklicken.**

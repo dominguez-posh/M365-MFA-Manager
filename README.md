@@ -2,6 +2,20 @@
 
 # M365 MFA Administration Tool
 
+## Start without downloading
+
+**Fastest way, nothing to download:** paste this line into Windows PowerShell. It loads the latest release to `%LOCALAPPDATA%\M365MfaTool` and starts the tool.
+
+```powershell
+irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
+```
+
+From `cmd`, Win+R or a shortcut (starts Windows PowerShell itself, no profile, execution policy skipped for this process only):
+
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
+```
+
 With this tool, administrators and help desk staff set up **multi-factor authentication (MFA) on behalf of other users** – for example a FIDO2 key, a TOTP card or a temporary access code. It also shows at a glance how well a user account is protected.
 
 ![Main window of the M365 MFA Administration Tool](docs/images/en/main-window.png)
@@ -49,20 +63,6 @@ With this tool, administrators and help desk staff set up **multi-factor authent
 ---
 
 ## Quick start
-
-**Fastest way, nothing to download:** paste this line into Windows PowerShell. It loads the latest release to `%LOCALAPPDATA%\M365MfaTool` and starts the tool.
-
-```powershell
-irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex
-```
-
-From `cmd`, Win+R or a shortcut (starts Windows PowerShell itself, no profile, execution policy skipped for this process only):
-
-```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dominguez-posh/M365-MFA-Manager/main/get.ps1 | iex"
-```
-
-Or copy the folder yourself:
 
 1. Copy the entire folder to your computer (the files must stay together).
 2. **Double-click `Start.cmd`.**
