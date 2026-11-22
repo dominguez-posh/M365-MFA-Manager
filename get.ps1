@@ -62,7 +62,7 @@
     Get-ChildItem $target -Recurse -File | Unblock-File
     $script = Join-Path $target $Entry
     if (-not (Test-Path $script)) { throw "Entry script $Entry not found in $target." }
-    $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $ps = Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\v1.0\powershell.exe'
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $script + '"')) + $Extra
     $style = if ($Hidden) { 'Hidden' } else { 'Normal' }
     Start-Process $ps -ArgumentList $argList -WorkingDirectory $target -WindowStyle $style
