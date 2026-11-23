@@ -86,6 +86,8 @@ De interface start in het **Engels**. Met het keuzeveld rechtsboven naast "Sign 
 
 Klik rechtsboven op **"Aanmelden"**. Na een geslaagde aanmelding staat daar in het groen *"Verbonden als …"* met de tenant. **"Afmelden"** beëindigt de sessie – dat gebeurt ook automatisch bij het sluiten van het venster.
 
+**Aanmelden met Keevault (optioneel):** de pijl naast **"Aanmelden"** biedt **"Aanmelden met Keevault"**. U kiest het Microsoft-account in [Keevault](https://keevault.de); gebruikersnaam, wachtwoord en eenmalige code worden in een ingebouwd venster (WebView2) ingevuld, en een item met passkey wordt na uw bevestiging door Keevault ondertekend. Keevault moet actief en ontgrendeld zijn, met *AI-agents (MCP)* ingeschakeld. De tokens blijven alleen in het geheugen.
+
 ### 2. Gebruiker zoeken
 
 Typ in het vak **"1. Gebruiker zoeken"** het begin van een naam, een e-mailadres of de UPN en druk op **Enter** (of klik op **"Zoeken"**).
@@ -444,6 +446,7 @@ In het **beleid voor verificatiemethoden** (Entra-beheercentrum → Beveiliging 
 | `UI/SettingsDialog.xaml` | Instellingenvenster |
 | `UI/HistoryDialog.xaml` | Geschiedenis van een gebruiker (auditlogboek) |
 | `Modules/Graph.psm1` | Aanmelden, Graph-aanvragen, gebruikers, domeinen, rollen, MFA-stoplicht, methoden lezen/verwijderen |
+| `Modules/KeevaultSignIn.psm1` | Optionele aanmelding met een account uit Keevault |
 | `Modules/Provisioning.psm1` | Inrichten van FIDO2, TOTP-kaarten, nep-MFA, TAP en noodaccounts |
 | `Modules/TenantReport.psm1` | MFA-rapport: gebruikers, rollen, gebundelde methode-aanvragen, stoplichtbeoordeling, Excel-export |
 | `Modules/Xlsx.psm1` | Eenvoudige Excel-writer (.xlsx zonder Excel of extra modules) |

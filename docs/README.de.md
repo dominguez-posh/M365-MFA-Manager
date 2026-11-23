@@ -83,6 +83,8 @@ Die Oberfläche startet auf **Englisch**. Über das Auswahlfeld oben rechts nebe
 
 Oben rechts auf **„Anmelden“** klicken. Nach erfolgreicher Anmeldung steht dort in Grün *„Verbunden als …“* und der Tenant. Mit **„Abmelden“** wird die Sitzung beendet – das passiert auch automatisch beim Schließen des Fensters.
 
+**Mit Keevault anmelden (optional):** Der Pfeil neben **„Anmelden“** bietet **„Mit Keevault anmelden“**. Sie wählen das Microsoft-Konto in [Keevault](https://keevault.de); Benutzername, Passwort und Einmalcode werden in ein eingebettetes Anmeldefenster (WebView2) eingetragen, ein Eintrag mit Passkey wird nach Ihrer Bestätigung von Keevault signiert. Sie können jederzeit selbst tippen oder eine andere Methode wählen. Dafür muss Keevault laufen und entsperrt sein, und *KI-Agenten (MCP)* müssen eingeschaltet sein; das WebView2-SDK wird einmalig von NuGet geladen (Signatur geprüft). Die Token bleiben nur im Arbeitsspeicher, bei langen Läufen wird die Sitzung automatisch erneuert.
+
 ### 2. Benutzer suchen
 
 Im Feld **„1. Benutzer suchen“** den Anfang eines Namens, einer E-Mail-Adresse oder des UPN eingeben und **Enter** drücken (oder auf **„Suchen“** klicken).
@@ -466,6 +468,7 @@ In den **Authentifizierungsmethoden-Richtlinien** (Entra Admin Center → Schutz
 | `UI/SettingsDialog.xaml` | Einstellungsdialog |
 | `UI/HistoryDialog.xaml` | Verlauf eines Benutzers aus dem Überwachungsprotokoll |
 | `Modules/Graph.psm1` | Anmeldung, Graph-Anfragen, Benutzer, Domains, Rollen, MFA-Ampel, Lesen/Löschen von Methoden |
+| `Modules/KeevaultSignIn.psm1` | Optionale Anmeldung mit einem Konto aus Keevault (tool-neutrales Modul) |
 | `Modules/Provisioning.psm1` | Einrichtung von FIDO2, TOTP-Karten, Fake-MFA, TAP und Breakglass-Accounts |
 | `Modules/TenantReport.psm1` | MFA-Report: Benutzer, Rollen, gebündelte Methodenabfragen, Ampelbewertung, Excel-Export |
 | `Modules/Xlsx.psm1` | Schlanker Excel-Writer (.xlsx ohne Excel oder Zusatzmodule) |

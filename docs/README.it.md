@@ -86,6 +86,8 @@ L'interfaccia si avvia in **inglese**. Con la casella di selezione in alto a des
 
 Fare clic su **"Accedi"** in alto a destra. Dopo l'accesso viene mostrato in verde *"Connesso come …"* insieme al tenant. **"Esci"** termina la sessione – ciò avviene anche automaticamente alla chiusura della finestra.
 
+**Accedi con Keevault (facoltativo):** la freccia accanto ad **"Accedi"** offre **"Accedi con Keevault"**. L'account Microsoft si sceglie in [Keevault](https://keevault.de); nome utente, password e codice monouso vengono inseriti in una finestra integrata (WebView2), e una voce con passkey viene firmata da Keevault dopo la conferma. Keevault deve essere avviato e sbloccato, con gli *agenti IA (MCP)* attivati. I token restano solo in memoria.
+
 ### 2. Cercare un utente
 
 Nella casella **"1. Cerca utente"** digitare l'inizio di un nome, di un indirizzo e-mail o dell'UPN e premere **Invio** (oppure fare clic su **"Cerca"**).
@@ -444,6 +446,7 @@ Nei **criteri dei metodi di autenticazione** (Interfaccia di amministrazione di 
 | `UI/SettingsDialog.xaml` | Finestra delle impostazioni |
 | `UI/HistoryDialog.xaml` | Cronologia di un utente (registro di controllo) |
 | `Modules/Graph.psm1` | Accesso, richieste Graph, utenti, domini, ruoli, semaforo MFA, lettura/eliminazione dei metodi |
+| `Modules/KeevaultSignIn.psm1` | Accesso facoltativo con un account di Keevault |
 | `Modules/Provisioning.psm1` | Configurazione di FIDO2, schede TOTP, MFA fittizia, TAP e account di emergenza |
 | `Modules/TenantReport.psm1` | Report MFA: utenti, ruoli, richieste di metodi raggruppate, valutazione a semaforo, esportazione Excel |
 | `Modules/Xlsx.psm1` | Writer Excel leggero (.xlsx senza Excel né moduli aggiuntivi) |

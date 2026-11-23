@@ -83,6 +83,8 @@ The interface starts in **English**. Use the selection box in the top right next
 
 Click **"Sign in"** in the top right. After a successful sign-in, it shows *"Connected as …"* in green along with the tenant. **"Sign out"** ends the session – this also happens automatically when the window is closed.
 
+**Sign in with Keevault (optional):** the arrow next to **"Sign in"** offers **"Sign in with Keevault"**. You pick the Microsoft account in [Keevault](https://keevault.de); user name, password and one-time code are filled into an embedded sign-in window (WebView2), and an entry with a passkey is signed by Keevault after you confirm it there. You can type yourself or choose another method at any time. This needs Keevault running and unlocked with *AI agents (MCP)* switched on; the WebView2 SDK is downloaded once from NuGet (signature checked). The tokens stay in memory only, and the session is renewed automatically during long runs.
+
 ### 2. Find a user
 
 In the **"1. Find user"** box, enter the beginning of a name, an email address or the UPN and press **Enter** (or click **"Search"**).
@@ -466,6 +468,7 @@ In the **authentication methods policy** (Entra admin center → Protection → 
 | `UI/SettingsDialog.xaml` | Settings dialog |
 | `UI/HistoryDialog.xaml` | Audit log history of a user |
 | `Modules/Graph.psm1` | Sign-in, Graph requests, users, domains, roles, MFA traffic light, reading/deleting methods |
+| `Modules/KeevaultSignIn.psm1` | Optional sign-in with an account from Keevault (tool-neutral module) |
 | `Modules/Provisioning.psm1` | Setup of FIDO2, TOTP cards, fake MFA, TAP and break-glass accounts |
 | `Modules/TenantReport.psm1` | Tenant MFA report: users, roles, batched method queries, traffic light rating, Excel export |
 | `Modules/Xlsx.psm1` | Minimal Excel writer (.xlsx without Excel or additional modules) |

@@ -86,6 +86,8 @@ L'interface démarre en **anglais**. La liste de sélection en haut à droite, �
 
 Cliquez sur **« Se connecter »** en haut à droite. Une fois connecté, *« Connecté en tant que … »* s'affiche en vert avec le locataire. **« Se déconnecter »** met fin à la session – cela se fait aussi automatiquement à la fermeture de la fenêtre.
 
+**Se connecter avec Keevault (facultatif) :** la flèche à côté de **« Se connecter »** propose **« Se connecter avec Keevault »**. Vous choisissez le compte Microsoft dans [Keevault](https://keevault.de) ; nom d'utilisateur, mot de passe et code à usage unique sont saisis dans une fenêtre intégrée (WebView2), et une entrée avec passkey est signée par Keevault après votre confirmation. Keevault doit être démarré et déverrouillé, avec les *agents IA (MCP)* activés. Les jetons restent uniquement en mémoire.
+
 ### 2. Rechercher un utilisateur
 
 Dans la zone **« 1. Rechercher un utilisateur »**, saisissez le début d'un nom, d'une adresse e-mail ou de l'UPN et appuyez sur **Entrée** (ou cliquez sur **« Rechercher »**).
@@ -444,6 +446,7 @@ Dans la **stratégie des méthodes d'authentification** (Centre d'administration
 | `UI/SettingsDialog.xaml` | Boîte de dialogue des paramètres |
 | `UI/HistoryDialog.xaml` | Historique d'un utilisateur (journal d'audit) |
 | `Modules/Graph.psm1` | Connexion, requêtes Graph, utilisateurs, domaines, rôles, feu tricolore MFA, lecture/suppression des méthodes |
+| `Modules/KeevaultSignIn.psm1` | Connexion facultative avec un compte de Keevault |
 | `Modules/Provisioning.psm1` | Configuration de FIDO2, cartes TOTP, MFA fictive, TAP et comptes d'urgence |
 | `Modules/TenantReport.psm1` | Rapport MFA : utilisateurs, rôles, requêtes de méthodes groupées, évaluation en feu tricolore, export Excel |
 | `Modules/Xlsx.psm1` | Générateur Excel léger (.xlsx sans Excel ni module supplémentaire) |
